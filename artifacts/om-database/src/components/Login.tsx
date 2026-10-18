@@ -12,12 +12,12 @@ type Mode = "login" | "register" | "forgot" | "twofa";
 
 const inputStyle: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", padding: "10px 14px",
-  border: "1.5px solid #e7e0d2", borderRadius: 8, fontSize: 14,
-  fontFamily: "'Inter', sans-serif", background: "#faf7f0", color: "#26281f", outline: "none",
+  border: "1.5px solid #e6e4de", borderRadius: 8, fontSize: 14,
+  fontFamily: "'Roboto',sans-serif", background: "#faf9f5", color: "#232422", outline: "none",
 };
 const labelStyle: React.CSSProperties = {
   display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
-  color: "#a89f8f", textTransform: "uppercase", marginBottom: 6,
+  color: "#9b9992", textTransform: "uppercase", marginBottom: 6,
 };
 
 export default function Login({ onLogin, startOn2fa }: Props) {
@@ -108,13 +108,13 @@ export default function Login({ onLogin, startOn2fa }: Props) {
     : (mode === "register" ? "Request access" : mode === "forgot" ? "Send reset link" : mode === "twofa" ? "Verify" : "Sign in");
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f1ece1", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", padding: 16 }}>
-      <div style={{ background: "#fff", border: "1px solid #e7e0d2", borderRadius: 14, padding: "40px 44px", width: "min(380px, 100%)", boxSizing: "border-box", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+    <div style={{ minHeight: "100vh", background: "#f3f2ee", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Roboto',sans-serif", padding: 16 }}>
+      <div style={{ background: "#fff", border: "1px solid #e6e4de", borderRadius: 14, padding: "40px 44px", width: "min(380px, 100%)", boxSizing: "border-box", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
         <div style={{ marginBottom: 24, textAlign: "center" }}>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 400, color: "#26281f", letterSpacing: "-0.01em" }}>
+          <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 400, color: "#232422", letterSpacing: "-0.01em" }}>
             KPR <span style={{ fontWeight: 600 }}>OM</span> Database
           </div>
-          <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 4 }}>{subtitle}</div>
+          <div style={{ fontSize: 12, color: "#9b9992", marginTop: 4 }}>{subtitle}</div>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -145,7 +145,7 @@ export default function Login({ onLogin, startOn2fa }: Props) {
               <input type="text" inputMode="numeric" autoComplete="one-time-code" autoFocus value={code}
                 onChange={e => setCode(e.target.value)} placeholder="6-digit code"
                 style={{ ...inputStyle, letterSpacing: "0.3em", fontSize: 18, textAlign: "center" }} />
-              <div style={{ fontSize: 11.5, color: "#a89f8f", marginTop: 7, lineHeight: 1.45 }}>
+              <div style={{ fontSize: 11.5, color: "#9b9992", marginTop: 7, lineHeight: 1.45 }}>
                 Enter the 6-digit code from your authenticator app. Lost your phone? Enter one of your backup codes instead.
               </div>
             </div>
@@ -155,28 +155,28 @@ export default function Login({ onLogin, startOn2fa }: Props) {
           {error && <div style={{ fontSize: 12, color: "#dc2626", marginBottom: 12 }}>{error}</div>}
           {needsVerify && email.trim() && (
             <div style={{ marginBottom: 12, textAlign: "center" }}>
-              <button type="button" onClick={resendVerify} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 12.5, fontWeight: 600, padding: 0 }}>
+              <button type="button" onClick={resendVerify} style={{ background: "none", border: "none", color: "#3e8a2f", cursor: "pointer", fontSize: 12.5, fontWeight: 600, padding: 0 }}>
                 Resend verification email
               </button>
             </div>
           )}
 
           <button type="submit" disabled={loading || !canSubmit}
-            style={{ width: "100%", padding: "10px 0", background: "#26281f", color: "#f1ece1", border: "none", borderRadius: 8, fontSize: 13, fontFamily: "'Inter', sans-serif", fontWeight: 600, cursor: loading ? "wait" : "pointer", opacity: (!canSubmit || loading) ? 0.5 : 1, letterSpacing: "0.02em" }}>
+            style={{ width: "100%", padding: "10px 0", background: "#232422", color: "#f3f2ee", border: "none", borderRadius: 8, fontSize: 13, fontFamily: "'Roboto',sans-serif", fontWeight: 600, cursor: loading ? "wait" : "pointer", opacity: (!canSubmit || loading) ? 0.5 : 1, letterSpacing: "0.02em" }}>
             {submitLabel}
           </button>
         </form>
 
         {mode === "login" && (
           <div style={{ marginTop: 12, textAlign: "center" }}>
-            <button onClick={() => switchMode("forgot")} style={{ background: "none", border: "none", color: "#7d766a", cursor: "pointer", fontSize: 14, fontWeight: 500, padding: 0 }}>Forgot password?</button>
+            <button onClick={() => switchMode("forgot")} style={{ background: "none", border: "none", color: "#6b6a65", cursor: "pointer", fontSize: 14, fontWeight: 500, padding: 0 }}>Forgot password?</button>
           </div>
         )}
 
-        <div style={{ marginTop: 16, textAlign: "center", fontSize: 14, color: "#7d766a" }}>
-          {mode === "login" && <>New here? <button onClick={() => switchMode("register")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: 0 }}>Create an account</button></>}
-          {mode === "register" && <>Already have an account? <button onClick={() => switchMode("login")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: 0 }}>Sign in</button></>}
-          {(mode === "forgot" || mode === "twofa") && <button onClick={() => switchMode("login")} style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: 0 }}>← Back to sign in</button>}
+        <div style={{ marginTop: 16, textAlign: "center", fontSize: 14, color: "#6b6a65" }}>
+          {mode === "login" && <>New here? <button onClick={() => switchMode("register")} style={{ background: "none", border: "none", color: "#3e8a2f", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: 0 }}>Create an account</button></>}
+          {mode === "register" && <>Already have an account? <button onClick={() => switchMode("login")} style={{ background: "none", border: "none", color: "#3e8a2f", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: 0 }}>Sign in</button></>}
+          {(mode === "forgot" || mode === "twofa") && <button onClick={() => switchMode("login")} style={{ background: "none", border: "none", color: "#3e8a2f", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: 0 }}>← Back to sign in</button>}
         </div>
       </div>
     </div>

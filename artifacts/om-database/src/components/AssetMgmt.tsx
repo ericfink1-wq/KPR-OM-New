@@ -44,7 +44,7 @@ export function Kpi({ label, value, sub }: { label: string; value: string; sub?:
   );
 }
 function Table({ children, minWidth = 900 }: { children: ReactNode; minWidth?: number }) {
-  return <div style={{ ...card, overflow: "auto", maxHeight: "70vh" }}><table style={{ width: "100%", minWidth, borderCollapse: "collapse" }}>{children}</table></div>;
+  return <div style={{ ...card, overflow: "auto", maxHeight: "70vh" }}><table className="kpr-table" style={{ width: "100%", minWidth, borderCollapse: "collapse" }}>{children}</table></div>;
 }
 export function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
@@ -550,7 +550,7 @@ export default function AssetMgmt({ deals, isAdmin, onOpenDeal, tab, onTab }: { 
   return (
     <div style={{ maxWidth: 1320, margin: "0 auto", padding: "18px 28px 90px", boxSizing: "border-box", width: "100%" }} className="am-page">
       <style>{`@media (max-width: 640px) { .am-page { padding: 14px 16px 90px !important; } }`}</style>
-      <h1 style={{ margin: 0, fontFamily: "'Lora',serif", fontWeight: 500, fontSize: 28, color: K.ink }}>Asset Management</h1>
+      <h1 className="kpr-page-title">Asset Management</h1>
       <div style={{ fontSize: 13.5, color: K.gray, marginTop: 4 }}>{owned.length} owned properties · KPR-owned only (Sold deals are excluded)</div>
       <div role="tablist" style={{ display: "flex", gap: 4, borderBottom: `1px solid ${K.line}`, marginTop: 14, overflowX: "auto" }}>
         {TABS.map(([id, label]) => (
@@ -559,7 +559,7 @@ export default function AssetMgmt({ deals, isAdmin, onOpenDeal, tab, onTab }: { 
         ))}
       </div>
       {error && <div style={{ color: K.red, fontSize: 13, marginTop: 10 }}>{error}</div>}
-      {records == null ? <div style={{ color: K.gray, padding: 24 }}>Loading…</div> : (
+      {records == null ? <div aria-busy="true" style={{ paddingTop: 16 }}><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 10, marginBottom: 14 }}>{[0, 1, 2, 3].map(k => <div key={k} className="kpr-skel" style={{ height: 84, borderRadius: 12 }} />)}</div><div className="kpr-skel" style={{ height: 240, borderRadius: 12 }} /></div> : (
         <>
           {tab === "debt" && <DebtTab deals={owned} records={records} rates={rates} isAdmin={isAdmin} reload={reload} onOpenDeal={onOpenDeal} />}
           {tab === "dates" && <DatesTab deals={owned} records={records} abstracts={abstracts} isAdmin={isAdmin} reload={reload} onOpenDeal={onOpenDeal} />}
@@ -670,7 +670,7 @@ export function DatexSalesCard({ deal, bench, note }: { deal: Deal; bench?: Anal
           {note && <div style={{ fontSize: 12.5, color: K.ink, marginTop: 4 }}>{note}</div>}
           <Src>{sales.source}. Occupancy cost = base rent + recoveries + other ÷ 12-month sales; at risk over 12% (anchors) / 15% (shops). Benchmark = library median sales PSF for the brand.</Src>
           <div style={{ overflowX: "auto", marginTop: 8 }}>
-            <table style={{ width: "100%", minWidth: 760, borderCollapse: "collapse" }}>
+            <table className="kpr-table" style={{ width: "100%", minWidth: 760, borderCollapse: "collapse" }}>
               <thead><tr>{["Tenant", "SF", "12-mo sales", "Sales PSF", "Period", "Occ. cost", "vs library", "Flags"].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>{sales.rows.map(r => (
                 <tr key={r.tenant}>
@@ -699,15 +699,43 @@ export function ThisWeekCard({ deals, onOpenDeal, onSeeAll }: { deals: Deal[]; o
   const today = useMemo(() => new Date(), []);
   const monday = useMemo(() => { const m = new Date(today); m.setDate(m.getDate() - ((m.getDay() + 6) % 7)); return m; }, [today]);
   const items = useMemo(() => records == null ? [] : buildCriticalDates(owned, records, abstracts, today, 90).items.filter(i => i.days >= 0), [owned, records, abstracts, today]);
-  if (!owned.length || records == null) return null;
+  if (!owned.length) return null;
+  if (records == null) return <div className="kpr-skel" style={{ height: 120, borderRadius: 12 }} aria-hidden />;
   const thisWeek = items.filter(i => i.days <= 7).length;
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
-        <div style={{ fontSize: 13, color: K.gray }}>Week of {monday.toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {thisWeek} this week · {items.length} in the next 90 days</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ fontSize: 13, color: K.gray }}>Week of {monday.toLocaleDateString("en-US", { month: "short", day: "numeric" })} · <b style={{ color: thisWeek ? K.red : K.ink }}>{thisWeek} this week</b> · {items.length} in the next 90 days</div>
         <button onClick={onSeeAll} style={{ ...miniBtn, padding: "5px 10px", minHeight: 30 }}>All critical dates →</button>
       </div>
-      <DatesList items={items.slice(0, 8)} onOpenDeal={onOpenDeal} compact />
+      <DateTimeline items={items.slice(0, 8)} onOpenDeal={onOpenDeal} />
+    </div>
+  );
+}
+
+// Timeline rendering of critical dates — a type icon per item and colour by urgency
+// (≤7 days red, ≤30 amber, later green). Used by the home "This week" card.
+const TYPE_ICON: Record<string, string> = { "Lease expiry": "▭", "Option notice": "✉", "Termination / kick-out": "⇥", "Co-tenancy": "⛓", "Loan maturity": "$", "Extension notice": "↦", "Swap maturity": "⇄", "Covenant test": "✓", "Covenant trigger": "!", "Other": "•" };
+export function DateTimeline({ items, onOpenDeal }: { items: CriticalDate[]; onOpenDeal: (id: string) => void }) {
+  if (!items.length) return <div style={{ ...card, padding: 16, fontSize: 13.5, color: K.gray }}>Nothing due in the next 90 days.</div>;
+  return (
+    <div style={{ ...card, padding: "6px 14px" }}>
+      {items.map((i, k) => {
+        const c = i.days <= 7 ? K.red : i.days <= 30 ? K.amber : "#3e8a2f";
+        return (
+          <div key={`${i.type}-${i.dealId}-${i.date}-${k}`} style={{ display: "grid", gridTemplateColumns: "34px 1fr auto", gap: 12, alignItems: "center", padding: "10px 0", borderTop: k ? "1px solid #f3f2ee" : "none" }}>
+            <span title={i.type} style={{ position: "relative", width: 30, height: 30, borderRadius: "50%", background: `${c}14`, color: c, border: `1.5px solid ${c}55`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13 }}>{TYPE_ICON[i.type] ?? "•"}</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 13.5, color: K.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}><button onClick={() => onOpenDeal(i.dealId)} style={linkBtn}>{i.property}</button>{i.tenant ? ` · ${i.tenant}` : ""}</div>
+              <div style={{ fontSize: 12, color: K.gray, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{i.type}{i.description ? ` — ${i.description}` : ""}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: "'Roboto',sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 13, color: K.ink, whiteSpace: "nowrap" }}>{fmtDate(i.date)}</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: c }}>{i.days === 0 ? "today" : `in ${i.days}d`}</div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

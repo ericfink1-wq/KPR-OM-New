@@ -44,7 +44,7 @@ export function ExportButtons({ fileName, makeDoc, onExcel, disabled }: {
   const [err, setErr] = useState<string | null>(null);
   const base: React.CSSProperties = {
     padding: "5px 12px", borderRadius: 7, fontSize: 11.5, fontWeight: 600,
-    fontFamily: "'Inter',sans-serif", cursor: disabled ? "not-allowed" : "pointer",
+    fontFamily: "'Roboto',sans-serif", cursor: disabled ? "not-allowed" : "pointer",
     opacity: disabled ? 0.45 : 1, display: "inline-flex", alignItems: "center", gap: 5,
     whiteSpace: "nowrap", lineHeight: 1.6,
   };
@@ -60,7 +60,7 @@ export function ExportButtons({ fileName, makeDoc, onExcel, disabled }: {
         ⬇ Excel
       </button>
       {disabled ? (
-        <span style={{ ...base, background: "#2a2c27", border: "1px solid #2a2c27", color: "#fff" }}>⬇ PDF</span>
+        <span style={{ ...base, background: "#232422", border: "1px solid #232422", color: "#fff" }}>⬇ PDF</span>
       ) : (
         <PdfDownloadButton
           fileName={fileName}
@@ -68,7 +68,7 @@ export function ExportButtons({ fileName, makeDoc, onExcel, disabled }: {
           onError={setErr}
           render={(busy) => (
             <span title="Download a branded one-page PDF of this view"
-              style={{ ...base, background: "#2a2c27", border: "1px solid #2a2c27", color: "#fff" }}>
+              style={{ ...base, background: "#232422", border: "1px solid #232422", color: "#fff" }}>
               {busy ? "Preparing…" : "⬇ PDF"}
             </span>
           )}

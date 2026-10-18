@@ -155,29 +155,29 @@ export default function LeaseRollover({ tenants, tenantsAsOf, risks, rentAtRisk 
     : 0;
 
   return (
-    <div style={{ background: "#fff", border: "1px solid #e7e0d2", borderRadius: 12, padding: "16px 18px", marginBottom: 12 }}>
-      <div style={{ fontSize: 9, letterSpacing: "0.12em", color: "#958d80", fontWeight: 700, textTransform: "uppercase", marginBottom: 12 }}>
+    <div style={{ background: "#fff", border: "1px solid #e6e4de", borderRadius: 12, padding: "16px 18px", marginBottom: 12 }}>
+      <div style={{ fontSize: 9, letterSpacing: "0.12em", color: "#8a8983", fontWeight: 700, textTransform: "uppercase", marginBottom: 12 }}>
         Lease Rollover &amp; WALT
       </div>
 
       {/* WALT stats */}
       <div style={{ display: "flex", gap: 28, marginBottom: 16, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 10, color: "#a89f8f", marginBottom: 3, fontFamily: "'Inter',sans-serif" }}>WALT (by SF)</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "#2a2c28", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>
+          <div style={{ fontSize: 10, color: "#9b9992", marginBottom: 3, fontFamily: "'Roboto',sans-serif" }}>WALT (by SF)</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#232422", fontFamily: "'Lora',Georgia,serif", lineHeight: 1 }}>
             {waltSF != null ? `${waltSF.toFixed(1)} yrs` : "—"}
           </div>
         </div>
         <div>
-          <div style={{ fontSize: 10, color: "#a89f8f", marginBottom: 3, fontFamily: "'Inter',sans-serif" }}>WALT (by rent)</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "#2a2c28", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>
+          <div style={{ fontSize: 10, color: "#9b9992", marginBottom: 3, fontFamily: "'Roboto',sans-serif" }}>WALT (by rent)</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#232422", fontFamily: "'Lora',Georgia,serif", lineHeight: 1 }}>
             {waltRent != null ? `${waltRent.toFixed(1)} yrs` : "—"}
           </div>
         </div>
         {hasRisk && rentAtRisk && rentAtRisk.tenantsInWindow > 0 && (
           <div title={`Base rent expiring within 36 months, weighted by each tenant's estimated renewal probability (occupancy cost, sales trend, watchlist, credit, options). ${fmtRent(rentAtRisk.expiring)} expires in the window in total.`}>
-            <div style={{ fontSize: 10, color: "#a06430", marginBottom: 3, fontFamily: "'Inter',sans-serif" }}>Rent at risk (36 mo)</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: "#b3541a", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>
+            <div style={{ fontSize: 10, color: "#a06430", marginBottom: 3, fontFamily: "'Roboto',sans-serif" }}>Rent at risk (36 mo)</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#b3541a", fontFamily: "'Lora',Georgia,serif", lineHeight: 1 }}>
               {fmtRent(rentAtRisk.atRisk)}
               {rentAtRisk.pctOfRent != null && (
                 <span style={{ fontSize: 12, color: "#a06430", fontWeight: 600 }}> · {Math.round(rentAtRisk.pctOfRent)}%</span>
@@ -188,7 +188,7 @@ export default function LeaseRollover({ tenants, tenantsAsOf, risks, rentAtRisk 
       </div>
 
       {!hasExpiry ? (
-        <p style={{ margin: 0, fontSize: 12, color: "#a89f8f", fontStyle: "italic" }}>
+        <p style={{ margin: 0, fontSize: 12, color: "#9b9992", fontStyle: "italic" }}>
           No lease expiration dates available.
         </p>
       ) : (
@@ -197,7 +197,7 @@ export default function LeaseRollover({ tenants, tenantsAsOf, risks, rentAtRisk 
             <ComposedChart data={chartData} margin={{ top: 22, right: 42, left: 4, bottom: 0 }}>
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 10, fill: "#a89f8f", fontFamily: "'Inter',sans-serif" }}
+                tick={{ fontSize: 10, fill: "#9b9992", fontFamily: "'Roboto',sans-serif" }}
                 axisLine={false}
                 tickLine={false}
               />
@@ -207,25 +207,25 @@ export default function LeaseRollover({ tenants, tenantsAsOf, risks, rentAtRisk 
                 orientation="right"
                 domain={[0, 100]}
                 tickFormatter={v => `${v}%`}
-                tick={{ fontSize: 9, fill: "#c0b8ab", fontFamily: "'Inter',sans-serif" }}
+                tick={{ fontSize: 9, fill: "#c0b8ab", fontFamily: "'Roboto',sans-serif" }}
                 axisLine={false}
                 tickLine={false}
                 width={34}
                 ticks={[0, 25, 50, 75, 100]}
               />
-              <ReferenceLine yAxisId="cum" y={50} stroke="#e7e0d2" strokeDasharray="3 3" />
+              <ReferenceLine yAxisId="cum" y={50} stroke="#e6e4de" strokeDasharray="3 3" />
               <Tooltip
                 cursor={{ fill: "rgba(63,122,31,0.06)" }}
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const d = payload[0].payload as BucketDatum;
                   return (
-                    <div style={{ background: "#fff", border: "1px solid #e7e0d2", borderRadius: 7, padding: "7px 11px", fontSize: 11, fontFamily: "'Inter',sans-serif", boxShadow: "0 4px 14px rgba(0,0,0,0.1)", lineHeight: 1.55 }}>
-                      <div style={{ fontWeight: 700, color: "#2a2c28", marginBottom: 2 }}>{d.label}</div>
+                    <div style={{ background: "#fff", border: "1px solid #e6e4de", borderRadius: 7, padding: "7px 11px", fontSize: 11, fontFamily: "'Roboto',sans-serif", boxShadow: "0 4px 14px rgba(0,0,0,0.1)", lineHeight: 1.55 }}>
+                      <div style={{ fontWeight: 700, color: "#232422", marginBottom: 2 }}>{d.label}</div>
                       <div style={{ color: "#52554e" }}>{fmtRent(d.rent)} · {Math.round(d.pct)}% of rent</div>
-                      <div style={{ color: "#a89f8f" }}>{Math.round(d.sf).toLocaleString()} SF · {d.count} tenant{d.count !== 1 ? "s" : ""}</div>
+                      <div style={{ color: "#9b9992" }}>{Math.round(d.sf).toLocaleString()} SF · {d.count} tenant{d.count !== 1 ? "s" : ""}</div>
                       {hasRisk && d.rent > 0 && (
-                        <div style={{ marginTop: 3, borderTop: "1px solid #f1eadc", paddingTop: 3 }}>
+                        <div style={{ marginTop: 3, borderTop: "1px solid #efeee9", paddingTop: 3 }}>
                           {BANDS.filter(b => d.bandRent[b] > 0).map(b => (
                             <div key={b} style={{ color: RISK_BAND_META[b].color, fontWeight: 600 }}>
                               {RISK_BAND_META[b].label}: {fmtRent(d.bandRent[b])}
@@ -233,7 +233,7 @@ export default function LeaseRollover({ tenants, tenantsAsOf, risks, rentAtRisk 
                           ))}
                         </div>
                       )}
-                      <div style={{ color: "#3f7a1f", fontWeight: 600, marginTop: 3, borderTop: "1px solid #f1eadc", paddingTop: 3 }}>
+                      <div style={{ color: "#3e8a2f", fontWeight: 600, marginTop: 3, borderTop: "1px solid #efeee9", paddingTop: 3 }}>
                         {Math.round(d.cumPct)}% cumulative roll
                       </div>
                     </div>
@@ -254,14 +254,14 @@ export default function LeaseRollover({ tenants, tenantsAsOf, risks, rentAtRisk 
                         const n = typeof v === "number" ? v : 0;
                         return n >= 1 ? `${Math.round(n)}%` : "";
                       }}
-                      style={{ fontSize: 9, fill: "#6f6a5f", fontFamily: "'Inter',sans-serif" }}
+                      style={{ fontSize: 9, fill: "#676767", fontFamily: "'Roboto',sans-serif" }}
                     />
                   </Bar>
                 </>
               ) : (
                 <Bar yAxisId="bar" dataKey="pct" radius={[3, 3, 0, 0]} maxBarSize={44}>
                   {chartData.map((entry, index) => (
-                    <Cell key={index} fill={entry.isPast ? "#c97a18" : entry.nearTerm ? "#8cbf63" : "#3f7a1f"} />
+                    <Cell key={index} fill={entry.isPast ? "#c97a18" : entry.nearTerm ? "#8cbf63" : "#3e8a2f"} />
                   ))}
                   <LabelList
                     dataKey="pct"
@@ -270,7 +270,7 @@ export default function LeaseRollover({ tenants, tenantsAsOf, risks, rentAtRisk 
                       const n = typeof v === "number" ? v : 0;
                       return n >= 1 ? `${Math.round(n)}%` : "";
                     }}
-                    style={{ fontSize: 9, fill: "#6f6a5f", fontFamily: "'Inter',sans-serif" }}
+                    style={{ fontSize: 9, fill: "#676767", fontFamily: "'Roboto',sans-serif" }}
                   />
                 </Bar>
               )}
@@ -292,22 +292,22 @@ export default function LeaseRollover({ tenants, tenantsAsOf, risks, rentAtRisk 
               BANDS.map(b => (
                 <div key={b} style={{ display: "flex", alignItems: "center", gap: 5 }}>
                   <div style={{ width: 10, height: 10, borderRadius: 2, background: RISK_BAND_META[b].color }} />
-                  <span style={{ fontSize: 10, color: "#a89f8f", fontFamily: "'Inter',sans-serif" }}>{RISK_BAND_META[b].label}</span>
+                  <span style={{ fontSize: 10, color: "#9b9992", fontFamily: "'Roboto',sans-serif" }}>{RISK_BAND_META[b].label}</span>
                 </div>
               ))
             ) : (
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <div style={{ width: 10, height: 10, borderRadius: 2, background: "#3f7a1f" }} />
-                <span style={{ fontSize: 10, color: "#a89f8f", fontFamily: "'Inter',sans-serif" }}>Roll by year</span>
+                <div style={{ width: 10, height: 10, borderRadius: 2, background: "#3e8a2f" }} />
+                <span style={{ fontSize: 10, color: "#9b9992", fontFamily: "'Roboto',sans-serif" }}>Roll by year</span>
               </div>
             )}
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <div style={{ width: 14, height: 2, background: "#c97a18", borderRadius: 1 }} />
-              <span style={{ fontSize: 10, color: "#a89f8f", fontFamily: "'Inter',sans-serif" }}>Cumulative roll %</span>
+              <span style={{ fontSize: 10, color: "#9b9992", fontFamily: "'Roboto',sans-serif" }}>Cumulative roll %</span>
             </div>
           </div>
 
-          <div style={{ fontSize: 11, color: "#a89f8f", marginTop: 2, fontFamily: "'Inter',sans-serif" }}>
+          <div style={{ fontSize: 11, color: "#9b9992", marginTop: 2, fontFamily: "'Roboto',sans-serif" }}>
             <strong style={{ color: "#383a37", fontWeight: 600 }}>{pct24mo}%</strong> of base rent rolls in the next 24 months.
             {hasRisk && rentAtRisk && rentAtRisk.tenantsInWindow > 0 && (
               <> Weighted by renewal probability, <strong style={{ color: "#b3541a", fontWeight: 600 }}>{fmtRent(rentAtRisk.atRisk)}/yr</strong> of the rent expiring within 36 months is genuinely at risk.</>
@@ -315,7 +315,7 @@ export default function LeaseRollover({ tenants, tenantsAsOf, risks, rentAtRisk 
           </div>
 
           {showCoverageWarning && (
-            <div style={{ marginTop: 10, padding: "7px 10px", background: "#fff8ee", border: "1px solid #f0c97a", borderRadius: 7, fontSize: 11, color: "#7a5200", fontFamily: "'Inter',sans-serif", lineHeight: 1.45 }}>
+            <div style={{ marginTop: 10, padding: "7px 10px", background: "#fff8ee", border: "1px solid #f0c97a", borderRadius: 7, fontSize: 11, color: "#7a5200", fontFamily: "'Roboto',sans-serif", lineHeight: 1.45 }}>
               ⚠ Lease-expiry data incomplete — WALT/rollover reflect only <strong>{coveragePct}%</strong> of base rent.
             </div>
           )}

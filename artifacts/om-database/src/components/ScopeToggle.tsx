@@ -22,15 +22,15 @@ export default function ScopeToggle({ scope, onChange, ownedCount, allCount }: {
         style={{
           padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", minHeight: 34,
           border: "none", borderRadius: 999,
-          background: on ? "#3f7a1f" : "transparent",
-          color: on ? "#fff" : "#7d766a",
+          background: on ? "#3e8a2f" : "transparent",
+          color: on ? "#fff" : "#6b6a65",
         }}>
         {label}{count != null ? ` (${count})` : ""}
       </button>
     );
   };
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 2, background: "#efe9dc", border: "1px solid #e0d8c8", borderRadius: 999, padding: 2 }}>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 2, background: "#efe9dc", border: "1px solid #dcdad3", borderRadius: 999, padding: 2 }}>
       {opt("owned", "Owned", ownedCount)}
       {opt("all", "All deals", allCount)}
     </div>

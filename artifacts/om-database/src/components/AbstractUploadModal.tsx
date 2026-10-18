@@ -13,8 +13,8 @@ import { extractLeaseAbstracts } from "../lib/abstractExtract";
 // upserts by (deal, tenantName), so this works as bulk upload without a new API.
 
 const C = {
-  ink: "#383a37", sub: "#6f6a5f", faint: "#a69e91", line: "#efe8da",
-  green: "#3f7a1f", greenBg: "#eef3e6", amber: "#c97a18", amberBg: "#fbf1e4",
+  ink: "#383a37", sub: "#676767", faint: "#94928b", line: "#ecebe6",
+  green: "#3e8a2f", greenBg: "#eef3e6", amber: "#c97a18", amberBg: "#fbf1e4",
   amberBorder: "#e0c9a8", red: "#dc2626", blue: "#2a7de1",
 };
 
@@ -162,7 +162,7 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
   const btn = (bg: string, on: boolean): React.CSSProperties => ({
     background: on ? bg : "#ccc", color: "#fff", border: "none", padding: "9px 18px",
     borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: on ? "pointer" : "default",
-    fontFamily: "'Inter',sans-serif",
+    fontFamily: "'Roboto',sans-serif",
   });
 
   return createPortal(
@@ -260,7 +260,7 @@ export default function AbstractUploadModal({ dealId, tenantNames, onClose, onSa
               Saved {result.saved} abstract{result.saved === 1 ? "" : "s"}{result.failed ? `, ${result.failed} failed` : ""}.
               {unmatched.length ? ` ${unmatched.length} left unassigned.` : ""}
             </div>
-            <button onClick={onClose} style={{ ...btn("#2a2c27", true), marginTop: 12 }}>Done</button>
+            <button onClick={onClose} style={{ ...btn("#232422", true), marginTop: 12 }}>Done</button>
           </div>
         )}
       </div>

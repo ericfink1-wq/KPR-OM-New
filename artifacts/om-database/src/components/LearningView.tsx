@@ -9,8 +9,8 @@ import { apiAddExtractionLesson, apiGetExtractionLessons, type LessonScope, type
 // extractions. The human stays the gatekeeper.
 
 const C = {
-  ink: "#383a37", sub: "#6f6a5f", faint: "#a69e91", line: "#efe8da", panel: "#faf7f0", panelBd: "#e7e0d2",
-  green: "#3f7a1f", greenBg: "#eef3e6", greenBd: "#b8d49a",
+  ink: "#383a37", sub: "#676767", faint: "#94928b", line: "#ecebe6", panel: "#faf9f5", panelBd: "#e6e4de",
+  green: "#3e8a2f", greenBg: "#eef3e6", greenBd: "#b8d49a",
   amber: "#c97a18", amberBg: "#fbf1e4", amberBd: "#e0c9a8", blue: "#1f4d8f",
 };
 
@@ -57,7 +57,7 @@ function PatternCard({ p, isAdmin, onOpenDeal, existingLessons }: {
       <div style={{ marginTop: 9, borderTop: `1px solid ${C.line}`, paddingTop: 9 }}>
         <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.05em", color: C.sub, textTransform: "uppercase", marginBottom: 4 }}>Proposed extraction lesson</div>
         <textarea value={draft} onChange={(e) => { setDraft(e.target.value); setState("idle"); }} rows={3} disabled={!isAdmin}
-          style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${C.panelBd}`, borderRadius: 7, padding: "7px 9px", fontSize: 12, color: C.ink, fontFamily: "'Inter',sans-serif", background: isAdmin ? "#fff" : C.panel, resize: "vertical" }} />
+          style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${C.panelBd}`, borderRadius: 7, padding: "7px 9px", fontSize: 12, color: C.ink, fontFamily: "'Roboto',sans-serif", background: isAdmin ? "#fff" : C.panel, resize: "vertical" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
           <select value={scope} onChange={(e) => setScope(e.target.value as LessonScope)} disabled={!isAdmin}
             style={{ fontSize: 11, padding: "4px 6px", border: `1px solid ${C.panelBd}`, borderRadius: 6, background: "#fff", color: C.ink }}>
@@ -101,7 +101,7 @@ export default function LearningView({ deals, isAdmin, onOpenDeal }: { deals: De
         <div style={{ fontSize: 22, fontWeight: 800, color: C.ink, fontFamily: "Georgia, serif" }}>Learning · corrections the system keeps making</div>
         {activeCount > 0 && (
           <button onClick={exportRules} title="Download all active learning rules (incl. requested hard-check notes) as JSON"
-            style={{ background: "#fff", border: `1px solid ${C.greenBd}`, color: C.green, padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+            style={{ background: "#fff", border: `1px solid ${C.greenBd}`, color: C.green, padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Roboto',sans-serif", whiteSpace: "nowrap" }}>
             ⬇ Export rules
           </button>
         )}

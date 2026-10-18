@@ -61,14 +61,14 @@ export default function PortfolioStressTest({ tenantName, brands, deals, onOpenD
           Stress test — if {result.target} goes dark
         </span>
         {collapsed && (
-          <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#9a2c12", fontWeight: 700, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+          <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#9a2c12", fontWeight: 700, fontFamily: "'Roboto',sans-serif", whiteSpace: "nowrap" }}>
             {fmtRent(result.totalAtRisk)}/yr · {result.dealsWithPresence} deal{result.dealsWithPresence === 1 ? "" : "s"}
           </span>
         )}
       </button>
 
       {!collapsed && (<>
-      <div style={{ fontSize: 11, color: "#a89f8f", margin: "8px 0 12px", fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>
+      <div style={{ fontSize: 11, color: "#9b9992", margin: "8px 0 12px", fontFamily: "'Roboto',sans-serif", lineHeight: 1.5 }}>
         Portfolio-wide blast radius: {result.target}'s own rent, plus other tenants' rent that converts to reduced/alternate
         rent through co-tenancy clauses naming it{hasKnockOn ? "" : " (no co-tenancy linkage captured yet — direct rent only)"}.
       </div>
@@ -76,24 +76,24 @@ export default function PortfolioStressTest({ tenantName, brands, deals, onOpenD
       {/* Totals */}
       <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 10, color: "#a89f8f", marginBottom: 3, fontFamily: "'Inter',sans-serif" }}>Direct rent · {result.dealsWithPresence} deal{result.dealsWithPresence === 1 ? "" : "s"}</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "#2a2c28", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>{fmtRent(result.totalDirectRent)}</div>
+          <div style={{ fontSize: 10, color: "#9b9992", marginBottom: 3, fontFamily: "'Roboto',sans-serif" }}>Direct rent · {result.dealsWithPresence} deal{result.dealsWithPresence === 1 ? "" : "s"}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#232422", fontFamily: "'Lora',Georgia,serif", lineHeight: 1 }}>{fmtRent(result.totalDirectRent)}</div>
         </div>
         {result.totalTier1Rent > 0 && (
           <div title="Other tenants' base rent whose co-tenancy clause trips on this tenant ALONE — converts to alternate/reduced rent (or opens a termination right) the day it goes dark.">
-            <div style={{ fontSize: 10, color: "#a0561f", marginBottom: 3, fontFamily: "'Inter',sans-serif" }}>Co-tenancy knock-on (Tier 1)</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: "#b3541a", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>{fmtRent(result.totalTier1Rent)}</div>
+            <div style={{ fontSize: 10, color: "#a0561f", marginBottom: 3, fontFamily: "'Roboto',sans-serif" }}>Co-tenancy knock-on (Tier 1)</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#b3541a", fontFamily: "'Lora',Georgia,serif", lineHeight: 1 }}>{fmtRent(result.totalTier1Rent)}</div>
           </div>
         )}
         {result.totalTier2Rent > 0 && (
           <div title="Needs a SECOND anchor event to trip — a watch item, not day-one exposure.">
-            <div style={{ fontSize: 10, color: "#a89f8f", marginBottom: 3, fontFamily: "'Inter',sans-serif" }}>Tier 2 (needs 2nd event)</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: "#8a8474", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>{fmtRent(result.totalTier2Rent)}</div>
+            <div style={{ fontSize: 10, color: "#9b9992", marginBottom: 3, fontFamily: "'Roboto',sans-serif" }}>Tier 2 (needs 2nd event)</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#8a8474", fontFamily: "'Lora',Georgia,serif", lineHeight: 1 }}>{fmtRent(result.totalTier2Rent)}</div>
           </div>
         )}
         <div>
-          <div style={{ fontSize: 10, color: "#a0561f", marginBottom: 3, fontFamily: "'Inter',sans-serif" }}>Total at risk / yr</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "#9a2c12", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>{fmtRent(result.totalAtRisk)}</div>
+          <div style={{ fontSize: 10, color: "#a0561f", marginBottom: 3, fontFamily: "'Roboto',sans-serif" }}>Total at risk / yr</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#9a2c12", fontFamily: "'Lora',Georgia,serif", lineHeight: 1 }}>{fmtRent(result.totalAtRisk)}</div>
         </div>
       </div>
 
@@ -102,16 +102,16 @@ export default function PortfolioStressTest({ tenantName, brands, deals, onOpenD
         {shown.map((r) => (
           <div key={r.dealId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderTop: "1px solid #f4efe4", fontSize: 12.5, flexWrap: "wrap" }}>
             <button onClick={() => { const d = dealById.get(r.dealId); if (d) onOpenDeal(d); }}
-              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontWeight: 600, color: "#26281f", textAlign: "left", flex: "1 1 160px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontWeight: 600, color: "#232422", textAlign: "left", flex: "1 1 160px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {r.dealName}{r.owned && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: "#2f6b1f", background: "#eef7e4", border: "1px solid #cfe3b8", borderRadius: 4, padding: "0 4px" }}>OWNED</span>}
             </button>
-            <div style={{ color: "#7d766a", whiteSpace: "nowrap" }}>
+            <div style={{ color: "#6b6a65", whiteSpace: "nowrap" }}>
               {r.directRent > 0 ? `direct ${fmtRent(r.directRent)}` : "no direct rent"}
               {r.tier1Rent > 0 && <span style={{ color: "#b3541a", fontWeight: 600 }}> + {fmtRent(r.tier1Rent)} knock-on ({r.dependents.slice(0, 3).join(", ")}{r.dependents.length > 3 ? "…" : ""})</span>}
             </div>
             <div style={{ width: 76, textAlign: "right", fontWeight: 700, color: "#9a2c12", whiteSpace: "nowrap" }}>
               {fmtRent(r.totalAtRisk)}
-              {r.dealTotalRent > 0 && <span style={{ color: "#a89f8f", fontWeight: 500 }}> · {Math.round((r.totalAtRisk / r.dealTotalRent) * 100)}%</span>}
+              {r.dealTotalRent > 0 && <span style={{ color: "#9b9992", fontWeight: 500 }}> · {Math.round((r.totalAtRisk / r.dealTotalRent) * 100)}%</span>}
             </div>
           </div>
         ))}

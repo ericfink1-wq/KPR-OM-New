@@ -66,7 +66,7 @@ export function OwnedAssetTab({ deal, isAdmin }: { deal: Deal; isAdmin: boolean 
         {head("Plan vs actual")}
         <Src>Underwriting (OM / acquisition record) against what Datex shows today. Variance = actual − plan.</Src>
         <div style={{ overflowX: "auto", marginTop: 8 }}>
-          <table style={{ width: "100%", minWidth: 620, borderCollapse: "collapse" }}>
+          <table className="kpr-table" style={{ width: "100%", minWidth: 620, borderCollapse: "collapse" }}>
             <thead><tr>{["", "Plan", "Actual", "Variance"].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
             <tbody>{plan.map(r => {
               const f = (v: number | null) => v == null ? "—" : r.unit === "pct" ? fmtPct(v, 1) : fmtM(v);
@@ -120,7 +120,7 @@ function CovenantMonitor({ deal, rows, debt, isAdmin, reload }: { deal: Deal; ro
       <Src>Headroom uses actual NOI (Datex trailing 12 months when loaded) over debt service that is interest-only during an IO period and amortizing after — or on the covenant's own test amortization when it names one. Tenant-triggered items also appear on the Dates calendar.</Src>
       {!rows.length ? <div style={{ fontSize: 13.5, color: K.gray, marginTop: 8 }}>No covenants on file.{isAdmin ? " Use “Detect from loan docs” to read them from the loan rows." : ""}</div> : (
         <div style={{ overflowX: "auto", marginTop: 8 }}>
-          <table style={{ width: "100%", minWidth: 760, borderCollapse: "collapse" }}>
+          <table className="kpr-table" style={{ width: "100%", minWidth: 760, borderCollapse: "collapse" }}>
             <thead><tr>{["Covenant", "Actual", "Headroom", "Next test", "Trigger", ""].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
             <tbody>{rows.map(r => (
               <tr key={r.record.id}>
@@ -208,7 +208,7 @@ function QuarterlyComment({ deal, recs, debt, plan, timeline }: { deal: Deal; re
 export function OwnedFinancing({ deal }: { deal: Deal }) {
   const { loaded, debt, covenants, acq, today } = useDealAm(deal);
   const noi = actualNoi(deal, acq?.data ?? null);
-  if (!loaded) return <div style={{ ...card, padding: 16, color: K.gray, marginBottom: 14 }}>Loading the loan records…</div>;
+  if (!loaded) return <div className="kpr-skel" style={{ height: 220, borderRadius: 12, marginBottom: 14 }} aria-busy="true" />;
   if (!debt.length) return <div style={{ ...card, padding: 16, fontSize: 13.5, color: K.gray, marginBottom: 14 }}>No loan on file for this property in Asset Mgmt → Debt. Loans and swaps are entered (or imported) there; this tab reads them.</div>;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 14 }} id="section-senior-loan">

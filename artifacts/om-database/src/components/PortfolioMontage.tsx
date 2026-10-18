@@ -13,11 +13,11 @@ export default function PortfolioMontage({ deals, onOpen }: Props) {
   if (covers.length < 2) return null;
   return (
     <div style={{ marginTop: 36 }}>
-      <div style={{ fontSize: 10.5, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 13 }}>From your portfolio</div>
+      <div style={{ fontSize: 10.5, letterSpacing: "0.16em", textTransform: "uppercase", color: "#9b9992", fontWeight: 700, marginBottom: 13 }}>From your portfolio</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(148px, 1fr))", gap: 12 }}>
         {covers.map(c => (
           <div key={c.id} onClick={() => onOpen(c.id)}
-            style={{ position: "relative", height: 112, borderRadius: 12, overflow: "hidden", cursor: "pointer", border: "1px solid #ece5d7", boxShadow: "0 10px 24px -20px rgba(56,58,55,0.6)", transition: "transform .25s ease, box-shadow .25s ease" }}
+            style={{ position: "relative", height: 112, borderRadius: 12, overflow: "hidden", cursor: "pointer", border: "1px solid #ebeae5", boxShadow: "0 10px 24px -20px rgba(56,58,55,0.6)", transition: "transform .25s ease, box-shadow .25s ease" }}
             onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 18px 34px -20px rgba(56,58,55,0.65)"; const img = e.currentTarget.querySelector("img"); if (img) (img as HTMLImageElement).style.transform = "scale(1.06)"; }}
             onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 10px 24px -20px rgba(56,58,55,0.6)"; const img = e.currentTarget.querySelector("img"); if (img) (img as HTMLImageElement).style.transform = "none"; }}>
             <img src={c.src} alt={c.name} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform .45s ease" }} />

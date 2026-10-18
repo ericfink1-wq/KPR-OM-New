@@ -122,31 +122,31 @@ export default function Members({ onClose }: { onClose: () => void }) {
 
   const btn = (label: string, onClick: () => void, color: string, disabled: boolean) => (
     <button onClick={onClick} disabled={disabled}
-      style={{ background: "transparent", border: `1px solid ${color}44`, color, borderRadius: 6, padding: "4px 9px", fontSize: 11, fontWeight: 600, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.5 : 1, whiteSpace: "nowrap", fontFamily: "'Inter',sans-serif" }}>{label}</button>
+      style={{ background: "transparent", border: `1px solid ${color}44`, color, borderRadius: 6, padding: "4px 9px", fontSize: 11, fontWeight: 600, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.5 : 1, whiteSpace: "nowrap", fontFamily: "'Roboto',sans-serif" }}>{label}</button>
   );
 
   const row = (u: MemberAccount) => {
     const open = openMember === u.id;
     const myEvents = (events || []).filter(ev => (ev.email || "").toLowerCase() === u.email.toLowerCase());
     return (
-    <div key={u.id} style={{ border: "1px solid #ece5d7", borderRadius: 9, background: "#fff", overflow: "hidden" }}>
+    <div key={u.id} style={{ border: "1px solid #ebeae5", borderRadius: 9, background: "#fff", overflow: "hidden" }}>
     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", flexWrap: "wrap" }}>
       <div onClick={() => setOpenMember(open ? null : u.id)} title="Show this member's sign-in activity"
         style={{ minWidth: 0, flex: "1 1 200px", cursor: "pointer" }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#26281f", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          <span style={{ color: "#a69e91", marginRight: 5 }}>{open ? "▾" : "▸"}</span>
-          {u.name || u.email}{u.isAdmin && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: "#5c5047", background: "#f1eadc", border: "1px solid #ddd4c2", borderRadius: 4, padding: "1px 5px" }}>ADMIN</span>}
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#232422", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <span style={{ color: "#94928b", marginRight: 5 }}>{open ? "▾" : "▸"}</span>
+          {u.name || u.email}{u.isAdmin && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: "#4f4d48", background: "#efeee9", border: "1px solid #dad8d1", borderRadius: 4, padding: "1px 5px" }}>ADMIN</span>}
         </div>
-        {u.name && <div style={{ fontSize: 11, color: "#8b8578", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingLeft: 16 }}>{u.email}</div>}
+        {u.name && <div style={{ fontSize: 11, color: "#7a7973", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingLeft: 16 }}>{u.email}</div>}
         {u.status === "approved" && (() => {
           const seen = relTime(u.lastSeenAt);
           const login = relTime(u.lastLoginAt);
           return (
-            <div style={{ fontSize: 10.5, color: "#a89f8f", paddingLeft: 16, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+            <div style={{ fontSize: 10.5, color: "#9b9992", paddingLeft: 16, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
               title={`Last seen: ${u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleString() : "no recent activity"}\nLast sign-in: ${u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "never"}`}>
-              <span style={{ color: seen ? "#5c7a3f" : "#bcae97", fontWeight: 600 }}>● </span>
+              <span style={{ color: seen ? "#5c7a3f" : "#b8b5ad", fontWeight: 600 }}>● </span>
               {seen ? `Last seen ${seen}` : "No recent activity"}
-              {login ? <span style={{ color: "#bcae97" }}> · signed in {login}</span> : null}
+              {login ? <span style={{ color: "#b8b5ad" }}> · signed in {login}</span> : null}
             </div>
           );
         })()}
@@ -164,26 +164,26 @@ export default function Members({ onClose }: { onClose: () => void }) {
         {u.status === "pending" && u.emailVerified && btn("✓ Approve", () => approve(u), "#0f7a3d", busy === u.id)}
         {u.status === "pending" && btn("Decline", () => act(u.id, () => apiRejectMember(u.id)), "#b3261e", busy === u.id)}
         {u.status === "rejected" && u.emailVerified && btn("Approve", () => approve(u), "#0f7a3d", busy === u.id)}
-        {btn("Rename", () => rename(u), "#5c5047", busy === u.id)}
-        {u.status === "approved" && btn(u.isAdmin ? "Remove admin" : "Make admin", () => act(u.id, () => apiSetMemberAdmin(u.id, !u.isAdmin)), "#5c5047", busy === u.id)}
+        {btn("Rename", () => rename(u), "#4f4d48", busy === u.id)}
+        {u.status === "approved" && btn(u.isAdmin ? "Remove admin" : "Make admin", () => act(u.id, () => apiSetMemberAdmin(u.id, !u.isAdmin)), "#4f4d48", busy === u.id)}
         {u.status === "approved" && btn("Reset password", () => resetPassword(u), "#2c6e9b", busy === u.id)}
         {u.status === "approved" && btn("Reset 2FA", () => { if (window.confirm(`Reset two-factor for ${u.email}? They'll sign in with just their password next time and set it up again. Use this if they've lost their authenticator and backup codes.`)) act(u.id, () => apiResetMember2fa(u.id)); }, "#9a5b12", busy === u.id)}
         {btn("Remove", () => { if (window.confirm(`Remove ${u.email}? They'll lose access and would have to request a new account.`)) act(u.id, () => apiDeleteMember(u.id)); }, "#c0392b", busy === u.id)}
       </div>
     </div>
     {open && (
-      <div style={{ borderTop: "1px solid #f1ece1", background: "#fbf9f4", padding: "8px 12px" }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Sign-in activity</div>
+      <div style={{ borderTop: "1px solid #f3f2ee", background: "#fbf9f4", padding: "8px 12px" }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: "#94928b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Sign-in activity</div>
         {myEvents.length === 0 ? (
-          <div style={{ fontSize: 11.5, color: "#a89f8f", fontStyle: "italic" }}>No recent sign-in activity recorded for {u.email}.</div>
+          <div style={{ fontSize: 11.5, color: "#9b9992", fontStyle: "italic" }}>No recent sign-in activity recorded for {u.email}.</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 220, overflowY: "auto" }}>
             {myEvents.map(ev => (
               <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, padding: "4px 2px", borderBottom: "1px solid #f4efe6" }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: ev.success ? "#3f7a1f" : "#c0392b", flexShrink: 0 }} />
-                <span style={{ color: ev.success ? "#6f6a5f" : "#c0392b", flex: "1 1 auto" }}>{ev.success ? "signed in" : "failed sign-in"}</span>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: ev.success ? "#3e8a2f" : "#c0392b", flexShrink: 0 }} />
+                <span style={{ color: ev.success ? "#676767" : "#c0392b", flex: "1 1 auto" }}>{ev.success ? "signed in" : "failed sign-in"}</span>
                 {ev.ip && <span style={{ color: "#b8b0a2", flexShrink: 0 }}>{ev.ip}</span>}
-                <span style={{ color: "#a89f8f", flexShrink: 0 }}>{new Date(ev.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                <span style={{ color: "#9b9992", flexShrink: 0 }}>{new Date(ev.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
               </div>
             ))}
           </div>
@@ -197,15 +197,15 @@ export default function Members({ onClose }: { onClose: () => void }) {
   return createPortal(
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9700, background: "rgba(38,40,31,0.42)", backdropFilter: "blur(2px)" }} />
-      <div role="dialog" aria-label="Members" style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 9701, width: "min(640px, 94vw)", maxHeight: "86vh", background: "#faf7f0", border: "1px solid #e0d8c8", borderRadius: 14, boxShadow: "0 18px 56px rgba(38,40,31,0.28)", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "'Inter',sans-serif" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid #ece5d7", background: "#fff", flexShrink: 0 }}>
-          <span style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#26281f" }}>Members</span>
-          <button onClick={onClose} aria-label="Close" style={{ background: "transparent", border: "1px solid #e3dccd", color: "#7d766a", width: 30, height: 30, borderRadius: 7, cursor: "pointer", fontSize: 15 }}>✕</button>
+      <div role="dialog" aria-label="Members" style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 9701, width: "min(640px, 94vw)", maxHeight: "86vh", background: "#faf9f5", border: "1px solid #dcdad3", borderRadius: 14, boxShadow: "0 18px 56px rgba(38,40,31,0.28)", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "'Roboto',sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid #ebeae5", background: "#fff", flexShrink: 0 }}>
+          <span style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, fontWeight: 600, color: "#232422" }}>Members</span>
+          <button onClick={onClose} aria-label="Close" style={{ background: "transparent", border: "1px solid #dfddd6", color: "#6b6a65", width: 30, height: 30, borderRadius: 7, cursor: "pointer", fontSize: 15 }}>✕</button>
         </div>
         <div style={{ padding: "16px 18px", overflowY: "auto" }}>
           {error && <div style={{ color: "#c0392b", fontSize: 12.5, marginBottom: 12 }}>⚠ {error}</div>}
           {notice && <div style={{ color: notice.includes("did NOT send") ? "#92400e" : "#0f7a3d", background: notice.includes("did NOT send") ? "#fef6e7" : "#eef7ee", border: `1px solid ${notice.includes("did NOT send") ? "#f5c842" : "#cfe9c4"}`, borderRadius: 8, padding: "8px 11px", fontSize: 12.5, marginBottom: 12, lineHeight: 1.45 }}>{notice}</div>}
-          {!rows && <div style={{ color: "#a69e91", fontSize: 13, padding: "20px 0", textAlign: "center" }}>Loading…</div>}
+          {!rows && <div style={{ color: "#94928b", fontSize: 13, padding: "20px 0", textAlign: "center" }}>Loading…</div>}
 
           {rows && pending.length > 0 && (
             <>
@@ -216,28 +216,28 @@ export default function Members({ onClose }: { onClose: () => void }) {
 
           {rows && (
             <>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Members · {others.length}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#94928b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Members · {others.length}</div>
               {others.length === 0
-                ? <div style={{ color: "#a69e91", fontSize: 12.5 }}>No active members yet.</div>
+                ? <div style={{ color: "#94928b", fontSize: 12.5 }}>No active members yet.</div>
                 : <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{others.map(row)}</div>}
             </>
           )}
 
           {/* Recent sign-in activity */}
           {events && events.length > 0 && (
-            <div style={{ marginTop: 18, borderTop: "1px solid #ece5d7", paddingTop: 12 }}>
+            <div style={{ marginTop: 18, borderTop: "1px solid #ebeae5", paddingTop: 12 }}>
               <button onClick={() => setShowActivity(s => !s)}
-                style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#94928b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 {showActivity ? "▾" : "▸"} Recent sign-in activity
               </button>
               {showActivity && (
                 <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2, maxHeight: 240, overflowY: "auto" }}>
                   {events.map(ev => (
                     <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, padding: "4px 2px", borderBottom: "1px solid #f4efe6" }}>
-                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: ev.success ? "#3f7a1f" : "#c0392b", flexShrink: 0 }} />
+                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: ev.success ? "#3e8a2f" : "#c0392b", flexShrink: 0 }} />
                       <span style={{ color: "#383a37", minWidth: 0, flex: "1 1 auto", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.email || "(unknown)"}</span>
-                      <span style={{ color: ev.success ? "#6f6a5f" : "#c0392b", flexShrink: 0 }}>{ev.success ? "signed in" : "failed"}</span>
-                      <span style={{ color: "#a89f8f", flexShrink: 0 }}>{new Date(ev.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                      <span style={{ color: ev.success ? "#676767" : "#c0392b", flexShrink: 0 }}>{ev.success ? "signed in" : "failed"}</span>
+                      <span style={{ color: "#9b9992", flexShrink: 0 }}>{new Date(ev.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
                     </div>
                   ))}
                 </div>
@@ -247,14 +247,14 @@ export default function Members({ onClose }: { onClose: () => void }) {
 
           {/* Upload activity log */}
           {uploads && uploads.length > 0 && (
-            <div style={{ marginTop: 18, borderTop: "1px solid #ece5d7", paddingTop: 12 }}>
+            <div style={{ marginTop: 18, borderTop: "1px solid #ebeae5", paddingTop: 12 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                 <button onClick={() => setShowUploads(s => !s)}
-                  style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#94928b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   {showUploads ? "▾" : "▸"} Upload activity ({uploads.length}){uploadFails > 0 ? <span style={{ color: "#c0392b" }}> · {uploadFails} failed</span> : null}
                 </button>
                 <button onClick={exportUploadsCsv} title="Download the upload log as CSV"
-                  style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", padding: "3px 9px", borderRadius: 6, cursor: "pointer", fontSize: 10.5, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                  style={{ background: "transparent", border: "1px solid #dad8d1", color: "#52554e", padding: "3px 9px", borderRadius: 6, cursor: "pointer", fontSize: 10.5, fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}>
                   ⬇ CSV
                 </button>
               </div>
@@ -262,14 +262,14 @@ export default function Members({ onClose }: { onClose: () => void }) {
                 <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2, maxHeight: 300, overflowY: "auto" }}>
                   {uploads.map(u => (
                     <div key={u.id} title={u.detail || ""} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, padding: "5px 2px", borderBottom: "1px solid #f4efe6" }}>
-                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: u.status === "success" ? "#3f7a1f" : "#c0392b", flexShrink: 0 }} />
+                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: u.status === "success" ? "#3e8a2f" : "#c0392b", flexShrink: 0 }} />
                       <span style={{ color: "#383a37", minWidth: 0, flex: "1 1 auto", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {u.fileName || "(file)"}
-                        {u.docType ? <span style={{ color: "#a89f8f", fontSize: 9.5, marginLeft: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>{u.docType}</span> : null}
+                        {u.docType ? <span style={{ color: "#9b9992", fontSize: 9.5, marginLeft: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>{u.docType}</span> : null}
                       </span>
-                      <span style={{ color: u.status === "success" ? "#6f6a5f" : "#c0392b", flexShrink: 0 }}>{u.status === "success" ? "ok" : "failed"}</span>
+                      <span style={{ color: u.status === "success" ? "#676767" : "#c0392b", flexShrink: 0 }}>{u.status === "success" ? "ok" : "failed"}</span>
                       <span style={{ color: "#8a8579", flexShrink: 0, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.userName || u.userEmail || "—"}</span>
-                      <span style={{ color: "#a89f8f", flexShrink: 0 }}>{new Date(u.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                      <span style={{ color: "#9b9992", flexShrink: 0 }}>{new Date(u.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
                     </div>
                   ))}
                 </div>
@@ -277,7 +277,7 @@ export default function Members({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          <div style={{ fontSize: 10.5, color: "#bcae97", marginTop: 14, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 10.5, color: "#b8b5ad", marginTop: 14, lineHeight: 1.5 }}>
             New people request access from the sign-in screen and appear here as “Pending” until you approve them. Approved members can use the app; admins can also approve others and use admin features.
           </div>
         </div>
@@ -286,13 +286,13 @@ export default function Members({ onClose }: { onClose: () => void }) {
       {resetPw && (
         <>
           <div onClick={() => setResetPw(null)} style={{ position: "fixed", inset: 0, zIndex: 9800, background: "rgba(38,40,31,0.5)" }} />
-          <div role="dialog" aria-label="Temporary password" style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 9801, width: "min(440px, 94vw)", background: "#fff", border: "1px solid #e0d8c8", borderRadius: 14, boxShadow: "0 18px 56px rgba(38,40,31,0.32)", padding: "20px 22px", fontFamily: "'Inter',sans-serif" }}>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 600, color: "#26281f", marginBottom: 4 }}>Temporary password set</div>
-            <div style={{ fontSize: 12.5, color: "#6f6a5f", lineHeight: 1.5, marginBottom: 14 }}>
-              Give this to <b style={{ color: "#26281f" }}>{resetPw.email}</b>. It replaces their old password — they can change it after signing in (Change password, top right). This is shown once, so copy it now.
+          <div role="dialog" aria-label="Temporary password" style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 9801, width: "min(440px, 94vw)", background: "#fff", border: "1px solid #dcdad3", borderRadius: 14, boxShadow: "0 18px 56px rgba(38,40,31,0.32)", padding: "20px 22px", fontFamily: "'Roboto',sans-serif" }}>
+            <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, fontWeight: 600, color: "#232422", marginBottom: 4 }}>Temporary password set</div>
+            <div style={{ fontSize: 12.5, color: "#676767", lineHeight: 1.5, marginBottom: 14 }}>
+              Give this to <b style={{ color: "#232422" }}>{resetPw.email}</b>. It replaces their old password — they can change it after signing in (Change password, top right). This is shown once, so copy it now.
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f7f4ec", border: "1px solid #e5ddcc", borderRadius: 10, padding: "12px 14px", marginBottom: 14 }}>
-              <code style={{ flex: 1, fontSize: 17, fontWeight: 700, letterSpacing: "0.02em", color: "#26281f", fontFamily: "ui-monospace, Menlo, monospace", wordBreak: "break-all" }}>{resetPw.password}</code>
+              <code style={{ flex: 1, fontSize: 17, fontWeight: 700, letterSpacing: "0.02em", color: "#232422", fontFamily: "ui-monospace, Menlo, monospace", wordBreak: "break-all" }}>{resetPw.password}</code>
               <button onClick={() => { navigator.clipboard?.writeText(resetPw.password).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 2000); }).catch(() => {}); }}
                 style={{ flexShrink: 0, background: copied ? "#0f7a3d" : "#2c6e9b", color: "#fff", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                 {copied ? "✓ Copied" : "Copy"}
@@ -304,7 +304,7 @@ export default function Members({ onClose }: { onClose: () => void }) {
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button onClick={() => setResetPw(null)} style={{ background: "#26281f", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Done</button>
+              <button onClick={() => setResetPw(null)} style={{ background: "#232422", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Done</button>
             </div>
           </div>
         </>

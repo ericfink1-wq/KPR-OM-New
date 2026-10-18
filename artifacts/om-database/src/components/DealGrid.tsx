@@ -102,7 +102,7 @@ function RowThumb({ deal, bust }: { deal: Deal; bust?: number }) {
     <div style={{ width: 64, height: 48, borderRadius: 4, overflow: "hidden", flexShrink: 0, background: "#eef3e6", display: "flex", alignItems: "center", justifyContent: "center" }}>
       {deal.imageMeta?.cover && !failed
         ? <img src={`/api/deals/${deal.id}/cover-thumb?v=${v}${bust ? `&b=${bust}` : ""}`} alt={deal.propertyName || deal.fileName || "Property photo"} loading="lazy" decoding="async" onError={() => setFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        : <span style={{ fontSize: 17, fontWeight: 700, color: "#3f7a1f", fontFamily: "'Inter', sans-serif" }}>{initial}</span>}
+        : <span style={{ fontSize: 17, fontWeight: 700, color: "#3e8a2f", fontFamily: "'Roboto',sans-serif" }}>{initial}</span>}
     </div>
   );
 }
@@ -148,7 +148,7 @@ const darkBtn: React.CSSProperties = {
   cursor: "pointer",
   fontSize: 11.5,
   fontWeight: 600,
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: "'Roboto',sans-serif",
   whiteSpace: "nowrap",
 };
 
@@ -192,10 +192,10 @@ function MultiSelectDropdown({ label, options, selected, onChange }: {
         onClick={() => setOpen(o => !o)}
         style={{
           fontSize: 12, padding: "6px 10px",
-          border: `1px solid ${selected.length > 0 ? "#6dba43" : "#e3dccd"}`,
-          borderRadius: 8, cursor: "pointer", fontFamily: "'Inter',sans-serif",
+          border: `1px solid ${selected.length > 0 ? "#5bba47" : "#dfddd6"}`,
+          borderRadius: 8, cursor: "pointer", fontFamily: "'Roboto',sans-serif",
           background: selected.length > 0 ? "#f0fae8" : "#fff",
-          color: selected.length > 0 ? "#3f7a1f" : "#383a37",
+          color: selected.length > 0 ? "#3e8a2f" : "#383a37",
           fontWeight: selected.length > 0 ? 600 : 400,
           display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
         }}
@@ -206,7 +206,7 @@ function MultiSelectDropdown({ label, options, selected, onChange }: {
       {open && options.length > 0 && (
         <div style={{
           position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 200,
-          background: "#fff", border: "1px solid #e3dccd", borderRadius: 10,
+          background: "#fff", border: "1px solid #dfddd6", borderRadius: 10,
           boxShadow: "0 8px 24px rgba(0,0,0,0.12)", padding: "6px 0",
           minWidth: 165, maxWidth: "calc(100vw - 24px)", maxHeight: 300, overflowY: "auto",
         }}>
@@ -224,16 +224,16 @@ function MultiSelectDropdown({ label, options, selected, onChange }: {
                 type="checkbox"
                 checked={selected.includes(opt)}
                 onChange={() => toggle(opt)}
-                style={{ width: 15, height: 15, accentColor: "#6dba43", cursor: "pointer", flexShrink: 0 }}
+                style={{ width: 15, height: 15, accentColor: "#5bba47", cursor: "pointer", flexShrink: 0 }}
               />
               {opt}
             </label>
           ))}
           {selected.length > 0 && (
-            <div style={{ padding: "7px 14px", borderTop: "1px solid #f1eadc", marginTop: 2 }}>
+            <div style={{ padding: "7px 14px", borderTop: "1px solid #efeee9", marginTop: 2 }}>
               <button
                 onClick={() => { onChange([]); setOpen(false); }}
-                style={{ fontSize: 11, color: "#a89f8f", background: "transparent", border: "none", cursor: "pointer", padding: 0, fontFamily: "'Inter',sans-serif" }}
+                style={{ fontSize: 11, color: "#9b9992", background: "transparent", border: "none", cursor: "pointer", padding: 0, fontFamily: "'Roboto',sans-serif" }}
               >
                 Clear
               </button>
@@ -960,12 +960,12 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
       {/* ── Token-spend confirmation modal ─────────────────────────────── */}
       {confirmGate && (
         <div onClick={() => resolveConfirm(false)} style={{ position: "fixed", inset: 0, background: "rgba(38,40,31,0.45)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, maxWidth: 430, width: "100%", padding: "26px 26px 22px", boxShadow: "0 24px 60px rgba(38,40,31,0.28)", border: "1px solid #ece5d7" }}>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, color: "#26281f", fontWeight: 600, marginBottom: 10 }}>This will use API tokens</div>
-            <div style={{ fontSize: 13.5, color: "#6f6a5f", lineHeight: 1.55, marginBottom: 22 }}>{confirmGate.body}</div>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, maxWidth: 430, width: "100%", padding: "26px 26px 22px", boxShadow: "0 24px 60px rgba(38,40,31,0.28)", border: "1px solid #ebeae5" }}>
+            <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 19, color: "#232422", fontWeight: 600, marginBottom: 10 }}>This will use API tokens</div>
+            <div style={{ fontSize: 13.5, color: "#676767", lineHeight: 1.55, marginBottom: 22 }}>{confirmGate.body}</div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button onClick={() => resolveConfirm(false)} style={{ background: "transparent", border: "1px solid #e3dccd", color: "#7d766a", padding: "9px 18px", borderRadius: 9, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>Cancel</button>
-              <button onClick={() => resolveConfirm(true)} style={{ background: "#2a2c27", border: "none", color: "#f6f2ea", padding: "9px 18px", borderRadius: 9, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>Continue</button>
+              <button onClick={() => resolveConfirm(false)} style={{ background: "transparent", border: "1px solid #dfddd6", color: "#6b6a65", padding: "9px 18px", borderRadius: 9, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}>Cancel</button>
+              <button onClick={() => resolveConfirm(true)} style={{ background: "#232422", border: "none", color: "#faf9f5", padding: "9px 18px", borderRadius: 9, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "'Roboto',sans-serif" }}>Continue</button>
             </div>
           </div>
         </div>
@@ -974,14 +974,14 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
       {/* Link/Merge Modal */}
       {modal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "#fff", borderRadius: 16, padding: "32px 36px", maxWidth: 480, width: "90%", boxShadow: "0 8px 40px rgba(0,0,0,0.15)", fontFamily: "'Inter', sans-serif" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "32px 36px", maxWidth: 480, width: "90%", boxShadow: "0 8px 40px rgba(0,0,0,0.15)", fontFamily: "'Roboto',sans-serif" }}>
             {modal.action === "link" ? (
               <>
-                <div style={{ fontFamily: "'Fraunces',serif", fontSize: 20, fontWeight: 500, color: "#26281f", marginBottom: 6 }}>Link as same property</div>
-                <div style={{ fontSize: 12, color: "#7d766a", marginBottom: 16, lineHeight: 1.6 }}>
+                <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, fontWeight: 500, color: "#232422", marginBottom: 6 }}>Link as same property</div>
+                <div style={{ fontSize: 12, color: "#6b6a65", marginBottom: 16, lineHeight: 1.6 }}>
                   Links these {modal.deals.length} deals as different years of the same property. <strong>Every OM is kept intact</strong> — nothing is deleted or merged. They'll appear together in Version History.
                 </div>
-                <div style={{ background: "#f1ece1", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
+                <div style={{ background: "#f3f2ee", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
                   {modal.deals.map(d => (
                     <div key={d.id} style={{ fontSize: 12, color: "#383a37", padding: "3px 0" }}>
                       {d.propertyName || d.fileName || "Untitled"} {d.omDate ? `(${d.omDate.slice(0,4)})` : d.uploadedAt ? `(${new Date(d.uploadedAt).getFullYear()})` : ""}
@@ -989,14 +989,14 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                   ))}
                 </div>
                 <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-                  <button onClick={() => setModal(null)} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>Cancel</button>
-                  <button onClick={commitLink} style={{ background: "#26281f", color: "#f1ece1", border: "none", padding: "8px 20px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Link deals</button>
+                  <button onClick={() => setModal(null)} style={{ background: "transparent", border: "1px solid #e6e4de", color: "#6b6a65", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>Cancel</button>
+                  <button onClick={commitLink} style={{ background: "#232422", color: "#f3f2ee", border: "none", padding: "8px 20px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Link deals</button>
                 </div>
               </>
             ) : (
               <>
-                <div style={{ fontFamily: "'Fraunces',serif", fontSize: 20, fontWeight: 500, color: "#26281f", marginBottom: 6 }}>Merge duplicates</div>
-                <div style={{ fontSize: 12, color: "#7d766a", marginBottom: 4, lineHeight: 1.6 }}>
+                <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, fontWeight: 500, color: "#232422", marginBottom: 6 }}>Merge duplicates</div>
+                <div style={{ fontSize: 12, color: "#6b6a65", marginBottom: 4, lineHeight: 1.6 }}>
                   <strong>Warning:</strong> Merge is for the <em>same OM uploaded more than once</em>. The non-keeper copies will be moved to Trash (reversible). Pick which deal is the "keeper":
                 </div>
                 <div style={{ background: "#fff8e6", border: "1px solid #d9890c40", borderRadius: 8, padding: "8px 12px", marginBottom: 14, fontSize: 11, color: "#a06208" }}>
@@ -1004,21 +1004,21 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                 </div>
                 <div style={{ marginBottom: 18 }}>
                   {modal.deals.map(d => (
-                    <label key={d.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, background: modal.keeperId === d.id ? "#6dba4312" : "transparent", border: modal.keeperId === d.id ? "1.5px solid #6dba43" : "1.5px solid transparent", marginBottom: 4, cursor: "pointer" }}>
+                    <label key={d.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, background: modal.keeperId === d.id ? "#6dba4312" : "transparent", border: modal.keeperId === d.id ? "1.5px solid #5bba47" : "1.5px solid transparent", marginBottom: 4, cursor: "pointer" }}>
                       <input type="radio" name="keeper" checked={modal.keeperId === d.id} onChange={() => setModal(m => m ? { ...m, keeperId: d.id } : m)} />
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: "#26281f" }}>{d.propertyName || d.fileName || "Untitled"}</div>
-                        <div style={{ fontSize: 10, color: "#a89f8f" }}>{d.status} · uploaded {d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString() : "unknown"}</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "#232422" }}>{d.propertyName || d.fileName || "Untitled"}</div>
+                        <div style={{ fontSize: 10, color: "#9b9992" }}>{d.status} · uploaded {d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString() : "unknown"}</div>
                       </div>
-                      {modal.keeperId === d.id && <span style={{ marginLeft: "auto", fontSize: 10, color: "#6dba43", fontWeight: 700 }}>KEEPER</span>}
+                      {modal.keeperId === d.id && <span style={{ marginLeft: "auto", fontSize: 10, color: "#5bba47", fontWeight: 700 }}>KEEPER</span>}
                     </label>
                   ))}
                 </div>
-                <div style={{ fontSize: 11, color: "#a89f8f", marginBottom: 16 }}>
+                <div style={{ fontSize: 11, color: "#9b9992", marginBottom: 16 }}>
                   Human-entered data from the other copies will be absorbed into the keeper (notes, status, transaction details, images). The copies move to Trash.
                 </div>
                 <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-                  <button onClick={() => setModal(null)} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>Cancel</button>
+                  <button onClick={() => setModal(null)} style={{ background: "transparent", border: "1px solid #e6e4de", color: "#6b6a65", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>Cancel</button>
                   <button onClick={commitMerge} disabled={merging} style={{ background: "#dc2626", color: "#fff", border: "none", padding: "8px 20px", borderRadius: 8, cursor: merging ? "wait" : "pointer", fontSize: 12, fontWeight: 600, opacity: merging ? 0.7 : 1 }}>
                     {merging ? "Merging…" : `Merge (trash ${modal.deals.length - 1} cop${modal.deals.length - 1 === 1 ? "y" : "ies"})`}
                   </button>
@@ -1039,37 +1039,37 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
         const fmt$ = (v: number) => v > 0 ? "$" + Math.round(v).toLocaleString() : "—";
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(10,14,23,0.88)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
-            <div style={{ background: "#faf7f0", border: "1px solid #383a37", borderRadius: 14, padding: 28, maxWidth: 520, width: "100%", maxHeight: "85vh", overflowY: "auto", fontFamily: "'Inter',sans-serif" }}>
-              <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 18, color: "#26281f", marginBottom: 6 }}>Combine {sel.length} OMs into one deal</div>
-              <p style={{ fontSize: 12, color: "#3f7a1f", lineHeight: 1.6, margin: "0 0 16px", background: "#f0fae8", border: "1px solid #c6e6a0", borderRadius: 8, padding: "10px 14px" }}>
+            <div style={{ background: "#faf9f5", border: "1px solid #383a37", borderRadius: 14, padding: 28, maxWidth: 520, width: "100%", maxHeight: "85vh", overflowY: "auto", fontFamily: "'Roboto',sans-serif" }}>
+              <div style={{ fontFamily: "'Lora',Georgia,serif", fontWeight: 700, fontSize: 18, color: "#232422", marginBottom: 6 }}>Combine {sel.length} OMs into one deal</div>
+              <p style={{ fontSize: 12, color: "#3e8a2f", lineHeight: 1.6, margin: "0 0 16px", background: "#f0fae8", border: "1px solid #c6e6a0", borderRadius: 8, padding: "10px 14px" }}>
                 For <strong>phases or parcels of one property you own</strong>. SF, NOI, income, and tenant rosters are <strong>added together</strong>; occupancy, WALT, cap rate, and rent/SF are recalculated. The extra OMs move to Trash (undoable for 15 s).
               </p>
               <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
                 {([["Combined SF", totSF > 0 ? totSF.toLocaleString() : "—"], ["Combined NOI", fmt$(totNOI)], ["Total tenants", String(totTenants)]] as [string, string][]).map(([l, v]) => (
-                  <div key={l} style={{ flex: "1 1 120px", background: "#fff", border: "1px solid #e7e0d2", borderRadius: 9, padding: "10px 14px" }}>
-                    <div style={{ fontSize: 9, letterSpacing: "0.07em", color: "#a69e91", textTransform: "uppercase", marginBottom: 4 }}>{l}</div>
-                    <div style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#383a37" }}>{v}</div>
+                  <div key={l} style={{ flex: "1 1 120px", background: "#fff", border: "1px solid #e6e4de", borderRadius: 9, padding: "10px 14px" }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.07em", color: "#94928b", textTransform: "uppercase", marginBottom: 4 }}>{l}</div>
+                    <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, fontWeight: 600, color: "#383a37" }}>{v}</div>
                   </div>
                 ))}
               </div>
-              <div style={{ fontSize: 11.5, color: "#7d766a", marginBottom: 10 }}>Keep this OM's name, address &amp; status for the combined deal:</div>
+              <div style={{ fontSize: 11.5, color: "#6b6a65", marginBottom: 10 }}>Keep this OM's name, address &amp; status for the combined deal:</div>
               {sel.map(d => (
-                <label key={d.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1.5px solid " + (combineModal.primaryId === d.id ? "#6dba43" : "#e7e0d2"), borderRadius: 9, padding: "10px 14px", marginBottom: 8, cursor: "pointer" }}>
+                <label key={d.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1.5px solid " + (combineModal.primaryId === d.id ? "#5bba47" : "#e6e4de"), borderRadius: 9, padding: "10px 14px", marginBottom: 8, cursor: "pointer" }}>
                   <input type="radio" name="combinePrimary" checked={combineModal.primaryId === d.id} onChange={() => setCombineModal(m => m ? { ...m, primaryId: d.id } : m)} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, color: "#2a2c27", fontWeight: 600 }}>
+                    <div style={{ fontSize: 13, color: "#232422", fontWeight: 600 }}>
                       {d.propertyName || d.fileName || "Untitled"}
                       {combineModal.primaryId === d.id && <span style={{ color: "#0f9d63", fontSize: 10, marginLeft: 8, fontWeight: 700 }}>PRIMARY</span>}
                     </div>
-                    <div style={{ fontSize: 10.5, color: "#a69e91" }}>
+                    <div style={{ fontSize: 10.5, color: "#94928b" }}>
                       {[d.address, d.totalSF ? Number(d.totalSF).toLocaleString() + " SF" : null, d.tenants?.length ? `${d.tenants.length} tenants` : null].filter(Boolean).join(" · ")}
                     </div>
                   </div>
                 </label>
               ))}
               <div style={{ display: "flex", gap: 8, marginTop: 12, justifyContent: "flex-end" }}>
-                <button onClick={() => setCombineModal(null)} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>Cancel</button>
-                <button onClick={() => doCombine(combineModal.primaryId, combineModal.ids)} disabled={combining} style={{ background: "#6dba43", border: "none", color: "#1f2b16", padding: "8px 18px", borderRadius: 8, cursor: combining ? "wait" : "pointer", fontSize: 12, fontWeight: 700, opacity: combining ? 0.7 : 1 }}>
+                <button onClick={() => setCombineModal(null)} style={{ background: "transparent", border: "1px solid #e6e4de", color: "#6b6a65", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>Cancel</button>
+                <button onClick={() => doCombine(combineModal.primaryId, combineModal.ids)} disabled={combining} style={{ background: "#5bba47", border: "none", color: "#1f2b16", padding: "8px 18px", borderRadius: 8, cursor: combining ? "wait" : "pointer", fontSize: 12, fontWeight: 700, opacity: combining ? 0.7 : 1 }}>
                   {combining ? "Combining…" : "Combine into one deal"}
                 </button>
               </div>
@@ -1083,9 +1083,9 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
 
       {/* Notice toast */}
       {notice && (
-        <div style={{ background: "#26281f", color: "#e8e0cf", borderRadius: 10, padding: "10px 16px", fontSize: 12, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ background: "#232422", color: "#e8e0cf", borderRadius: 10, padding: "10px 16px", fontSize: 12, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           {notice}
-          <button onClick={() => setNotice(null)} style={{ background: "none", border: "none", color: "#a89f8f", cursor: "pointer", fontSize: 14, marginLeft: 12, lineHeight: 1 }}>×</button>
+          <button onClick={() => setNotice(null)} style={{ background: "none", border: "none", color: "#9b9992", cursor: "pointer", fontSize: 14, marginLeft: 12, lineHeight: 1 }}>×</button>
         </div>
       )}
 
@@ -1093,7 +1093,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
       {combineUndo && (
         <div style={{ background: "#2d4a1e", color: "#d4f0b8", borderRadius: 10, padding: "9px 16px", fontSize: 12, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
           <span>Extra OMs moved to Trash.</span>
-          <button onClick={undoCombine} style={{ background: "#6dba43", border: "none", color: "#1f2b16", padding: "4px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>Undo combine</button>
+          <button onClick={undoCombine} style={{ background: "#5bba47", border: "none", color: "#1f2b16", padding: "4px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Roboto',sans-serif", whiteSpace: "nowrap" }}>Undo combine</button>
           <button onClick={() => { setCombineUndo(null); if (combineUndoTimerRef.current) clearTimeout(combineUndoTimerRef.current); }} style={{ background: "none", border: "none", color: "#8aad6a", cursor: "pointer", fontSize: 14, lineHeight: 1 }}>×</button>
         </div>
       )}
@@ -1119,16 +1119,16 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
               Bulk edit ▾
             </button>
             {bulkEditOpen && (
-              <div style={{ position: "absolute", top: "110%", left: 0, background: "#ffffff", border: "1px solid #e3dccd", borderRadius: 10, padding: 12, zIndex: 50, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", width: 270 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "#a69e91", textTransform: "uppercase", marginBottom: 6 }}>Set field for {selected.size} selected</div>
+              <div style={{ position: "absolute", top: "110%", left: 0, background: "#ffffff", border: "1px solid #dfddd6", borderRadius: 10, padding: 12, zIndex: 50, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", width: 270 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "#94928b", textTransform: "uppercase", marginBottom: 6 }}>Set field for {selected.size} selected</div>
                 <select value={String(bulkEditField)}
                   onChange={e => { const k = e.target.value as keyof Deal; setBulkEditField(k); const c = BULK_FIELDS.find(f => f.key === k); setBulkEditValue(c?.options ? c.options[0] : ""); }}
-                  style={{ width: "100%", boxSizing: "border-box", padding: "7px 9px", border: "1px solid #d9d2c4", borderRadius: 7, fontSize: 12.5, fontFamily: "'Inter',sans-serif", background: "#fff", color: "#26281f" }}>
+                  style={{ width: "100%", boxSizing: "border-box", padding: "7px 9px", border: "1px solid #d7d5ce", borderRadius: 7, fontSize: 12.5, fontFamily: "'Roboto',sans-serif", background: "#fff", color: "#232422" }}>
                   {BULK_FIELDS.map(f => <option key={String(f.key)} value={String(f.key)}>{f.label}</option>)}
                 </select>
                 {(() => {
                   const cfg = BULK_FIELDS.find(f => f.key === bulkEditField);
-                  const ctrl: React.CSSProperties = { width: "100%", boxSizing: "border-box", padding: "7px 9px", border: "1px solid #d9d2c4", borderRadius: 7, fontSize: 12.5, fontFamily: "'Inter',sans-serif", background: "#fff", color: "#26281f", marginTop: 8 };
+                  const ctrl: React.CSSProperties = { width: "100%", boxSizing: "border-box", padding: "7px 9px", border: "1px solid #d7d5ce", borderRadius: 7, fontSize: 12.5, fontFamily: "'Roboto',sans-serif", background: "#fff", color: "#232422", marginTop: 8 };
                   if (cfg?.options) {
                     return (
                       <select value={bulkEditValue} onChange={e => setBulkEditValue(e.target.value)} style={ctrl}>
@@ -1138,12 +1138,12 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                   }
                   return <input value={bulkEditValue} onChange={e => setBulkEditValue(e.target.value)} placeholder="New value (blank = clear)" onKeyDown={e => { if (e.key === "Enter") applyBulkEdit(); }} style={ctrl} />;
                 })()}
-                <div style={{ fontSize: 10, color: "#a69e91", marginTop: 6, lineHeight: 1.4 }}>
+                <div style={{ fontSize: 10, color: "#94928b", marginTop: 6, lineHeight: 1.4 }}>
                   {BULK_FIELDS.find(f => f.key === bulkEditField)?.hint || "Applies to all selected properties."}
                 </div>
                 <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                  <button onClick={applyBulkEdit} style={{ background: "#26281f", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Apply to {selected.size}</button>
-                  <button onClick={() => setBulkEditOpen(false)} style={{ background: "transparent", color: "#837c6e", border: "1px solid #ddd4c2", borderRadius: 7, padding: "7px 12px", fontSize: 12, cursor: "pointer" }}>Cancel</button>
+                  <button onClick={applyBulkEdit} style={{ background: "#232422", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Apply to {selected.size}</button>
+                  <button onClick={() => setBulkEditOpen(false)} style={{ background: "transparent", color: "#837c6e", border: "1px solid #dad8d1", borderRadius: 7, padding: "7px 12px", fontSize: 12, cursor: "pointer" }}>Cancel</button>
                 </div>
               </div>
             )}
@@ -1208,7 +1208,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                   onChange={e => setDelConfirmText(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") bulkDelete(); }}
                   placeholder="DELETE"
-                  style={{ width: 78, fontSize: 11.5, padding: "4px 8px", border: "1px solid #8a4b46", borderRadius: 6, background: "#2c2320", color: "#fff", fontFamily: "'Inter',sans-serif", outline: "none" }}
+                  style={{ width: 78, fontSize: 11.5, padding: "4px 8px", border: "1px solid #8a4b46", borderRadius: 6, background: "#2c2320", color: "#fff", fontFamily: "'Roboto',sans-serif", outline: "none" }}
                 />
                 {(() => {
                   const ok = delConfirmText.trim().toUpperCase() === "DELETE";
@@ -1229,7 +1229,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
           )}
 
           {/* Clear selection */}
-          <button onClick={clearSelection} style={{ background: "transparent", border: "none", color: "#b5b8b0", fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif", marginLeft: "auto", flexShrink: 0 }}>
+          <button onClick={clearSelection} style={{ background: "transparent", border: "none", color: "#b5b8b0", fontSize: 11, cursor: "pointer", fontFamily: "'Roboto',sans-serif", marginLeft: "auto", flexShrink: 0 }}>
             ✕ Clear
           </button>
         </div>
@@ -1238,7 +1238,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
       {/* Filters */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search deals…" aria-label="Search deals"
-          style={{ fontSize: 12, padding: "6px 12px", border: "1px solid #e3dccd", borderRadius: 8, color: "#383a37", background: "#fff", width: 180, minWidth: 0, fontFamily: "'Inter',sans-serif" }} />
+          style={{ fontSize: 12, padding: "6px 12px", border: "1px solid #dfddd6", borderRadius: 8, color: "#383a37", background: "#fff", width: 180, minWidth: 0, fontFamily: "'Roboto',sans-serif" }} />
         <MultiSelectDropdown
           label="statuses"
           options={STATUS_OPTS}
@@ -1264,14 +1264,14 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
         {(q || filterStatuses.length > 0 || filterStates.length > 0 || filterTypes.length > 0) && (
           <button onClick={() => { setQ(""); setFilterStatuses([]); setFilterStates([]); setFilterTypes([]); }}
             title="Clear the search and all filters"
-            style={{ background: "transparent", border: "1px solid #e0c3b3", color: "#b3593b", padding: "6px 11px", borderRadius: 8, cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+            style={{ background: "transparent", border: "1px solid #e0c3b3", color: "#b3593b", padding: "6px 11px", borderRadius: 8, cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Roboto',sans-serif", whiteSpace: "nowrap" }}>
             ✕ Clear all
           </button>
         )}
-        <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: "auto" }}>{rows.length} deal{rows.length !== 1 ? "s" : ""}</span>
+        <span style={{ fontSize: 11, color: "#9b9992", marginLeft: "auto" }}>{rows.length} deal{rows.length !== 1 ? "s" : ""}</span>
         <button onClick={async () => { const { exportPortfolioToExcel } = await import("../lib/exportExcel"); exportPortfolioToExcel(rows, filterStatuses.length === 1 ? filterStatuses[0].replace(/\s+/g, "") : "All"); }} disabled={rows.length === 0}
           title="Export the current (filtered) deal list to Excel"
-          style={{ background: "transparent", border: "1px solid #c8b89a", color: rows.length === 0 ? "#c9c2b8" : "#5c5047", padding: "5px 11px", borderRadius: 7, cursor: rows.length === 0 ? "default" : "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 4 }}>
+          style={{ background: "transparent", border: "1px solid #c4c1b8", color: rows.length === 0 ? "#c6c4bd" : "#4f4d48", padding: "5px 11px", borderRadius: 7, cursor: rows.length === 0 ? "default" : "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Roboto',sans-serif", display: "flex", alignItems: "center", gap: 4 }}>
           ⬇ Excel
         </button>
         <PdfDownloadButton
@@ -1303,19 +1303,19 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
           }}
           render={(busy) => (
             <span title="Export the current (filtered) deal list to PDF"
-              style={{ background: "transparent", border: "1px solid #c8b89a", color: rows.length === 0 ? "#c9c2b8" : "#5c5047", padding: "5px 11px", borderRadius: 7, fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", display: "inline-flex", alignItems: "center", gap: 4 }}>
+              style={{ background: "transparent", border: "1px solid #c4c1b8", color: rows.length === 0 ? "#c6c4bd" : "#4f4d48", padding: "5px 11px", borderRadius: 7, fontSize: 11, fontWeight: 600, fontFamily: "'Roboto',sans-serif", display: "inline-flex", alignItems: "center", gap: 4 }}>
               {busy ? "Preparing…" : "⬇ PDF"}
             </span>
           )}
         />
         <button onClick={() => setViewMode(v => v === "table" ? "grid" : "table")}
-          style={{ background: "transparent", border: "1px solid #e3dccd", color: "#a89f8f", padding: "5px 10px", borderRadius: 7, cursor: "pointer", fontSize: 11 }}>
+          style={{ background: "transparent", border: "1px solid #dfddd6", color: "#9b9992", padding: "5px 10px", borderRadius: 7, cursor: "pointer", fontSize: 11 }}>
           {viewMode === "table" ? "⊞" : "☰"}
         </button>
       </div>
 
       {rows.length === 0 && (
-        <div style={{ textAlign: "center", padding: "60px 0", color: "#a89f8f", fontSize: 14 }}>No deals match your filters.</div>
+        <div style={{ textAlign: "center", padding: "60px 0", color: "#9b9992", fontSize: 14 }}>No deals match your filters.</div>
       )}
 
       {rows.length > 0 && (
@@ -1324,9 +1324,9 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
       )}
 
       {viewMode === "table" && rows.length > 0 && hiddenCols.length > 0 && !isPhone && (
-        <div style={{ fontSize: 11, color: "#a89f8f", margin: "0 0 6px 2px" }}>
+        <div style={{ fontSize: 11, color: "#9b9992", margin: "0 0 6px 2px" }}>
           Hidden because 90%+ of deals leave them blank: {hiddenCols.join(", ")} ·{" "}
-          <button onClick={() => setShowSparse(true)} style={{ background: "none", border: "none", padding: 0, color: "#3f7a1f", fontWeight: 600, cursor: "pointer", fontSize: 11 }}>show</button>
+          <button onClick={() => setShowSparse(true)} style={{ background: "none", border: "none", padding: 0, color: "#3e8a2f", fontWeight: 600, cursor: "pointer", fontSize: 11 }}>show</button>
         </div>
       )}
 
@@ -1337,17 +1337,17 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
             const loc = cityState(d);
             const stat = (label: string, value: string) => (
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.08em", color: "#a89f8f", textTransform: "uppercase", fontWeight: 700 }}>{label}</div>
+                <div style={{ fontSize: 9, letterSpacing: "0.08em", color: "#9b9992", textTransform: "uppercase", fontWeight: 700 }}>{label}</div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#383a37", whiteSpace: "nowrap" }}>{value}</div>
               </div>
             );
             return (
               <div key={d.id} onClick={() => onOpen(d.id)} role="button"
-                style={{ display: "flex", gap: 10, alignItems: "flex-start", background: selected.has(d.id) ? "#f3f9ee" : "#fff", border: "1px solid #ece5d7", borderRadius: 12, padding: 10, cursor: "pointer" }}>
+                style={{ display: "flex", gap: 10, alignItems: "flex-start", background: selected.has(d.id) ? "#f3f9ee" : "#fff", border: "1px solid #ebeae5", borderRadius: 12, padding: 10, cursor: "pointer" }}>
                 <RowThumb deal={d} bust={thumbBust[d.id]} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-                    <div style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, color: "#26281f", lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+                    <div style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, color: "#232422", lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
                       {d.propertyName || d.fileName || "Untitled"}
                     </div>
                     {d.dealScore?.grade && <span style={{ fontSize: 11, fontWeight: 800, color: "#383a37", background: "#f4f1ea", borderRadius: 6, padding: "1px 6px", flexShrink: 0 }}>{d.dealScore.grade}</span>}
@@ -1355,7 +1355,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                       <input type="checkbox" aria-label="Select deal" checked={selected.has(d.id)} onChange={() => {}} style={{ width: 18, height: 18 }} />
                     </span>
                   </div>
-                  {loc && <div style={{ fontSize: 11.5, color: "#7d766a", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{loc}</div>}
+                  {loc && <div style={{ fontSize: 11.5, color: "#6b6a65", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{loc}</div>}
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 5 }}>
                     <StatusTag status={d.status} size="sm" />
                     <NoClosingDatePill deal={d} size="sm" />
@@ -1373,78 +1373,78 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
       )}
 
       {viewMode === "table" && rows.length > 0 && !isPhone && (
-        <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
+        <div style={{ background: "#fff", border: "1px solid #ebeae5", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ overflowX: "auto" }}>
-            <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 600 }}>
+            <table className="kpr-table" style={{ borderCollapse: "collapse", width: "100%", minWidth: 600 }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid #f1eadc", background: "#faf7f0" }}>
+                <tr style={{ borderBottom: "1px solid #efeee9", background: "#faf9f5" }}>
                   <th style={{ width: 28, padding: "10px 8px 10px 14px" }}>
                     <input type="checkbox" checked={selected.size === rows.length && rows.length > 0}
                       onChange={e => setSelected(e.target.checked ? new Set(rows.map(d => d.id)) : new Set())} />
                   </th>
                   <th style={{ width: 80, padding: "10px 8px" }} />
                   <th onClick={e => toggleSort("propertyName", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
-                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("propertyName") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("propertyName") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Property{arrow("propertyName")}
                   </th>
                   <th onClick={e => toggleSort("status", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
-                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("status") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("status") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Status{arrow("status")}
                   </th>
                   <th onClick={e => toggleSort("city", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
-                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("city") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("city") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     City{arrow("city")}
                   </th>
                   <th onClick={e => toggleSort("state", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
-                    style={{ width: 70, padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("state") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ width: 70, padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("state") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     State{arrow("state")}
                   </th>
                   <th onClick={e => toggleSort("market", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker" className="hidden lg:table-cell"
-                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("market") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("market") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     MSA{arrow("market")}
                   </th>
                   <th onClick={e => toggleSort("anchor", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker" className="hidden lg:table-cell"
-                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("anchor") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("anchor") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Anchor{arrow("anchor")}
                   </th>
                   <th onClick={e => toggleSort("totalSF", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
-                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("totalSF") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("totalSF") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     SF{arrow("totalSF")}
                   </th>
                   <th onClick={e => toggleSort("occupancy", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker" className="hidden lg:table-cell"
-                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("occupancy") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("occupancy") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Occ{arrow("occupancy")}
                   </th>
                   <th onClick={e => toggleSort("noi", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
-                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("noi") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("noi") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     NOI{arrow("noi")}
                   </th>
                   <th onClick={e => toggleSort("walt", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker" className="hidden lg:table-cell"
-                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("walt") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("walt") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     WALT{arrow("walt")}
                   </th>
                   <th onClick={e => toggleSort("grade", e)} title="AI deal grade · click to sort"
-                    style={{ padding: "10px 10px", textAlign: "center", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("grade") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "center", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("grade") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Grade{arrow("grade")}
                   </th>
                   {showCap && <th onClick={e => toggleSort("capRate", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
-                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("capRate") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("capRate") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Cap{arrow("capRate")}
                   </th>}
                   {showPrice && <th onClick={e => toggleSort("askingPrice", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
-                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("askingPrice") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "right", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("askingPrice") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Price{arrow("askingPrice")}
                   </th>}
                   {showSeller && <th onClick={e => toggleSort("seller", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
-                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("seller") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("seller") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Seller{arrow("seller")}
                   </th>}
                   <th onClick={e => toggleSort("uploadedAt", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
-                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("uploadedAt") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("uploadedAt") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Uploaded{arrow("uploadedAt")}
                   </th>
                   <th onClick={e => toggleSort("lastUploadAt", e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker"
-                    style={{ padding: "10px 14px 10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("lastUploadAt") ? "#383a37" : "#a89f8f", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
+                    style={{ padding: "10px 14px 10px 10px", textAlign: "left", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: sort.isSorted("lastUploadAt") ? "#383a37" : "#9b9992", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none", textTransform: "uppercase" }}>
                     Last Upload{arrow("lastUploadAt")}
                   </th>
                 </tr>
@@ -1469,7 +1469,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                       <td style={{ padding: "8px 10px" }}>
                         <div
                           style={{ fontSize: 13, color: "#383a37", whiteSpace: "nowrap", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis" }}
-                          onMouseEnter={e => (e.currentTarget.style.color = "#3f7a1f")}
+                          onMouseEnter={e => (e.currentTarget.style.color = "#3e8a2f")}
                           onMouseLeave={e => (e.currentTarget.style.color = "#383a37")}>
                           {d.propertyName || d.fileName || "Untitled"}
                           {busyRow && <span style={{ marginLeft: 6, fontSize: 9, color: "#d9890c" }}>● processing</span>}
@@ -1482,23 +1482,23 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                         <StatusTag status={d.status} size="sm" />
                         {d.status === "Sold" && !isClosingDate(d.txnSaleDate) && <div style={{ marginTop: 3 }}><NoClosingDatePill deal={d} size="sm" /></div>}
                       </td>
-                      <td style={{ padding: "8px 10px", fontSize: 11, color: d.city ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{cityOnly(d.city, d.state)}</td>
-                      <td style={{ width: 70, padding: "8px 10px", fontSize: 11, color: d.state ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.state || "—"}</td>
-                      <td className="hidden lg:table-cell" style={{ padding: "8px 10px", fontSize: 11, color: d.market ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>{d.market || "—"}</td>
-                      <td className="hidden lg:table-cell" style={{ padding: "8px 10px", fontSize: 11, color: anchor ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis" }}>{anchor || "—"}</td>
+                      <td style={{ padding: "8px 10px", fontSize: 11, color: d.city ? "#383a37" : "#676767", whiteSpace: "nowrap" }}>{cityOnly(d.city, d.state)}</td>
+                      <td style={{ width: 70, padding: "8px 10px", fontSize: 11, color: d.state ? "#383a37" : "#676767", whiteSpace: "nowrap" }}>{d.state || "—"}</td>
+                      <td className="hidden lg:table-cell" style={{ padding: "8px 10px", fontSize: 11, color: d.market ? "#383a37" : "#676767", whiteSpace: "nowrap", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>{d.market || "—"}</td>
+                      <td className="hidden lg:table-cell" style={{ padding: "8px 10px", fontSize: 11, color: anchor ? "#383a37" : "#676767", whiteSpace: "nowrap", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis" }}>{anchor || "—"}</td>
                       <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#5c5f57", whiteSpace: "nowrap" }}>{d.totalSF ? Number(d.totalSF).toLocaleString() : "—"}</td>
                       <td className="hidden lg:table-cell" style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#5c5f57", whiteSpace: "nowrap" }}>{d.occupancy != null ? `${d.occupancy}%` : "—"}</td>
                       <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#383a37", whiteSpace: "nowrap" }}>{fmtPriceShort(d.noi)}</td>
                       <td className="hidden lg:table-cell" style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: d.walt != null && Number(d.walt) < 3 ? "#b3261e" : "#5c5f57", whiteSpace: "nowrap" }}>{d.walt != null ? `${Number(d.walt).toFixed(1)}y` : "—"}</td>
                       <td style={{ padding: "8px 10px", textAlign: "center", fontSize: 11.5, fontWeight: 700, color: "#383a37", whiteSpace: "nowrap" }}>{d.dealScore?.grade || "—"}</td>
                       {showCap && (() => { const c = effectiveCap(d); return (
-                        <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: c.implied ? "#7d766a" : "#0f9d63", whiteSpace: "nowrap" }} title={c.implied ? "Implied: NOI ÷ asking price (no stated cap)" : undefined}>{c.value != null ? `${c.value}%${c.implied ? "*" : ""}` : "—"}</td>
+                        <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: c.implied ? "#6b6a65" : "#0f9d63", whiteSpace: "nowrap" }} title={c.implied ? "Implied: NOI ÷ asking price (no stated cap)" : undefined}>{c.value != null ? `${c.value}%${c.implied ? "*" : ""}` : "—"}</td>
                       ); })()}
                       {showPrice && <td style={{ padding: "8px 10px", textAlign: "right", fontSize: 11, color: "#383a37", whiteSpace: "nowrap" }}>{fmtPriceShort(d.askingPrice)}</td>}
-                      {showSeller && <td style={{ padding: "8px 10px", fontSize: 11, color: d.seller ? "#383a37" : "#6f6a5f", whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>{d.seller || "—"}</td>}
-                      <td style={{ padding: "8px 10px", fontSize: 11, color: d.uploadedAt ? "#5c5f57" : "#6f6a5f", whiteSpace: "nowrap" }}>{d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" }) : "—"}</td>
+                      {showSeller && <td style={{ padding: "8px 10px", fontSize: 11, color: d.seller ? "#383a37" : "#676767", whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>{d.seller || "—"}</td>}
+                      <td style={{ padding: "8px 10px", fontSize: 11, color: d.uploadedAt ? "#5c5f57" : "#676767", whiteSpace: "nowrap" }}>{d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" }) : "—"}</td>
                       {(() => { const lu = d.lastUploadAt || d.uploadedAt; return (
-                        <td style={{ padding: "8px 14px 8px 10px", fontSize: 11, color: lu ? "#5c5f57" : "#6f6a5f", whiteSpace: "nowrap" }}>{lu ? new Date(lu).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" }) : "—"}</td>
+                        <td style={{ padding: "8px 14px 8px 10px", fontSize: 11, color: lu ? "#5c5f57" : "#676767", whiteSpace: "nowrap" }}>{lu ? new Date(lu).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" }) : "—"}</td>
                       ); })()}
                     </tr>
                   );
@@ -1512,14 +1512,14 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
       {viewMode === "grid" && rows.length > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
           {rows.map(d => {
-            const sc = STATUS_COLORS[d.status || ""] || "#a69e91";
+            const sc = STATUS_COLORS[d.status || ""] || "#94928b";
             const loc = cityState(d);
             const adjScore = computeWatchlistImpact(d, watchMap).adjustScore(d.dealScore);
             return (
               <button key={d.id} onClick={() => onOpen(d.id)}
-                style={{ position: "relative", height: 172, borderRadius: 14, overflow: "hidden", cursor: "pointer", border: "1px solid #ece5d7", textAlign: "left", padding: 0,
+                style={{ position: "relative", height: 172, borderRadius: 14, overflow: "hidden", cursor: "pointer", border: "1px solid #ebeae5", textAlign: "left", padding: 0,
                   boxShadow: "0 1px 2px rgba(56,58,55,0.05), 0 14px 30px -24px rgba(56,58,55,0.6)",
-                  background: d.imageMeta?.cover ? "#26281f" : "linear-gradient(135deg,#43463b,#26281f)", transition: "transform .2s ease" }}
+                  background: d.imageMeta?.cover ? "#232422" : "linear-gradient(135deg,#43463b,#232422)", transition: "transform .2s ease" }}
                 onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; const img = e.currentTarget.querySelector("img"); if (img) (img as HTMLImageElement).style.transform = "scale(1.06)"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = "none"; const img = e.currentTarget.querySelector("img"); if (img) (img as HTMLImageElement).style.transform = "none"; }}>
                 {d.imageMeta?.cover && (
@@ -1537,7 +1537,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                   <RecencyBadge deal={d} />
                 </div>
                 <div style={{ position: "absolute", left: 13, right: 13, bottom: 11, color: "#fff" }}>
-                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: 16, fontWeight: 600, lineHeight: 1.18, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{d.propertyName || d.fileName || "Untitled"}</div>
+                  <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 16, fontWeight: 600, lineHeight: 1.18, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{d.propertyName || d.fileName || "Untitled"}</div>
                   {loc && <div style={{ fontSize: 11, opacity: 0.86, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{loc}</div>}
                   <div style={{ display: "flex", gap: 12, marginTop: 5 }}>
                     {d.noi != null && <span style={{ fontSize: 11, color: "#9fe08a", fontWeight: 600 }}>${(Number(d.noi)/1e6).toFixed(1)}M NOI</span>}

@@ -327,12 +327,12 @@ function ZoomableLightbox({ src, onClose }: { src: string; onClose: () => void }
       {/* Zoom toolbar — finger-friendly, works on desktop + mobile */}
       <div onClick={(e) => e.stopPropagation()} style={{ position: "fixed", bottom: 22, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 10, background: "rgba(26,28,22,0.55)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 14, padding: "8px 12px", backdropFilter: "blur(4px)" }}>
         <button title="Zoom out" onClick={() => { const { cx, cy } = centerOf(); zoomTo(1 / 1.4, cx, cy); }} style={btn}>−</button>
-        <span style={{ color: "#fff", fontSize: 13, fontWeight: 600, minWidth: 52, textAlign: "center", fontFamily: "'Inter',sans-serif" }}>{Math.round(scale * 100)}%</span>
+        <span style={{ color: "#fff", fontSize: 13, fontWeight: 600, minWidth: 52, textAlign: "center", fontFamily: "'Roboto',sans-serif" }}>{Math.round(scale * 100)}%</span>
         <button title="Zoom in" onClick={() => { const { cx, cy } = centerOf(); zoomTo(1.4, cx, cy); }} style={btn}>+</button>
         <button title="Reset" onClick={reset} style={{ ...btn, fontSize: 18 }}>⟲</button>
       </div>
       <button title="Close" onClick={onClose} style={{ position: "fixed", top: 20, right: 24, ...btn, borderRadius: "50%" }}>✕</button>
-      <div style={{ position: "fixed", top: 22, left: 24, color: "rgba(255,255,255,0.7)", fontSize: 11.5, fontFamily: "'Inter',sans-serif", pointerEvents: "none", userSelect: "none", maxWidth: "60vw" }}>
+      <div style={{ position: "fixed", top: 22, left: 24, color: "rgba(255,255,255,0.7)", fontSize: 11.5, fontFamily: "'Roboto',sans-serif", pointerEvents: "none", userSelect: "none", maxWidth: "60vw" }}>
         Scroll or pinch to zoom · drag to pan · double-click to toggle
       </div>
     </div>
@@ -342,14 +342,14 @@ function ZoomableLightbox({ src, onClose }: { src: string; onClose: () => void }
 // Box that starts collapsed to about a normal card's height with a "click to
 // enlarge" hover hint; on click it expands to show everything, and the child
 // renders at a larger text size (it receives `expanded`).
-function CollapsibleBox({ collapsedHeight = 300, fadeColor = "#faf7f0", children }: {
+function CollapsibleBox({ collapsedHeight = 300, fadeColor = "#faf9f5", children }: {
   collapsedHeight?: number;
   fadeColor?: string;
   children: (expanded: boolean) => React.ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [hover, setHover] = useState(false);
-  const collapseBtn: React.CSSProperties = { background:"#fff", border:"1px solid #e7e0d2", borderRadius:6, fontSize:10, fontWeight:600, color:"#7d766a", cursor:"pointer", padding:"3px 9px", fontFamily:"'Inter',sans-serif" };
+  const collapseBtn: React.CSSProperties = { background:"#fff", border:"1px solid #e6e4de", borderRadius:6, fontSize:10, fontWeight:600, color:"#6b6a65", cursor:"pointer", padding:"3px 9px", fontFamily:"'Roboto',sans-serif" };
   return (
     <div
       onMouseEnter={() => setHover(true)}
@@ -362,7 +362,7 @@ function CollapsibleBox({ collapsedHeight = 300, fadeColor = "#faf7f0", children
       </div>
       {!expanded && (
         <div style={{ position:"absolute", inset:0, borderRadius:8, display:"flex", alignItems:"flex-end", justifyContent:"center", paddingBottom:8, background:`linear-gradient(to bottom, rgba(0,0,0,0) 48%, ${fadeColor})` }}>
-          <span style={{ fontSize:10, fontWeight:700, letterSpacing:"0.06em", color:"#7d766a", background:"#fff", border:"1px solid #e7e0d2", borderRadius:20, padding:"3px 11px", boxShadow:"0 1px 3px rgba(0,0,0,0.08)", opacity: hover ? 1 : 0.8 }}>
+          <span style={{ fontSize:10, fontWeight:700, letterSpacing:"0.06em", color:"#6b6a65", background:"#fff", border:"1px solid #e6e4de", borderRadius:20, padding:"3px 11px", boxShadow:"0 1px 3px rgba(0,0,0,0.08)", opacity: hover ? 1 : 0.8 }}>
             ⤢ Click to enlarge
           </span>
         </div>
@@ -400,7 +400,7 @@ function ExpandableNarrative({ text, color = "#5b574d" }: { text: string; color?
       </div>
       {long && (
         <button onClick={() => setExpanded(e => !e)}
-          style={{ marginTop:7, background:"none", border:"none", padding:0, cursor:"pointer", fontSize:11, fontWeight:700, color:"#3f7a1f", fontFamily:"'Inter',sans-serif" }}>
+          style={{ marginTop:7, background:"none", border:"none", padding:0, cursor:"pointer", fontSize:11, fontWeight:700, color:"#3e8a2f", fontFamily:"'Roboto',sans-serif" }}>
           {expanded ? "Show less ▴" : "Show more ▾"}
         </button>
       )}
@@ -417,14 +417,14 @@ function AnchorSnapshot({ deal, allDeals }: { deal: Deal; allDeals: Deal[] }) {
   if (!anchors.length) return null;
   const signed = (p: number | null) => p == null ? "—" : `${p > 0 ? "+" : ""}${p}%`;
   const th: React.CSSProperties = { padding: "0 8px 6px", textAlign: "right", fontWeight: 700 };
-  const td: React.CSSProperties = { padding: "6px 8px", textAlign: "right", color: "#5c5850", whiteSpace: "nowrap" };
+  const td: React.CSSProperties = { padding: "6px 8px", textAlign: "right", color: "#55544f", whiteSpace: "nowrap" };
   return (
-    <div id="section-anchors" style={{ background: "#fff", border: "1px solid #efe8da", borderRadius: 12, padding: "16px 18px", marginBottom: 12, boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
+    <div id="section-anchors" style={{ background: "#fff", border: "1px solid #ecebe6", borderRadius: 12, padding: "16px 18px", marginBottom: 12, boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
       <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 700, color: "#3f6b24", marginBottom: 10 }}>Anchor Comparison — rent · term · sales vs chain</div>
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 520, fontFamily: "'Inter',sans-serif" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 520, fontFamily: "'Roboto',sans-serif" }}>
           <thead>
-            <tr style={{ color: "#a89f8f", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <tr style={{ color: "#9b9992", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               <th style={{ padding: "0 8px 6px 0", textAlign: "left", fontWeight: 700 }}>Anchor</th>
               <th style={th}>GLA</th><th style={th}>Rent/SF</th><th style={th}>vs chain</th><th style={th}>Term</th><th style={th}>Sales/SF</th><th style={{ ...th, padding: "0 0 6px 8px" }}>vs chain</th>
             </tr>
@@ -432,19 +432,19 @@ function AnchorSnapshot({ deal, allDeals }: { deal: Deal; allDeals: Deal[] }) {
           <tbody>
             {anchors.map((a, i) => (
               <tr key={i} style={{ borderTop: "1px solid #f3eee2" }}>
-                <td style={{ padding: "6px 8px 6px 0", textAlign: "left", fontWeight: 600, color: "#26281f", whiteSpace: "nowrap" }}>{a.name}</td>
+                <td style={{ padding: "6px 8px 6px 0", textAlign: "left", fontWeight: 600, color: "#232422", whiteSpace: "nowrap" }}>{a.name}</td>
                 <td style={td}>{a.sf != null ? `${Math.round(a.sf / 1000)}k` : "—"}</td>
                 <td style={td}>{a.rentPSF != null ? `$${a.rentPSF.toFixed(2)}` : "—"}</td>
-                <td style={{ ...td, fontWeight: 600, color: a.rentVsChain == null ? "#a89f8f" : a.rentVsChain > 0 ? "#2f5d16" : "#c97a18" }}>{signed(a.rentVsChain)}</td>
+                <td style={{ ...td, fontWeight: 600, color: a.rentVsChain == null ? "#9b9992" : a.rentVsChain > 0 ? "#2f5d16" : "#c97a18" }}>{signed(a.rentVsChain)}</td>
                 <td style={td}>{a.termYears != null ? `${a.termYears.toFixed(1)}y` : "—"}</td>
                 <td style={td}>{a.salesPSF != null ? `$${Math.round(a.salesPSF)}` : "—"}</td>
-                <td style={{ ...td, padding: "6px 0 6px 8px", fontWeight: 600, color: a.salesVsChain == null ? "#a89f8f" : a.salesVsChain >= 0 ? "#0f9d63" : "#dc2626" }}>{signed(a.salesVsChain)}</td>
+                <td style={{ ...td, padding: "6px 0 6px 8px", fontWeight: 600, color: a.salesVsChain == null ? "#9b9992" : a.salesVsChain >= 0 ? "#0f9d63" : "#dc2626" }}>{signed(a.salesVsChain)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <div style={{ fontSize: 9.5, color: "#a89f8f", marginTop: 7 }}>vs chain = this store vs the median of other same-brand locations in your library (— = too few to compare; sales where disclosed).</div>
+      <div style={{ fontSize: 9.5, color: "#9b9992", marginTop: 7 }}>vs chain = this store vs the median of other same-brand locations in your library (— = too few to compare; sales where disclosed).</div>
     </div>
   );
 }
@@ -465,7 +465,7 @@ function signalFirstLine(t: string, max = 135): string {
 // detail also lives on the AI Analysis tab.)
 function SignalList({ items, dot }: { items: string[]; dot: string }) {
   const [expanded, setExpanded] = useState(false);
-  if (!items.length) return <div style={{ fontSize: 12, color: "#a89f8f" }}>—</div>;
+  if (!items.length) return <div style={{ fontSize: 12, color: "#9b9992" }}>—</div>;
   const isClipped = (t: string) => {
     const full = (t || "").replace(/\s+/g, " ").trim();
     const short = signalFirstLine(t);
@@ -479,14 +479,14 @@ function SignalList({ items, dot }: { items: string[]; dot: string }) {
       {visible.map((t, i) => (
         <div key={i} style={{ display: "flex", gap: 7, marginBottom: 6 }}>
           <span style={{ color: dot, fontWeight: 700, fontSize: 12 }}>•</span>
-          <span style={{ flex: 1, fontSize: 12, lineHeight: 1.4, color: "#3f3d37", fontFamily: "'Inter',sans-serif" }}>
+          <span style={{ flex: 1, fontSize: 12, lineHeight: 1.4, color: "#3f3d37", fontFamily: "'Roboto',sans-serif" }}>
             <BoldText text={expanded ? (t || "").replace(/\s+/g, " ").trim() : signalFirstLine(t)} />
           </span>
         </div>
       ))}
       {hasMore && (
         <button onClick={() => setExpanded(e => !e)}
-          style={{ background: "none", border: "none", padding: "2px 0 0", cursor: "pointer", color: dot, fontWeight: 600, fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
+          style={{ background: "none", border: "none", padding: "2px 0 0", cursor: "pointer", color: dot, fontWeight: 600, fontSize: 11, fontFamily: "'Roboto',sans-serif" }}>
           {expanded ? "Show less ▴" : "Show more ▾"}
         </button>
       )}
@@ -500,11 +500,11 @@ function SignalList({ items, dot }: { items: string[]; dot: string }) {
 function SummarySignals({ deal, allDeals }: { deal: Deal; allDeals: Deal[] }) {
   const m = useMemo(() => buildICMemoModel(deal, { allDeals }), [deal, allDeals]);
   if (!m.risks.length && !m.upside.length) return null;
-  const card = (accent: string): React.CSSProperties => ({ background: "#fff", border: "1px solid #efe8da", borderLeft: `3px solid ${accent}`, borderRadius: 12, padding: "14px 16px", boxShadow: "0 1px 2px rgba(56,58,55,0.04)" });
+  const card = (accent: string): React.CSSProperties => ({ background: "#fff", border: "1px solid #ecebe6", borderLeft: `3px solid ${accent}`, borderRadius: 12, padding: "14px 16px", boxShadow: "0 1px 2px rgba(56,58,55,0.04)" });
   const hdr = (color: string): React.CSSProperties => ({ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 700, color, marginBottom: 9 });
   return (
     <div id="section-signals" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12, marginBottom: 12 }}>
-      <div style={card("#3f7a1f")}><div style={hdr("#2d7a0e")}>✦ Upside / Value-Add</div><SignalList items={m.upside} dot="#3f7a1f" /></div>
+      <div style={card("#3e8a2f")}><div style={hdr("#2d7a0e")}>✦ Upside / Value-Add</div><SignalList items={m.upside} dot="#3e8a2f" /></div>
       <div style={card("#dc2626")}><div style={hdr("#b3261e")}>⚠ Key Risks</div><SignalList items={m.risks} dot="#dc2626" /></div>
     </div>
   );
@@ -522,8 +522,8 @@ function EditableTextRow({ label, value, placeholder, onSave }: {
   const [draft, setDraft] = useState("");
   const commit = () => { const t = draft.trim(); onSave(t === "" ? null : t); setEditing(false); };
   return (
-    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom:"1px solid #e7e0d2", gap:10 }}>
-      <span style={{ fontSize:10, color:"#6f6a5f", letterSpacing:"0.05em", flexShrink:0 }}>{label}</span>
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom:"1px solid #e6e4de", gap:10 }}>
+      <span style={{ fontSize:10, color:"#676767", letterSpacing:"0.05em", flexShrink:0 }}>{label}</span>
       {editing ? (
         <input
           autoFocus
@@ -532,14 +532,14 @@ function EditableTextRow({ label, value, placeholder, onSave }: {
           onBlur={commit}
           onKeyDown={e => { if (e.key === "Enter") commit(); else if (e.key === "Escape") setEditing(false); }}
           placeholder={placeholder}
-          style={{ fontSize:11, padding:"3px 7px", border:"1px solid #6dba43", borderRadius:5, color:"#383a37", background:"#fafaf8", maxWidth:200, width:"100%", fontFamily:"'Inter',sans-serif", textAlign:"right", boxSizing:"border-box" }}
+          style={{ fontSize:11, padding:"3px 7px", border:"1px solid #5bba47", borderRadius:5, color:"#383a37", background:"#fafaf8", maxWidth:200, width:"100%", fontFamily:"'Roboto',sans-serif", textAlign:"right", boxSizing:"border-box" }}
         />
       ) : (
         <button
           onClick={() => { setDraft(value ?? ""); setEditing(true); }}
           title="Click to edit"
           style={{ display:"flex", alignItems:"center", gap:6, background:"transparent", border:"none", cursor:"pointer", padding:0, minWidth:0 }}>
-          <span style={{ fontSize:11, color: value ? "#383a37" : "#958d80", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{value || "—"}</span>
+          <span style={{ fontSize:11, color: value ? "#383a37" : "#8a8983", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{value || "—"}</span>
           <span style={{ fontSize:10, color:"#c4bba7", flexShrink:0 }}>✎</span>
         </button>
       )}
@@ -549,7 +549,7 @@ function EditableTextRow({ label, value, placeholder, onSave }: {
 
 function StaleBadge() {
   return (
-    <span style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#fffbeb", border:"1px solid #f59e0b", borderRadius:5, padding:"2px 8px", fontSize:10, color:"#92400e", fontWeight:500, fontFamily:"'Inter',sans-serif", lineHeight:1.4 }}>
+    <span style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#fffbeb", border:"1px solid #f59e0b", borderRadius:5, padding:"2px 8px", fontSize:10, color:"#92400e", fontWeight:500, fontFamily:"'Roboto',sans-serif", lineHeight:1.4 }}>
       ⚠ Roster updated — AI grade, summary &amp; red flags may be out of date.
     </span>
   );
@@ -597,7 +597,7 @@ function ExtractionQuality({ deal, onUpdate }: { deal: Deal; onUpdate: (id: stri
           <div style={{ fontSize:10, fontWeight:700, color, letterSpacing:"0.06em", marginBottom:3 }}>
             {quality === "thin" ? "⚠ THIN EXTRACTION" : "PARTIAL EXTRACTION"}
           </div>
-          <div style={{ fontSize:11, color:"#6f6a5f" }}>
+          <div style={{ fontSize:11, color:"#676767" }}>
             {missing.length > 0
               ? <>Missing: {missing.join(", ")}. Fill them in below, or re-upload a higher-quality PDF.</>
               : <>No tenant roster captured — paste a rent roll or re-upload a higher-quality PDF.</>}
@@ -605,7 +605,7 @@ function ExtractionQuality({ deal, onUpdate }: { deal: Deal; onUpdate: (id: stri
         </div>
         {blanks.length > 0 && (
           <button onClick={() => { setVals({}); setOpen(true); }}
-            style={{ flexShrink:0, background:"#fff", border:`1px solid ${color}`, color, padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:11.5, fontWeight:700, fontFamily:"'Inter',sans-serif", whiteSpace:"nowrap" }}>
+            style={{ flexShrink:0, background:"#fff", border:`1px solid ${color}`, color, padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:11.5, fontWeight:700, fontFamily:"'Roboto',sans-serif", whiteSpace:"nowrap" }}>
             ✎ Fill in the blanks
           </button>
         )}
@@ -613,31 +613,31 @@ function ExtractionQuality({ deal, onUpdate }: { deal: Deal; onUpdate: (id: stri
       {open && createPortal(
         <>
           <div onClick={() => setOpen(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.32)", zIndex:9998 }} />
-          <div onClick={e => e.stopPropagation()} style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:9999, background:"#fff", borderRadius:14, boxShadow:"0 24px 60px rgba(0,0,0,0.22)", padding:"20px 22px 18px", width:"min(360px,92vw)", maxHeight:"88vh", overflowY:"auto", fontFamily:"'Inter',sans-serif" }}>
+          <div onClick={e => e.stopPropagation()} style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:9999, background:"#fff", borderRadius:14, boxShadow:"0 24px 60px rgba(0,0,0,0.22)", padding:"20px 22px 18px", width:"min(360px,92vw)", maxHeight:"88vh", overflowY:"auto", fontFamily:"'Roboto',sans-serif" }}>
             <div style={{ fontWeight:700, fontSize:13, color:"#383a37", marginBottom:4 }}>Fill in the missing fields</div>
-            <div style={{ fontSize:11, color:"#a89f8f", marginBottom:14, lineHeight:1.5 }}>
+            <div style={{ fontSize:11, color:"#9b9992", marginBottom:14, lineHeight:1.5 }}>
               Enter the values from the OM. Filling these clears the {quality === "thin" ? "thin" : "partial"}-extraction flag. Leave any you don't have blank.
             </div>
             {blanks.map(c => (
               <div key={c.field as string} style={{ marginBottom:12 }}>
                 <div style={{ fontSize:11, color:"#6b7280", marginBottom:4 }}>{c.label}</div>
                 <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                  {c.prefix && <span style={{ fontSize:13, color:"#a89f8f" }}>{c.prefix}</span>}
+                  {c.prefix && <span style={{ fontSize:13, color:"#9b9992" }}>{c.prefix}</span>}
                   <input
                     inputMode={c.type === "number" ? "decimal" : undefined}
                     placeholder={c.placeholder}
                     value={vals[c.field as string] ?? ""}
                     onChange={e => setVals(prev => ({ ...prev, [c.field as string]: e.target.value }))}
                     onKeyDown={e => { if (e.key === "Enter") save(); }}
-                    style={{ flex:1, boxSizing:"border-box", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", fontFamily:"'Inter',sans-serif", outline:"none", background:"#faf8f4" }}
+                    style={{ flex:1, boxSizing:"border-box", border:"1px solid #e3e1db", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", fontFamily:"'Roboto',sans-serif", outline:"none", background:"#faf8f4" }}
                   />
-                  {c.suffix && <span style={{ fontSize:13, color:"#a89f8f" }}>{c.suffix}</span>}
+                  {c.suffix && <span style={{ fontSize:13, color:"#9b9992" }}>{c.suffix}</span>}
                 </div>
               </div>
             ))}
             <div style={{ display:"flex", gap:8, marginTop:4 }}>
-              <button onClick={save} style={{ flex:1, background:"#3f7a1f", color:"#fff", border:"none", borderRadius:8, padding:"10px 0", fontFamily:"'Inter',sans-serif", fontWeight:600, fontSize:13, cursor:"pointer" }}>Save</button>
-              <button onClick={() => setOpen(false)} style={{ flex:1, background:"#f3f4f6", color:"#383a37", border:"none", borderRadius:8, padding:"10px 0", fontFamily:"'Inter',sans-serif", fontWeight:500, fontSize:13, cursor:"pointer" }}>Cancel</button>
+              <button onClick={save} style={{ flex:1, background:"#3e8a2f", color:"#fff", border:"none", borderRadius:8, padding:"10px 0", fontFamily:"'Roboto',sans-serif", fontWeight:600, fontSize:13, cursor:"pointer" }}>Save</button>
+              <button onClick={() => setOpen(false)} style={{ flex:1, background:"#f3f4f6", color:"#383a37", border:"none", borderRadius:8, padding:"10px 0", fontFamily:"'Roboto',sans-serif", fontWeight:500, fontSize:13, cursor:"pointer" }}>Cancel</button>
             </div>
           </div>
         </>,
@@ -665,7 +665,7 @@ function KeyAssumptions({ deal }: { deal: Deal }) {
         </div>
       ))}
       {hidden > 0 && (
-        <button onClick={() => setExpanded(e => !e)} style={{ marginTop:7, background:"transparent", border:"none", color:"#b45309", fontWeight:600, fontSize:12, cursor:"pointer", padding:0, fontFamily:"'Inter',sans-serif" }}>
+        <button onClick={() => setExpanded(e => !e)} style={{ marginTop:7, background:"transparent", border:"none", color:"#b45309", fontWeight:600, fontSize:12, cursor:"pointer", padding:0, fontFamily:"'Roboto',sans-serif" }}>
           {expanded ? "Show less" : `Show ${hidden} more`}
         </button>
       )}
@@ -712,20 +712,20 @@ function CompDetail({ c }: { c: BmMatch }) {
   if (c.sourceDealName && c.sourceDealName !== c.name) push("From deal", c.sourceDealName);
   push("Source", c.source === "owned" ? "KPR owned transaction (verified)" : c.source === "broker" ? "Broker / manually entered" : "OM-sourced (seller-provided)");
   return (
-    <div style={{ fontFamily: "'Inter',sans-serif" }}>
+    <div style={{ fontFamily: "'Roboto',sans-serif" }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "5px 22px", marginTop: 6 }}>
         {rows.map(([l, v]) => (
           <div key={l} style={{ fontSize: 11.5 }}>
-            <span style={{ color: "#a89f8f", marginRight: 5 }}>{l}:</span>
+            <span style={{ color: "#9b9992", marginRight: 5 }}>{l}:</span>
             <span style={{ color: "#383a37", fontWeight: 500 }}>{v}</span>
           </div>
         ))}
       </div>
       {c.matchReasons && c.matchReasons.length > 0 && (
-        <div style={{ fontSize: 11, color: "#3f7a1f", marginTop: 7 }}>Why it matched: {c.matchReasons.join(" · ")}</div>
+        <div style={{ fontSize: 11, color: "#3e8a2f", marginTop: 7 }}>Why it matched: {c.matchReasons.join(" · ")}</div>
       )}
-      {c.sourceNotes && <div style={{ fontSize: 11, color: "#7d766a", marginTop: 6, lineHeight: 1.5 }}>{c.sourceNotes}</div>}
-      {rows.length === 0 && !c.sourceNotes && <div style={{ fontSize: 11.5, color: "#a89f8f", fontStyle: "italic", marginTop: 6 }}>No additional center detail on file for this comp.</div>}
+      {c.sourceNotes && <div style={{ fontSize: 11, color: "#6b6a65", marginTop: 6, lineHeight: 1.5 }}>{c.sourceNotes}</div>}
+      {rows.length === 0 && !c.sourceNotes && <div style={{ fontSize: 11.5, color: "#9b9992", fontStyle: "italic", marginTop: 6 }}>No additional center detail on file for this comp.</div>}
     </div>
   );
 }
@@ -892,13 +892,13 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
     if (bps == null) return null;
     if (bps <= -25) return { text: `~${Math.abs(bps)}bps inside the comp median — priced richer than comps`, color: "#b45309" };
     if (bps >= 25)  return { text: `~${Math.abs(bps)}bps above the comp median — priced cheaper than comps`, color: "#0f6b46" };
-    return { text: "in line with comps", color: "#6dba43" };
+    return { text: "in line with comps", color: "#5bba47" };
   };
   const psfVerdict = (pct: number | null) => {
     if (pct == null) return null;
     if (pct >= 5)  return { text: `${Math.abs(pct)}% above the comp median — priced higher`, color: "#b45309" };
     if (pct <= -5) return { text: `${Math.abs(pct)}% below the comp median — priced lower`, color: "#0f6b46" };
-    return { text: "in line with comps", color: "#6dba43" };
+    return { text: "in line with comps", color: "#5bba47" };
   };
 
   const sourceBadge = (s: "owned" | "broker" | "om") =>
@@ -906,15 +906,15 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
     : s === "broker" ? <span style={{ fontSize: 8, fontWeight: 700, color: "#5a7c9e", background: "#e8f1f8", border: "1px solid #c3d9ec", borderRadius: 3, padding: "1px 4px" }}>MANUAL</span>
     : <span style={{ fontSize: 8, fontWeight: 700, color: "#8c7a62", background: "#f3ede2", border: "1px solid #e0d4c0", borderRadius: 3, padding: "1px 4px" }}>OM</span>;
 
-  const ROW_STYLE: React.CSSProperties = { display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", padding: "7px 0", borderBottom: "1px solid #f5f1ea" };
-  const LABEL: React.CSSProperties = { fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#a89f8f", minWidth: 72, flexShrink: 0 };
-  const VAL: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: "#26281f" };
-  const MUTED: React.CSSProperties = { fontSize: 11, color: "#a89f8f" };
+  const ROW_STYLE: React.CSSProperties = { display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", padding: "7px 0", borderBottom: "1px solid #f6f5f1" };
+  const LABEL: React.CSSProperties = { fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9b9992", minWidth: 72, flexShrink: 0 };
+  const VAL: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: "#232422" };
+  const MUTED: React.CSSProperties = { fontSize: 11, color: "#9b9992" };
 
   const EyeBtn = ({ id, isExcluded }: { id: number; isExcluded: boolean }) => (
     <button onClick={() => toggleExclude(id)}
       title={isExcluded ? "Re-include in benchmark" : "Exclude from benchmark"}
-      style={{ background: "transparent", border: "none", cursor: "pointer", padding: "0 4px", color: isExcluded ? "#c0b8ab" : "#6dba43", display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
+      style={{ background: "transparent", border: "none", cursor: "pointer", padding: "0 4px", color: isExcluded ? "#c0b8ab" : "#5bba47", display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
       {isExcluded ? (
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
@@ -931,21 +931,21 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
 
   const AddCompSection = () => (
     <div style={{ marginTop: 10, position: "relative" }}>
-      <div style={{ fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>Add a comp</div>
+      <div style={{ fontSize: 10, color: "#9b9992", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>Add a comp</div>
       <input value={addQ} onChange={e => setAddQ(e.target.value)}
         placeholder="Search by property name, market…"
-        style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e7e0d2", borderRadius: 6, padding: "6px 10px", fontSize: 12, fontFamily: "'Inter',sans-serif", outline: "none", background: "#fdfaf6" }} />
-      {sugsLoading && <div style={{ fontSize: 11, color: "#a89f8f", padding: "4px 0" }}>Searching…</div>}
+        style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e6e4de", borderRadius: 6, padding: "6px 10px", fontSize: 12, fontFamily: "'Roboto',sans-serif", outline: "none", background: "#fdfaf6" }} />
+      {sugsLoading && <div style={{ fontSize: 11, color: "#9b9992", padding: "4px 0" }}>Searching…</div>}
       {suggestions.length > 0 && (
-        <div style={{ position: "absolute", zIndex: 20, top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e7e0d2", borderRadius: 7, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", maxHeight: 260, overflowY: "auto" }}>
+        <div style={{ position: "absolute", zIndex: 20, top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e6e4de", borderRadius: 7, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", maxHeight: 260, overflowY: "auto" }}>
           {suggestions.map(s => {
             const label = s.name || s.sourceDealName || s.market || "Unnamed comp";
             return (
               <button key={s.id} onClick={() => addInclude(s.id)}
-                style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f5f1ea", padding: "10px 12px", cursor: "pointer", fontFamily: "'Inter',sans-serif", touchAction: "manipulation" }}>
-                <span style={{ fontSize: 12, fontWeight: 500, color: "#26281f" }}>{label}</span>
-                {s.market && s.name && <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>{s.market}</span>}
-                {s.saleDate && <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>{fmtD(s.saleDate)}</span>}
+                style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f6f5f1", padding: "10px 12px", cursor: "pointer", fontFamily: "'Roboto',sans-serif", touchAction: "manipulation" }}>
+                <span style={{ fontSize: 12, fontWeight: 500, color: "#232422" }}>{label}</span>
+                {s.market && s.name && <span style={{ fontSize: 11, color: "#9b9992", marginLeft: 6 }}>{s.market}</span>}
+                {s.saleDate && <span style={{ fontSize: 11, color: "#9b9992", marginLeft: 6 }}>{fmtD(s.saleDate)}</span>}
               </button>
             );
           })}
@@ -955,11 +955,11 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   );
 
   return (
-    <div id="section-comp-benchmark" style={{ background: "#fff", border: "1px solid #efe8da", borderRadius: 12, padding: "18px 20px", marginBottom: 14, boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
+    <div id="section-comp-benchmark" style={{ background: "#fff", border: "1px solid #ecebe6", borderRadius: 12, padding: "18px 20px", marginBottom: 14, boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12, gap: 12, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 700, color: "#a89f8f" }}>Comp Benchmark</div>
-        <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontSize: 11, color: "#7d766a", fontFamily: "'Inter',sans-serif" }}>
-          <input type="checkbox" checked={excludeOm} onChange={e => setExcludeOm(e.target.checked)} style={{ accentColor: "#6dba43", width: 12, height: 12 }} />
+        <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 700, color: "#9b9992" }}>Comp Benchmark</div>
+        <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontSize: 11, color: "#6b6a65", fontFamily: "'Roboto',sans-serif" }}>
+          <input type="checkbox" checked={excludeOm} onChange={e => setExcludeOm(e.target.checked)} style={{ accentColor: "#5bba47", width: 12, height: 12 }} />
           Exclude OM-sourced comps
         </label>
       </div>
@@ -968,18 +968,18 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12, fontSize: 11.5 }}>
         {compFilters === null ? (
           <>
-            <span style={{ color: "#7d766a" }}>Comps: <b style={{ color: "#3f7a1f" }}>Auto</b></span>
+            <span style={{ color: "#6b6a65" }}>Comps: <b style={{ color: "#3e8a2f" }}>Auto</b></span>
             <button onClick={() => setCompFilters(filtersFromAuto())}
-              style={{ background: "transparent", border: "1px solid #d8cfbd", color: "#5c5047", borderRadius: 6, padding: "3px 9px", fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+              style={{ background: "transparent", border: "1px solid #d4d2ca", color: "#4f4d48", borderRadius: 6, padding: "3px 9px", fontSize: 11, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
               Customize
             </button>
           </>
         ) : (
           <>
-            <span style={{ color: "#7d766a", fontWeight: 600 }}>Filters:</span>
+            <span style={{ color: "#6b6a65", fontWeight: 600 }}>Filters:</span>
             <select value={String(compFilters.months ?? 0)} aria-label="Timing window"
               onChange={e => setCompFilters(f => ({ ...(f ?? DEFAULT_FILTERS), months: Number(e.target.value) || null }))}
-              style={{ fontSize: 11, padding: "3px 6px", border: "1px solid #d8cfbd", borderRadius: 6, background: "#fff", color: "#383a37", fontFamily: "'Inter',sans-serif" }}>
+              style={{ fontSize: 11, padding: "3px 6px", border: "1px solid #d4d2ca", borderRadius: 6, background: "#fff", color: "#383a37", fontFamily: "'Roboto',sans-serif" }}>
               <option value="12">Last 12 mo</option>
               <option value="24">Last 24 mo</option>
               <option value="36">Last 36 mo</option>
@@ -988,33 +988,33 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
             </select>
             <select value={compFilters.geography} aria-label="Geography"
               onChange={e => setCompFilters(f => ({ ...(f ?? DEFAULT_FILTERS), geography: e.target.value as CompFilters["geography"] }))}
-              style={{ fontSize: 11, padding: "3px 6px", border: "1px solid #d8cfbd", borderRadius: 6, background: "#fff", color: "#383a37", fontFamily: "'Inter',sans-serif" }}>
+              style={{ fontSize: 11, padding: "3px 6px", border: "1px solid #d4d2ca", borderRadius: 6, background: "#fff", color: "#383a37", fontFamily: "'Roboto',sans-serif" }}>
               <option value="national">National</option>
               <option value="state">Same state</option>
               <option value="metro">Same metro</option>
             </select>
-            <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: "#5c5047" }}>
-              <input type="checkbox" checked={compFilters.sameType} onChange={e => setCompFilters(f => ({ ...(f ?? DEFAULT_FILTERS), sameType: e.target.checked }))} style={{ accentColor: "#6dba43", width: 12, height: 12 }} />
+            <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: "#4f4d48" }}>
+              <input type="checkbox" checked={compFilters.sameType} onChange={e => setCompFilters(f => ({ ...(f ?? DEFAULT_FILTERS), sameType: e.target.checked }))} style={{ accentColor: "#5bba47", width: 12, height: 12 }} />
               Same type
             </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: "#5c5047" }}>
-              <input type="checkbox" checked={compFilters.sizeBand} onChange={e => setCompFilters(f => ({ ...(f ?? DEFAULT_FILTERS), sizeBand: e.target.checked }))} style={{ accentColor: "#6dba43", width: 12, height: 12 }} />
+            <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: "#4f4d48" }}>
+              <input type="checkbox" checked={compFilters.sizeBand} onChange={e => setCompFilters(f => ({ ...(f ?? DEFAULT_FILTERS), sizeBand: e.target.checked }))} style={{ accentColor: "#5bba47", width: 12, height: 12 }} />
               Similar size
             </label>
             <button onClick={() => setCompFilters(null)}
-              style={{ background: "transparent", border: "none", color: "#3f7a1f", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+              style={{ background: "transparent", border: "none", color: "#3e8a2f", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
               Reset to auto
             </button>
           </>
         )}
       </div>
 
-      {loading && <div style={{ fontSize: 12, color: "#a89f8f", padding: "12px 0" }}>Computing benchmark…</div>}
+      {loading && <div style={{ fontSize: 12, color: "#9b9992", padding: "12px 0" }}>Computing benchmark…</div>}
       {err && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 12, color: "#dc2626" }}>
           <span>Could not load benchmark: {err}</span>
           <button onClick={() => setRetryKey(k => k + 1)}
-            style={{ background: "transparent", border: "1px solid #dc2626", color: "#dc2626", padding: "3px 10px", borderRadius: 5, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", flexShrink: 0 }}>
+            style={{ background: "transparent", border: "1px solid #dc2626", color: "#dc2626", padding: "3px 10px", borderRadius: 5, cursor: "pointer", fontSize: 11, fontFamily: "'Roboto',sans-serif", flexShrink: 0 }}>
             Retry
           </button>
         </div>
@@ -1029,8 +1029,8 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
         if (bm.n === 0 && bm.comps.length === 0) {
           return (
             <>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#26281f", marginBottom: 8 }}>Based on 0 comps · no matching comps</div>
-              <div style={{ background: "#f9f6f0", border: "1px solid #ece5d7", borderRadius: 8, padding: "14px 16px", marginBottom: 10, fontSize: 12, color: "#a89f8f", fontStyle: "italic" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#232422", marginBottom: 8 }}>Based on 0 comps · no matching comps</div>
+              <div style={{ background: "#f9f6f0", border: "1px solid #ebeae5", borderRadius: 8, padding: "14px 16px", marginBottom: 10, fontSize: 12, color: "#9b9992", fontStyle: "italic" }}>
                 No comparable trades on file yet.
               </div>
               {AddCompSection()}
@@ -1041,7 +1041,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
         return (
           <>
             <div style={{ marginBottom: 6 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#26281f" }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#232422" }}>
                 {bm.n} comp{bm.n !== 1 ? "s" : ""} · {(bm.tierLabel === "no matching comps" && bm.n > 0) ? "closest matches" : bm.tierLabel}
                 {bm.dateRange ? ` · ${fmtD(bm.dateRange.from)}–${fmtD(bm.dateRange.to)}` : ""}
               </span>
@@ -1053,10 +1053,10 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                 ].filter(Boolean);
                 if (bm.excludedInvalid > 0) mix.push(`${bm.excludedInvalid} excluded`);
                 if (bm.relaxed.length > 0) mix.push(`relaxed ${bm.relaxed.join("/")}`);
-                return mix.length ? <span style={{ fontSize: 11, color: "#a89f8f", marginLeft: 6 }}>· {mix.join(" · ")}</span> : null;
+                return mix.length ? <span style={{ fontSize: 11, color: "#9b9992", marginLeft: 6 }}>· {mix.join(" · ")}</span> : null;
               })()}
               {bm.smartMatched > 0 && (
-                <span style={{ fontSize: 11, color: "#3f7a1f", marginLeft: 6, fontWeight: 600 }}>· {bm.smartMatched} auto-matched</span>
+                <span style={{ fontSize: 11, color: "#3e8a2f", marginLeft: 6, fontWeight: 600 }}>· {bm.smartMatched} auto-matched</span>
               )}
             </div>
 
@@ -1074,7 +1074,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                 {bm.capRate != null && (
                   <span style={{ fontSize: 12, color: "#383a37" }}>
                     median {fmtPct2(bm.capRate.median)}
-                    <span style={{ color: "#a89f8f" }}> ({fmtPct2(bm.capRate.p25)}–{fmtPct2(bm.capRate.p75)} range)</span>
+                    <span style={{ color: "#9b9992" }}> ({fmtPct2(bm.capRate.p25)}–{fmtPct2(bm.capRate.p75)} range)</span>
                   </span>
                 )}
                 {!bm.insufficient && cv && <span style={{ fontSize: 11, color: cv.color, fontWeight: 500 }}>{cv.text}</span>}
@@ -1089,7 +1089,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                 {bm.pricePerSf != null && (
                   <span style={{ fontSize: 12, color: "#383a37" }}>
                     median {fmtPsf(bm.pricePerSf.median)}
-                    <span style={{ color: "#a89f8f" }}> ({fmtPsf(bm.pricePerSf.p25)}–{fmtPsf(bm.pricePerSf.p75)} range)</span>
+                    <span style={{ color: "#9b9992" }}> ({fmtPsf(bm.pricePerSf.p25)}–{fmtPsf(bm.pricePerSf.p75)} range)</span>
                   </span>
                 )}
                 {!bm.insufficient && pv && <span style={{ fontSize: 11, color: pv.color, fontWeight: 500 }}>{pv.text}</span>}
@@ -1097,7 +1097,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
             )}
 
             {bm.last12 && (
-              <div style={{ fontSize: 11, color: "#7d766a", padding: "6px 0", borderBottom: "1px solid #f5f1ea" }}>
+              <div style={{ fontSize: 11, color: "#6b6a65", padding: "6px 0", borderBottom: "1px solid #f6f5f1" }}>
                 Last 12 months (n={bm.last12.n}):
                 {bm.last12.capRate && <span> median cap {fmtPct2(bm.last12.capRate.median)}</span>}
                 {bm.last12.capRate && bm.last12.pricePerSf && <span>,</span>}
@@ -1115,15 +1115,15 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
             {/* Comps list — always shown, no toggle */}
             <div style={{ marginTop: 10 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
-                <div style={{ fontSize: 11, color: "#7d766a" }} title="★ weights a comp heavier · × drops it · tap a column header to sort">
-                  <span style={{ fontWeight: 600, color: "#6dba43" }}>{activeComps.length}</span> in benchmark
-                  {excludedCount > 0 && <span style={{ color: "#a89f8f", marginLeft: 5 }}>· {excludedCount} excluded</span>}
+                <div style={{ fontSize: 11, color: "#6b6a65" }} title="★ weights a comp heavier · × drops it · tap a column header to sort">
+                  <span style={{ fontWeight: 600, color: "#5bba47" }}>{activeComps.length}</span> in benchmark
+                  {excludedCount > 0 && <span style={{ color: "#9b9992", marginLeft: 5 }}>· {excludedCount} excluded</span>}
                   {starredIds.length > 0 && <span style={{ color: "#c98f1e", marginLeft: 5, fontWeight: 600 }}>· {starredIds.length} starred</span>}
                   <span style={{ fontSize: 10, color: "#c0b8ab", marginLeft: 6 }}>· ★ weight · × drop</span>
                 </div>
                 <input value={tableQ} onChange={e => setTableQ(e.target.value)}
                   placeholder="Filter comps…"
-                  style={{ flex: "0 1 200px", minWidth: 130, boxSizing: "border-box", border: "1px solid #e7e0d2", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontFamily: "'Inter',sans-serif", outline: "none", background: "#fdfaf6" }} />
+                  style={{ flex: "0 1 200px", minWidth: 130, boxSizing: "border-box", border: "1px solid #e6e4de", borderRadius: 6, padding: "5px 9px", fontSize: 11.5, fontFamily: "'Roboto',sans-serif", outline: "none", background: "#fdfaf6" }} />
               </div>
               {(() => {
                 const q = tableQ.trim().toLowerCase();
@@ -1167,14 +1167,14 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                 return (
                 <>
                 <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, fontFamily: "'Roboto',sans-serif" }}>
                   <thead>
-                    <tr style={{ borderBottom: "2px solid #ece5d7" }}>
+                    <tr style={{ borderBottom: "2px solid #ebeae5" }}>
                       <th style={{ width: 48 }} />
                       {COLS.map(col => (
                         <th key={col.key} onClick={() => toggleSort(col.key)}
                           title="Sort by this column"
-                          style={{ textAlign: "left", padding: "4px 8px", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: sortKey === col.key ? "#6dba43" : "#a89f8f", fontWeight: 700, whiteSpace: "nowrap", cursor: "pointer", userSelect: "none" }}>
+                          style={{ textAlign: "left", padding: "4px 8px", fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: sortKey === col.key ? "#5bba47" : "#9b9992", fontWeight: 700, whiteSpace: "nowrap", cursor: "pointer", userSelect: "none" }}>
                           {col.label}{sortKey === col.key ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
                         </th>
                       ))}
@@ -1186,7 +1186,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                       const open = expandedComp === c.id;
                       return (
                       <Fragment key={c.id}>
-                      <tr style={{ borderBottom: open ? "none" : "1px solid #f5f1ea", opacity: c.excluded ? 0.38 : 1, background: open ? "#faf7f0" : (isStar && !c.excluded ? "#fffaf0" : undefined) }}>
+                      <tr style={{ borderBottom: open ? "none" : "1px solid #f6f5f1", opacity: c.excluded ? 0.38 : 1, background: open ? "#faf9f5" : (isStar && !c.excluded ? "#fffaf0" : undefined) }}>
                         <td style={{ padding: "5px 2px 5px 6px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                           <button onClick={() => toggleStar(c.id)}
                             title={isStar ? "Unstar — remove extra weight" : "Star — weight this comp more heavily"}
@@ -1198,20 +1198,20 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                                 style={{ background: "transparent", border: "none", cursor: "pointer", padding: "0 4px", color: "#dc2626", fontSize: 16, lineHeight: 1, display: "inline-flex", alignItems: "center", flexShrink: 0, fontFamily: "sans-serif" }}>×</button>}
                         </td>
                         <td onClick={() => setExpandedComp(open ? null : c.id)} title="Click for center details"
-                          style={{ padding: "6px 8px", color: c.excluded ? "#a89f8f" : "#383a37", fontWeight: 500, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" }}>
+                          style={{ padding: "6px 8px", color: c.excluded ? "#9b9992" : "#383a37", fontWeight: 500, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" }}>
                           <span style={{ color: "#b3a994", fontSize: 9, marginRight: 4 }}>{open ? "▾" : "▸"}</span>{dispName(c)}
                         </td>
-                        <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{c.market || "—"}</td>
-                        <td style={{ padding: "6px 8px", color: c.anchor ? "#5c5850" : "#c9c2b8", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.anchor || "—"}</td>
-                        <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{fmtD(c.saleDate)}</td>
+                        <td style={{ padding: "6px 8px", color: "#55544f", whiteSpace: "nowrap" }}>{c.market || "—"}</td>
+                        <td style={{ padding: "6px 8px", color: c.anchor ? "#55544f" : "#c6c4bd", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.anchor || "—"}</td>
+                        <td style={{ padding: "6px 8px", color: "#55544f", whiteSpace: "nowrap" }}>{fmtD(c.saleDate)}</td>
                         <td style={{ padding: "6px 8px", color: "#383a37", whiteSpace: "nowrap" }}>{fmtM(c.salePrice)}</td>
-                        <td style={{ padding: "6px 8px", color: c.capRate != null ? "#26281f" : "#c9c2b8", fontWeight: c.capRate != null ? 600 : 400, whiteSpace: "nowrap" }}>{fmtPct2(c.capRate)}</td>
+                        <td style={{ padding: "6px 8px", color: c.capRate != null ? "#232422" : "#c6c4bd", fontWeight: c.capRate != null ? 600 : 400, whiteSpace: "nowrap" }}>{fmtPct2(c.capRate)}</td>
                         <td style={{ padding: "6px 8px", color: "#383a37", whiteSpace: "nowrap" }}>{fmtPsf(c.pricePerSf)}</td>
-                        <td style={{ padding: "6px 8px", color: "#5c5850", whiteSpace: "nowrap" }}>{fmtSf(c.sf)}</td>
+                        <td style={{ padding: "6px 8px", color: "#55544f", whiteSpace: "nowrap" }}>{fmtSf(c.sf)}</td>
                         <td style={{ padding: "6px 8px" }}>{sourceBadge(c.source)}</td>
                       </tr>
                       {open && (
-                        <tr style={{ background: "#faf7f0", borderBottom: "1px solid #f5f1ea" }}>
+                        <tr style={{ background: "#faf9f5", borderBottom: "1px solid #f6f5f1" }}>
                           <td colSpan={10} style={{ padding: "2px 14px 12px 30px" }}>
                             <CompDetail c={c} />
                           </td>
@@ -1221,14 +1221,14 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                       );
                     })}
                     {sorted.length === 0 && (
-                      <tr><td colSpan={11} style={{ padding: "10px 8px", color: "#a89f8f", fontStyle: "italic" }}>No comps match "{tableQ}".</td></tr>
+                      <tr><td colSpan={11} style={{ padding: "10px 8px", color: "#9b9992", fontStyle: "italic" }}>No comps match "{tableQ}".</td></tr>
                     )}
                   </tbody>
                 </table>
                 </div>
                 {sorted.length > COMP_PREVIEW && !q && (
                   <button onClick={() => setShowAllComps(s => !s)}
-                    style={{ marginTop: 8, background: "transparent", border: "none", color: "#6dba43", cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: "2px 0" }}>
+                    style={{ marginTop: 8, background: "transparent", border: "none", color: "#5bba47", cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Roboto',sans-serif", padding: "2px 0" }}>
                     {collapsed ? `▸ Show all ${sorted.length} comps` : "▾ Show fewer"}
                   </button>
                 )}
@@ -1249,25 +1249,25 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
                 const SUG_PREVIEW = 5;
                 const visibleSugs = showAllSugs ? sugs : sugs.slice(0, SUG_PREVIEW);
                 return (
-                  <div style={{ marginTop: 14, borderTop: "1px solid #f1eadc", paddingTop: 12 }}>
-                    <div style={{ fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Suggested comps — most similar first</div>
+                  <div style={{ marginTop: 14, borderTop: "1px solid #efeee9", paddingTop: 12 }}>
+                    <div style={{ fontSize: 10, color: "#9b9992", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Suggested comps — most similar first</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {visibleSugs.map(s => (
-                        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid #ece5d7", borderRadius: 9, padding: "8px 10px", background: "#faf7f0", flexWrap: "wrap" }}>
+                        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid #ebeae5", borderRadius: 9, padding: "8px 10px", background: "#faf9f5", flexWrap: "wrap" }}>
                           <div style={{ minWidth: 0, flex: "1 1 220px" }}>
-                            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#26281f", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name || s.sourceDealName || s.market || "Comp"}</div>
-                            <div style={{ fontSize: 10.5, color: "#8b8578", marginTop: 1 }}>
+                            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#232422", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name || s.sourceDealName || s.market || "Comp"}</div>
+                            <div style={{ fontSize: 10.5, color: "#7a7973", marginTop: 1 }}>
                               {(s.matchReasons ?? []).join(" · ") || "similar"}{s.capRate != null ? ` · ${fmtPct2(s.capRate)} cap` : ""}{s.saleDate ? ` · ${fmtD(s.saleDate)}` : ""}
                             </div>
                           </div>
-                          <button onClick={() => addInclude(s.id)} style={{ background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 6, padding: "5px 11px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>+ Add</button>
-                          <button onClick={() => setDismissedSugIds(prev => prev.includes(s.id) ? prev : [...prev, s.id])} title="Dismiss this suggestion" style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#a69e91", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>Dismiss</button>
+                          <button onClick={() => addInclude(s.id)} style={{ background: "#3e8a2f", color: "#fff", border: "none", borderRadius: 6, padding: "5px 11px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>+ Add</button>
+                          <button onClick={() => setDismissedSugIds(prev => prev.includes(s.id) ? prev : [...prev, s.id])} title="Dismiss this suggestion" style={{ background: "transparent", border: "1px solid #dad8d1", color: "#94928b", borderRadius: 6, padding: "5px 9px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>Dismiss</button>
                         </div>
                       ))}
                     </div>
                     {sugs.length > SUG_PREVIEW && (
                       <button onClick={() => setShowAllSugs(s => !s)}
-                        style={{ marginTop: 8, background: "transparent", border: "none", color: "#6dba43", cursor: "pointer", fontSize: 11.5, fontWeight: 600, padding: 0 }}>
+                        style={{ marginTop: 8, background: "transparent", border: "none", color: "#5bba47", cursor: "pointer", fontSize: 11.5, fontWeight: 600, padding: 0 }}>
                         {showAllSugs ? "▾ Show fewer" : `▸ Show all ${sugs.length} suggestions`}
                       </button>
                     )}
@@ -1372,14 +1372,14 @@ function SectionJump({ deal, scrollRef, viewMode }: { deal: Deal; scrollRef: Rea
         onClick={() => setOpen(o => !o)}
         style={{
           background: "#fff",
-          border: "1px solid #ddd4c2",
+          border: "1px solid #dad8d1",
           color: "#52554e",
           padding: "5px 11px",
           borderRadius: 6,
           cursor: "pointer",
           fontSize: 11,
           fontWeight: 600,
-          fontFamily: "'Inter', sans-serif",
+          fontFamily: "'Roboto',sans-serif",
           display: "flex",
           alignItems: "center",
           gap: 5,
@@ -1394,7 +1394,7 @@ function SectionJump({ deal, scrollRef, viewMode }: { deal: Deal; scrollRef: Rea
           top: "calc(100% + 5px)",
           right: 0,
           background: "#fff",
-          border: "1px solid #e6dfd0",
+          border: "1px solid #e3e1db",
           borderRadius: 8,
           boxShadow: "0 8px 24px rgba(56,58,55,0.16)",
           minWidth: 200,
@@ -1415,7 +1415,7 @@ function SectionJump({ deal, scrollRef, viewMode }: { deal: Deal; scrollRef: Rea
                 cursor: "pointer",
                 fontSize: 12,
                 color: "#383a37",
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: "'Roboto',sans-serif",
                 borderBottom: "1px solid #f5efe2",
               }}
               onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
@@ -1475,7 +1475,7 @@ function DealReviewBox({ deal, onUpdate, onRegrade, regrading, onOpenHouseView }
         </div>
         {onOpenHouseView && (
           <button onClick={onOpenHouseView}
-            style={{ background:"#fff", border:"1px solid #c2e0c9", color:"#1f7a43", padding:"5px 11px", borderRadius:7, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+            style={{ background:"#fff", border:"1px solid #c2e0c9", color:"#1f7a43", padding:"5px 11px", borderRadius:7, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>
             🧠 House View
           </button>
         )}
@@ -1489,15 +1489,15 @@ function DealReviewBox({ deal, onUpdate, onRegrade, regrading, onOpenHouseView }
         onBlur={save}
         placeholder="e.g. We like the grocer's strong sales and below-market rent. Concerned about Best Buy — rent is high and sales are soft. Broker guided to a 6.5% cap, which is too expensive for this product and market…"
         rows={4}
-        style={{ width:"100%", boxSizing:"border-box", resize:"vertical", fontFamily:"'Inter',sans-serif", fontSize:13, lineHeight:1.55, padding:"10px 12px", border:"1px solid #c2e0c9", borderRadius:8, color:"#383a37", background:"#fff", outline:"none" }}
+        style={{ width:"100%", boxSizing:"border-box", resize:"vertical", fontFamily:"'Roboto',sans-serif", fontSize:13, lineHeight:1.55, padding:"10px 12px", border:"1px solid #c2e0c9", borderRadius:8, color:"#383a37", background:"#fff", outline:"none" }}
       />
       <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:10, flexWrap:"wrap" }}>
         <button onClick={save} disabled={!dirty}
-          style={{ background: dirty ? "#fff" : "#eef3ea", border:"1px solid #c2e0c9", color: dirty ? "#1f7a43" : "#a89f8f", padding:"7px 14px", borderRadius:7, cursor: dirty ? "pointer" : "default", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+          style={{ background: dirty ? "#fff" : "#eef3ea", border:"1px solid #c2e0c9", color: dirty ? "#1f7a43" : "#9b9992", padding:"7px 14px", borderRadius:7, cursor: dirty ? "pointer" : "default", fontSize:12, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>
           {dirty ? "Save" : "Saved"}
         </button>
         <button onClick={saveAndRegrade} disabled={regrading || (!saved && !text.trim())}
-          style={{ background:"#1f7a43", border:"none", color:"#fff", padding:"7px 14px", borderRadius:7, cursor: regrading ? "default" : "pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif", opacity: regrading ? 0.6 : 1 }}>
+          style={{ background:"#1f7a43", border:"none", color:"#fff", padding:"7px 14px", borderRadius:7, cursor: regrading ? "default" : "pointer", fontSize:12, fontWeight:600, fontFamily:"'Roboto',sans-serif", opacity: regrading ? 0.6 : 1 }}>
           {regrading ? "Re-grading…" : "✨ Save & Re-grade with this review"}
         </button>
         <span style={{ fontSize:10.5, color:"#9aa3b2" }}>Re-grade uses a token refresh.</span>
@@ -1519,10 +1519,10 @@ function DispositionSection({ sold, children }: { sold: boolean; children: React
   return (
     <div style={{ marginTop: 4 }}>
       <button onClick={() => setOpen(o => !o)}
-        style={{ display:"flex", alignItems:"center", gap:8, width:"100%", textAlign:"left", background:"transparent", border:"none", cursor:"pointer", padding:"4px 0", marginBottom: open ? 10 : 0, fontFamily:"'Inter',sans-serif" }}>
+        style={{ display:"flex", alignItems:"center", gap:8, width:"100%", textAlign:"left", background:"transparent", border:"none", cursor:"pointer", padding:"4px 0", marginBottom: open ? 10 : 0, fontFamily:"'Roboto',sans-serif" }}>
         <span style={{ width:6, height:6, borderRadius:"50%", background:sold?"#0d9488":"#d0c9bc", flexShrink:0 }}/>
         <span style={{ fontSize:13, fontWeight:600, color:"#383a37" }}>{sold ? "Disposition Record" : "Disposition"}</span>
-        <span style={{ marginLeft:"auto", fontSize:10, color:"#a69e91", fontWeight:600 }}>{open ? "HIDE ▴" : "SHOW ▾"}</span>
+        <span style={{ marginLeft:"auto", fontSize:10, color:"#94928b", fontWeight:600 }}>{open ? "HIDE ▴" : "SHOW ▾"}</span>
       </button>
       {open && children}
     </div>
@@ -1568,54 +1568,54 @@ function TeachExtractorModal({ onClose }: { onClose: () => void }) {
   const remove = async (id: string) => { await apiDeleteExtractionLesson(id); reload(); };
   const scopeLabel = (s: string) => SCOPE_OPTS.find(o => o.value === s)?.label || s;
 
-  const fld: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: "1px solid #ddd4c2", borderRadius: 8, padding: "9px 11px", fontSize: 13, fontFamily: "'Inter',sans-serif", outline: "none", background: "#fdfaf6" };
+  const fld: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: "1px solid #dad8d1", borderRadius: 8, padding: "9px 11px", fontSize: 13, fontFamily: "'Roboto',sans-serif", outline: "none", background: "#fdfaf6" };
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 800, background: "rgba(38,40,31,0.5)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: "20px 22px", width: "min(560px, 96vw)", maxHeight: "88vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(38,40,31,0.28)", fontFamily: "'Inter',sans-serif" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: "20px 22px", width: "min(560px, 96vw)", maxHeight: "88vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(38,40,31,0.28)", fontFamily: "'Roboto',sans-serif" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#26281f" }}>🎓 Teach the extractor</div>
-            <div style={{ fontSize: 12.5, color: "#7d766a", lineHeight: 1.5, marginTop: 4 }}>
+            <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, fontWeight: 600, color: "#232422" }}>🎓 Teach the extractor</div>
+            <div style={{ fontSize: 12.5, color: "#6b6a65", lineHeight: 1.5, marginTop: 4 }}>
               Caught a mistake? Write a rule in plain English. The AI will follow it on every future extraction, so it gets it right next time.
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", color: "#a69e91", cursor: "pointer", fontSize: 18, lineHeight: 1, flexShrink: 0 }}>✕</button>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", color: "#94928b", cursor: "pointer", fontSize: 18, lineHeight: 1, flexShrink: 0 }}>✕</button>
         </div>
 
         <div style={{ marginTop: 16 }}>
-          <label style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#a89f8f", marginBottom: 5 }}>New rule</label>
+          <label style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9b9992", marginBottom: 5 }}>New rule</label>
           <textarea value={text} onChange={e => setText(e.target.value)} rows={3}
             placeholder="e.g. Always capture every anchor tenant (Burlington, grocers, banks) even if they're on a separate page of the rent roll — never drop large tenants."
             style={{ ...fld, resize: "vertical", lineHeight: 1.5 }} />
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
-            <span style={{ fontSize: 12, color: "#7d766a" }}>Apply to:</span>
+            <span style={{ fontSize: 12, color: "#6b6a65" }}>Apply to:</span>
             <select value={scope} onChange={e => setScope(e.target.value as LessonScope)} style={{ ...fld, width: "auto", padding: "7px 9px" }}>
               {SCOPE_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             <button onClick={save} disabled={saving || !text.trim()}
-              style={{ marginLeft: "auto", background: "#26281f", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: saving || !text.trim() ? "default" : "pointer", opacity: saving || !text.trim() ? 0.5 : 1 }}>
+              style={{ marginLeft: "auto", background: "#232422", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: saving || !text.trim() ? "default" : "pointer", opacity: saving || !text.trim() ? 0.5 : 1 }}>
               {saving ? "Saving…" : "Add rule"}
             </button>
           </div>
           {err && <div style={{ fontSize: 12, color: "#dc2626", marginTop: 6 }}>{err}</div>}
         </div>
 
-        <div style={{ borderTop: "1px solid #f1ece1", margin: "18px 0 12px" }} />
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#a89f8f", marginBottom: 8 }}>
+        <div style={{ borderTop: "1px solid #f3f2ee", margin: "18px 0 12px" }} />
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9b9992", marginBottom: 8 }}>
           Active rules{lessons.length > 0 ? ` (${lessons.length})` : ""}
         </div>
         {loading ? (
-          <div style={{ fontSize: 12.5, color: "#a89f8f" }}>Loading…</div>
+          <div style={{ fontSize: 12.5, color: "#9b9992" }}>Loading…</div>
         ) : lessons.length === 0 ? (
-          <div style={{ fontSize: 12.5, color: "#a89f8f", fontStyle: "italic" }}>No custom rules yet. Add one above — the built-in extraction rules still apply on their own.</div>
+          <div style={{ fontSize: 12.5, color: "#9b9992", fontStyle: "italic" }}>No custom rules yet. Add one above — the built-in extraction rules still apply on their own.</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
             {lessons.map(l => (
-              <div key={l.id} style={{ display: "flex", alignItems: "flex-start", gap: 9, border: "1px solid #ece5d7", borderRadius: 9, padding: "9px 11px", background: "#faf7f0" }}>
+              <div key={l.id} style={{ display: "flex", alignItems: "flex-start", gap: 9, border: "1px solid #ebeae5", borderRadius: 9, padding: "9px 11px", background: "#faf9f5" }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontSize: 12.5, color: "#383a37", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{l.lesson}</div>
-                  <div style={{ fontSize: 10.5, color: "#a69e91", marginTop: 3 }}>{scopeLabel(l.scope)}</div>
+                  <div style={{ fontSize: 10.5, color: "#94928b", marginTop: 3 }}>{scopeLabel(l.scope)}</div>
                 </div>
                 <button onClick={() => remove(l.id)} title="Remove this rule"
                   style={{ background: "transparent", border: "none", color: "#c0392b", cursor: "pointer", fontSize: 12, fontWeight: 600, flexShrink: 0, padding: "0 2px" }}>Remove</button>
@@ -2323,7 +2323,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     <div style={{ display:"flex", gap:4 }}>
       {(["full","left","right"] as const).map(v => (
         <button key={v} onClick={() => set(v)}
-          style={{ fontSize:9, padding:"3px 7px", borderRadius:5, border:"1px solid", borderColor:val===v?"#0d9488":"#e3dccd", background:val===v?"#0d948818":"transparent", color:val===v?"#0d9488":"#a69e91", cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>
+          style={{ fontSize:9, padding:"3px 7px", borderRadius:5, border:"1px solid", borderColor:val===v?"#0d9488":"#dfddd6", background:val===v?"#0d948818":"transparent", color:val===v?"#0d9488":"#94928b", cursor:"pointer", fontFamily:"'Roboto',sans-serif" }}>
           {v}
         </button>
       ))}
@@ -2338,13 +2338,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     // where this number came from without opening the PDF.
     const cite = field && hasVal ? (d.fieldCitations || {})[field] : null;
     return (
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom:"1px solid #e7e0d2", background:ver?"#0f9d6308":"transparent", margin:ver?"0 -6px":0, paddingLeft:ver?6:0, paddingRight:ver?6:0, borderRadius:ver?4:0 }}>
-        <span style={{ fontSize:10, color:"#6f6a5f", letterSpacing:"0.05em" }}>{l}</span>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom:"1px solid #e6e4de", background:ver?"#0f9d6308":"transparent", margin:ver?"0 -6px":0, paddingLeft:ver?6:0, paddingRight:ver?6:0, borderRadius:ver?4:0 }}>
+        <span style={{ fontSize:10, color:"#676767", letterSpacing:"0.05em" }}>{l}</span>
         <span style={{ display:"flex", alignItems:"center", gap:7 }}>
-          <span style={{ fontSize:11, color:c||"#383a37", fontWeight:500 }}>{hasVal ? String(v) : <span style={{color:"#958d80"}}>—</span>}</span>
+          <span style={{ fontSize:11, color:c||"#383a37", fontWeight:500 }}>{hasVal ? String(v) : <span style={{color:"#8a8983"}}>—</span>}</span>
           {cite && (
             <span title={`OM source: ${cite}`}
-              style={{ fontSize:9, color:"#a89f8f", border:"1px solid #e3dccd", borderRadius:999, padding:"0 5px", lineHeight:"14px", cursor:"help", flexShrink:0, fontFamily:"'Inter',sans-serif" }}>
+              style={{ fontSize:9, color:"#9b9992", border:"1px solid #dfddd6", borderRadius:999, padding:"0 5px", lineHeight:"14px", cursor:"help", flexShrink:0, fontFamily:"'Roboto',sans-serif" }}>
               {cite.match(/p\.?\s?\d+/i)?.[0]?.replace(/\s/g, "") || "src"}
             </span>
           )}
@@ -2362,10 +2362,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   };
 
   const Card = ({ title, source, children, accent }: { title: string; source?: string; children: React.ReactNode; accent?: string }) => (
-    <div style={{ background:"#fff", border:`1px solid ${accent||"#ece5d7"}`, borderRadius:12, padding:"16px 18px", boxShadow:"0 1px 2px rgba(56,58,55,0.04), 0 12px 28px -22px rgba(56,58,55,0.45)" }}>
-      <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:accent||"#a89f8f", marginBottom:12 }}>
+    <div style={{ background:"#fff", border:`1px solid ${accent||"#ebeae5"}`, borderRadius:12, padding:"16px 18px", boxShadow:"0 1px 2px rgba(56,58,55,0.04), 0 12px 28px -22px rgba(56,58,55,0.45)" }}>
+      <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:accent||"#9b9992", marginBottom:12 }}>
         {title}
-        {source && <span style={{ textTransform:"none", letterSpacing:"normal", fontWeight:500, color:"#bcae97" }}> (Source: {source})</span>}
+        {source && <span style={{ textTransform:"none", letterSpacing:"normal", fontWeight:500, color:"#b8b5ad" }}> (Source: {source})</span>}
       </div>
       {children}
     </div>
@@ -2455,12 +2455,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
     isMobileNav ? (
       <div style={{ position:"relative", display:"flex", gap:8, alignItems:"stretch" }}>
         <button onClick={() => setNavMenu(m => m ? null : "toc")}
-          style={{ flex:1, minWidth:0, width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", background:"#fff", border:"1px solid #e3dccd", borderRadius:8, padding:"9px 13px", fontSize:13, fontWeight:700, color:"#26281f", cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>
-          <span>{PAGE_TAB_LABEL[tab]}</span><span style={{ fontSize:11, color:"#a69e91", fontWeight:600 }}>☰ sections ▾</span>
+          style={{ flex:1, minWidth:0, width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", background:"#fff", border:"1px solid #dfddd6", borderRadius:8, padding:"9px 13px", fontSize:13, fontWeight:700, color:"#232422", cursor:"pointer", fontFamily:"'Roboto',sans-serif" }}>
+          <span>{PAGE_TAB_LABEL[tab]}</span><span style={{ fontSize:11, color:"#94928b", fontWeight:600 }}>☰ sections ▾</span>
         </button>
         <AddIntelButton onClick={() => setIntelOpen(true)} style={{ padding: "5px 10px", fontSize: 11.5, flexShrink: 0 }} />
         {navMenu && showMenu && (
-          <div style={{ position:"absolute", left:0, right:0, top:"calc(100% + 4px)", background:"#fff", border:"1px solid #e3dccd", borderRadius:10, boxShadow:"0 14px 34px rgba(0,0,0,0.2)", zIndex:70, maxHeight:"68vh", overflowY:"auto", padding:6 }}>
+          <div style={{ position:"absolute", left:0, right:0, top:"calc(100% + 4px)", background:"#fff", border:"1px solid #dfddd6", borderRadius:10, boxShadow:"0 14px 34px rgba(0,0,0,0.2)", zIndex:70, maxHeight:"68vh", overflowY:"auto", padding:6 }}>
             {tabs.map(([k,label]) => (
               <div key={k} style={{ marginBottom:2 }}>
                 <button onClick={() => { setTab(k); setNavMenu(null); }}
@@ -2469,7 +2469,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                 </button>
                 {(TAB_SECTIONS[k] || []).map(s => (
                   <button key={s.id} onClick={() => { setTab(k); setNavMenu(null); setTimeout(() => scrollToSection(s.id), 60); }}
-                    style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"5px 10px 5px 26px", fontSize:11.5, color:"#6f6a5f", cursor:"pointer" }}>
+                    style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"5px 10px 5px 26px", fontSize:11.5, color:"#676767", cursor:"pointer" }}>
                     {s.label}
                   </button>
                 ))}
@@ -2479,15 +2479,15 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         )}
       </div>
     ) : (
-      <div style={{ display:"flex", gap:2, borderBottom:"1.5px solid #e7e0d2", flexWrap:"wrap" }}>
+      <div style={{ display:"flex", gap:2, borderBottom:"1.5px solid #e6e4de", flexWrap:"wrap" }}>
         {tabs.map(([k,label]) => (
           <div key={k} style={{ position:"relative" }}>
             <button onClick={() => { setTab(k); setNavMenu(m => m === k ? null : k); }}
-              style={{ background:"transparent", border:"none", borderBottom: tab===k ? "2px solid #3f7a1f" : "2px solid transparent", color: tab===k ? "#26281f" : "#8b8578", padding:"8px 11px", marginBottom:-1.5, cursor:"pointer", fontSize:12.5, fontWeight: tab===k ? 700 : 500, whiteSpace:"nowrap", fontFamily:"'Inter',sans-serif" }}>
+              style={{ background:"transparent", border:"none", borderBottom: tab===k ? "2px solid #3e8a2f" : "2px solid transparent", color: tab===k ? "#232422" : "#7a7973", padding:"8px 11px", marginBottom:-1.5, cursor:"pointer", fontSize:12.5, fontWeight: tab===k ? 700 : 500, whiteSpace:"nowrap", fontFamily:"'Roboto',sans-serif" }}>
               {label} <span style={{ fontSize:8, opacity:0.55 }}>▾</span>
             </button>
             {navMenu === k && showMenu && (TAB_SECTIONS[k] || []).length > 0 && (
-              <div style={{ position:"absolute", top:"100%", left:0, marginTop:2, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, boxShadow:"0 10px 26px rgba(0,0,0,0.14)", zIndex:70, minWidth:190, padding:5 }}>
+              <div style={{ position:"absolute", top:"100%", left:0, marginTop:2, background:"#fff", border:"1px solid #dfddd6", borderRadius:9, boxShadow:"0 10px 26px rgba(0,0,0,0.14)", zIndex:70, minWidth:190, padding:5 }}>
                 {(TAB_SECTIONS[k] || []).map(s => (
                   <button key={s.id} onClick={() => { setTab(k); setNavMenu(null); setTimeout(() => scrollToSection(s.id), 60); }}
                     style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 10px", fontSize:12, color:"#383a37", cursor:"pointer", borderRadius:6 }}>
@@ -2513,24 +2513,24 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       <div style={{ maxWidth: DETAIL_MAX_WIDTH, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       {/* Back — own line above the title so it never crowds the title/actions row */}
       <div style={{ marginBottom:8 }}>
-        <button onClick={onBack} title="Back" aria-label="Back" style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#fff", border:"1px solid #e0d8c8", color:"#5c5047", borderRadius:20, padding:"5px 13px 5px 10px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'Inter',sans-serif", boxShadow:"0 1px 3px rgba(56,58,55,0.1)" }}>← Back</button>
+        <button onClick={onBack} title="Back" aria-label="Back" style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#fff", border:"1px solid #dcdad3", color:"#4f4d48", borderRadius:20, padding:"5px 13px 5px 10px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'Roboto',sans-serif", boxShadow:"0 1px 3px rgba(56,58,55,0.1)" }}>← Back</button>
       </div>
       {/* Property name + Actions + Jump To */}
       <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:8, margin:"0 0 4px 0", flexWrap:"wrap" }}>
-        <h1 ref={titleRef} style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:500, color:"#26281f", margin:0, letterSpacing:"-0.02em", lineHeight:1.15, paddingTop:2, flex:"1 1 auto", minWidth:0 }}>{d.propertyName||d.fileName}</h1>
+        <h1 ref={titleRef} style={{ fontFamily:"'Lora',Georgia,serif", fontSize:30, fontWeight:500, color:"#232422", margin:0, letterSpacing:"-0.02em", lineHeight:1.15, paddingTop:2, flex:"1 1 auto", minWidth:0 }}>{d.propertyName||d.fileName}</h1>
         <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
           <div style={{ position:"relative" }}>
             <button onClick={() => setActionsOpen(o => { if (o) setActionsHelpOpen(false); return !o; })}
-              style={{ background:"#2a2c27", border:"none", color:"#fff", padding:"6px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5, fontWeight:500 }}>
+              style={{ background:"#232422", border:"none", color:"#fff", padding:"6px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Roboto',sans-serif", display:"flex", alignItems:"center", gap:5, fontWeight:500 }}>
               Actions <span style={{ fontSize:9 }}>▾</span>
             </button>
             {actionsOpen && (
-              <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", left:0, right:"auto", background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:4, zIndex:300, boxShadow:"0 8px 24px rgba(0,0,0,0.13)", minWidth:210, maxWidth:"calc(100vw - 24px)", maxHeight:"70vh", overflowY:"auto" }}>
+              <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:"110%", left:0, right:"auto", background:"#fff", border:"1px solid #dfddd6", borderRadius:9, padding:4, zIndex:300, boxShadow:"0 8px 24px rgba(0,0,0,0.13)", minWidth:210, maxWidth:"calc(100vw - 24px)", maxHeight:"70vh", overflowY:"auto" }}>
                 {actionsHelpOpen ? (
                   <div>
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"4px 8px 6px 12px" }}>
-                      <span style={{ fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>What these do</span>
-                      <button onClick={() => setActionsHelpOpen(false)} style={{ background:"transparent", border:"none", color:"#7d766a", cursor:"pointer", fontSize:12, fontWeight:600, padding:"2px 6px" }}>✕ Close</button>
+                      <span style={{ fontSize:9, color:"#94928b", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>What these do</span>
+                      <button onClick={() => setActionsHelpOpen(false)} style={{ background:"transparent", border:"none", color:"#6b6a65", cursor:"pointer", fontSize:12, fontWeight:600, padding:"2px 6px" }}>✕ Close</button>
                     </div>
                     <div style={{ maxHeight:380, overflowY:"auto", padding:"0 12px 6px" }}>
                       {([
@@ -2542,46 +2542,46 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                       ] as [string, string][]).map(([title, desc]) => (
                         <div key={title} style={{ padding:"7px 0", borderBottom:"1px solid #f4efe6" }}>
                           <div style={{ fontSize:11.5, fontWeight:700, color:"#383a37", marginBottom:2 }}>{title}</div>
-                          <div style={{ fontSize:11, color:"#7d766a", lineHeight:1.5 }}>{desc}</div>
+                          <div style={{ fontSize:11, color:"#6b6a65", lineHeight:1.5 }}>{desc}</div>
                         </div>
                       ))}
                     </div>
                   </div>
                 ) : (<>
                 <div style={{ display:"flex", alignItems:"center", gap:6, padding:"4px 12px 2px" }}>
-                  <span style={{ fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Analyze</span>
+                  <span style={{ fontSize:9, color:"#94928b", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Analyze</span>
                   <button onClick={() => setActionsHelpOpen(true)} title="What do these actions do?"
-                    style={{ width:16, height:16, borderRadius:"50%", border:"1px solid #d8cfbd", background:"#f6f2ea", color:"#7d766a", fontSize:10, fontWeight:700, lineHeight:1, cursor:"pointer", display:"inline-flex", alignItems:"center", justifyContent:"center", padding:0, flexShrink:0 }}>?</button>
+                    style={{ width:16, height:16, borderRadius:"50%", border:"1px solid #d4d2ca", background:"#faf9f5", color:"#6b6a65", fontSize:10, fontWeight:700, lineHeight:1, cursor:"pointer", display:"inline-flex", alignItems:"center", justifyContent:"center", padding:0, flexShrink:0 }}>?</button>
                 </div>
                 <button onClick={() => handleRefreshAnalysis()} disabled={reanalyzeBusy}
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:reanalyzeBusy?"default":"pointer", fontSize:12, color:reanalyzeBusy?"#a69e91":"#3f7a1f", fontFamily:"'Inter',sans-serif", fontWeight:600 }}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:reanalyzeBusy?"default":"pointer", fontSize:12, color:reanalyzeBusy?"#94928b":"#3e8a2f", fontFamily:"'Roboto',sans-serif", fontWeight:600 }}
                   onMouseEnter={e => { if (!reanalyzeBusy) e.currentTarget.style.background="#f0f7e8"; }} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
                   {reanalyzeBusy ? "Refreshing…" : "✨ Refresh Analysis (current roster)"}
                 </button>
                 <button onClick={() => { setActionsOpen(false); handleReanalyze(); }}
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px 2px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
-                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px 2px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Roboto',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.background="#faf9f5"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
                   ↺ Rebuild from OM
                 </button>
                 <button onClick={() => { setActionsOpen(false); rerunPdfRef.current?.click(); }}
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"0 12px 7px 30px", borderRadius:6, cursor:"pointer", fontSize:10.5, color:"#a69e91", fontFamily:"'Inter',sans-serif" }}
-                  onMouseEnter={e => e.currentTarget.style.color="#7d766a"} onMouseLeave={e => e.currentTarget.style.color="#a69e91"}>
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"0 12px 7px 30px", borderRadius:6, cursor:"pointer", fontSize:10.5, color:"#94928b", fontFamily:"'Roboto',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.color="#6b6a65"} onMouseLeave={e => e.currentTarget.style.color="#94928b"}>
                   ↑ OM text looks wrong? Re-run from PDF…
                 </button>
-                <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
-                <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Research</div>
+                <div style={{ borderTop:"1px solid #f3f2ee", margin:"4px 0" }}/>
+                <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#94928b", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Research</div>
                 <button onClick={() => { setActionsOpen(false); onQuery(`Full investment analysis on "${d.propertyName}": evaluate cap rate, WALT (${d.walt||"unknown"}yr), tenant credit quality, rent bumps, lease rollover risk, and comparable sales. Give a buy/pass/watch recommendation.`); }}
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
-                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Roboto',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.background="#faf9f5"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
                   ↗ Ask the Analyst
                 </button>
                 <button onClick={() => { setActionsOpen(false); onLookupSale(d.id); }}
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
-                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Roboto',sans-serif" }}
+                  onMouseEnter={e => e.currentTarget.style.background="#faf9f5"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
                   🔍 Find Sale Record
                 </button>
-                <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
-                <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Export</div>
+                <div style={{ borderTop:"1px solid #f3f2ee", margin:"4px 0" }}/>
+                <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#94928b", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Export</div>
                 <button onClick={() => {
                     setActionsOpen(false);
                     const md = buildICMemo(d);
@@ -2594,13 +2594,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                     URL.revokeObjectURL(url);
                   }}
                   title="Generate a one-click Investment Committee memo (overview, demographics, tenancy + retail resilience, lease rollover, financials, risks, upside) as a Markdown file you can paste straight into Word."
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif", fontWeight:600 }}
-                  onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Roboto',sans-serif", fontWeight:600 }}
+                  onMouseEnter={e => e.currentTarget.style.background="#faf9f5"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
                   📄 Generate IC Memo (.md)
                 </button>
                 {isAdmin && (<>
-                  <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
-                  <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#a69e91", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Admin · Debug</div>
+                  <div style={{ borderTop:"1px solid #f3f2ee", margin:"4px 0" }}/>
+                  <div style={{ padding:"4px 12px 2px", fontSize:9, color:"#94928b", fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" }}>Admin · Debug</div>
                   <button onClick={() => {
                       setActionsOpen(false);
                       const { id, ...data } = d;
@@ -2613,20 +2613,20 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                       URL.revokeObjectURL(url);
                     }}
                     title="Download this deal's full extracted data to review against the OM"
-                    style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
-                    onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                    style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Roboto',sans-serif" }}
+                    onMouseEnter={e => e.currentTarget.style.background="#faf9f5"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
                     🧪 Export raw data (.json)
                   </button>
                   <button onClick={() => { setActionsOpen(false); setTeachOpen(true); }}
                     title="Teach the extractor a new rule so it handles files like this correctly next time"
-                    style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Inter',sans-serif" }}
-                    onMouseEnter={e => e.currentTarget.style.background="#f6f2ea"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                    style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#383a37", fontFamily:"'Roboto',sans-serif" }}
+                    onMouseEnter={e => e.currentTarget.style.background="#faf9f5"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
                     🎓 Teach the extractor
                   </button>
                 </>)}
-                <div style={{ borderTop:"1px solid #f1ece1", margin:"4px 0" }}/>
+                <div style={{ borderTop:"1px solid #f3f2ee", margin:"4px 0" }}/>
                 <button onClick={() => { setActionsOpen(false); setConfirmDel(true); }}
-                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#dc2626", fontFamily:"'Inter',sans-serif" }}
+                  style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", padding:"7px 12px", borderRadius:6, cursor:"pointer", fontSize:12, color:"#dc2626", fontFamily:"'Roboto',sans-serif" }}
                   onMouseEnter={e => e.currentTarget.style.background="#fff5f5"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
                   🗑 Delete Deal
                 </button>
@@ -2639,22 +2639,22 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {editingAddr ? (
         <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap", margin:"0 0 12px 0" }}>
           <input autoFocus value={addrDraft.address} onChange={e => setAddrDraft(a => ({ ...a, address: e.target.value }))} placeholder="Street address"
-            style={{ flex:"1 1 240px", minWidth:160, border:"1px solid #c8b89a", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Inter',sans-serif", background:"#fff" }} />
+            style={{ flex:"1 1 240px", minWidth:160, border:"1px solid #c4c1b8", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Roboto',sans-serif", background:"#fff" }} />
           <input value={addrDraft.city} onChange={e => setAddrDraft(a => ({ ...a, city: e.target.value }))} placeholder="City"
-            style={{ flex:"0 1 140px", minWidth:90, border:"1px solid #c8b89a", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Inter',sans-serif", background:"#fff" }} />
+            style={{ flex:"0 1 140px", minWidth:90, border:"1px solid #c4c1b8", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Roboto',sans-serif", background:"#fff" }} />
           <input value={addrDraft.state} onChange={e => setAddrDraft(a => ({ ...a, state: e.target.value.toUpperCase().slice(0,2) }))} placeholder="ST" maxLength={2}
-            style={{ width:46, border:"1px solid #c8b89a", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Inter',sans-serif", background:"#fff", textTransform:"uppercase" }} />
+            style={{ width:46, border:"1px solid #c4c1b8", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Roboto',sans-serif", background:"#fff", textTransform:"uppercase" }} />
           <input value={addrDraft.zip} onChange={e => setAddrDraft(a => ({ ...a, zip: e.target.value.replace(/[^0-9-]/g, "").slice(0,10) }))} placeholder="ZIP" inputMode="numeric"
-            style={{ width:72, border:"1px solid #c8b89a", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Inter',sans-serif", background:"#fff" }} />
+            style={{ width:72, border:"1px solid #c4c1b8", borderRadius:6, padding:"5px 9px", fontSize:12, fontFamily:"'Roboto',sans-serif", background:"#fff" }} />
           <button onClick={() => { onUpdate(d.id, { address: addrDraft.address.trim(), city: addrDraft.city.trim(), state: addrDraft.state.trim().toUpperCase(), zip: addrDraft.zip.trim() }); setEditingAddr(false); }}
-            style={{ background:"#26281f", color:"#fff", border:"none", borderRadius:6, padding:"6px 12px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>Save</button>
+            style={{ background:"#232422", color:"#fff", border:"none", borderRadius:6, padding:"6px 12px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'Roboto',sans-serif" }}>Save</button>
           <button onClick={() => setEditingAddr(false)}
-            style={{ background:"transparent", color:"#a89f8f", border:"none", padding:"6px 8px", fontSize:12, cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>Cancel</button>
+            style={{ background:"transparent", color:"#9b9992", border:"none", padding:"6px 8px", fontSize:12, cursor:"pointer", fontFamily:"'Roboto',sans-serif" }}>Cancel</button>
         </div>
       ) : (
         <p onClick={() => { setAddrDraft({ address: d.address || "", city: d.city || "", state: d.state || "", zip: d.zip || "" }); setEditingAddr(true); }}
           title="Click to edit the address"
-          style={{ color: fullAddress ? "#6f6a5f" : "#b08a3c", fontSize:12, margin:"0 0 12px 0", cursor:"pointer", display:"inline-flex", alignItems:"center", gap:6 }}>
+          style={{ color: fullAddress ? "#676767" : "#b08a3c", fontSize:12, margin:"0 0 12px 0", cursor:"pointer", display:"inline-flex", alignItems:"center", gap:6 }}>
           {fullAddress || "+ Add address (needed for closing costs)"}
           <span style={{ fontSize:10, color:"#b3a994" }}>✎</span>
         </p>
@@ -2664,7 +2664,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       <div style={{ display:"flex", gap:8, marginBottom:12 }}>
         {((d.tenants||[]).length > 0 || (Array.isArray(d.cashFlowProjection) && d.cashFlowProjection.length > 0)) && (
           <button onClick={() => exportDealToExcel(d)}
-            style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color:"#5c5047", padding:"8px 16px", borderRadius:6, cursor:"pointer", fontSize:12, fontFamily:"'Inter',sans-serif", fontWeight:600, display:"flex", alignItems:"center", gap:5 }}>
+            style={{ background:"#faf9f5", border:"1px solid #c4c1b8", color:"#4f4d48", padding:"8px 16px", borderRadius:6, cursor:"pointer", fontSize:12, fontFamily:"'Roboto',sans-serif", fontWeight:600, display:"flex", alignItems:"center", gap:5 }}>
             <span style={{ fontSize:13 }}>⬇</span> Excel
           </button>
         )}
@@ -2672,7 +2672,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           fileName={`IC-Memo-${(d.propertyName||d.fileName||"deal").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}.pdf`}
           makeDoc={async () => { const { default: ICMemoPDF } = await import("./ICMemoPDF"); return <ICMemoPDF deal={d} allDeals={allDeals} logoUrl={`${window.location.origin}/apple-touch-icon.png`} />; }}
           render={(busy) => (
-            <button title="One-page, branded deal teaser / Investment Committee memo (PDF)" style={{ background:"#3f7a1f", border:"1px solid #3f7a1f", color: busy ? "#cfe3b8" : "#fff", padding:"8px 16px", borderRadius:6, cursor: busy ? "default" : "pointer", fontSize:12, fontFamily:"'Inter',sans-serif", fontWeight:600, display:"flex", alignItems:"center", gap:5, opacity: busy ? 0.8 : 1 }}>
+            <button title="One-page, branded deal teaser / Investment Committee memo (PDF)" style={{ background:"#3e8a2f", border:"1px solid #3e8a2f", color: busy ? "#cfe3b8" : "#fff", padding:"8px 16px", borderRadius:6, cursor: busy ? "default" : "pointer", fontSize:12, fontFamily:"'Roboto',sans-serif", fontWeight:600, display:"flex", alignItems:"center", gap:5, opacity: busy ? 0.8 : 1 }}>
               <span style={{ fontSize:13 }}>📄</span>{busy ? "Memo…" : "Deal Memo (PDF)"}
             </button>
           )}
@@ -2710,7 +2710,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             {d.autoPassed && <span title="Auto-passed: a Prospect with no new upload or status change for 6+ weeks" style={{ fontSize:9, color:"#b08968", background:"#b0896815", border:"1px solid #b0896840", padding:"2px 7px", borderRadius:3, fontWeight:600 }}>AUTO-PASSED</span>}
             {d.assumableDebt && <span style={{ fontSize:9, color:"#0f9d63", background:"#0f9d6315", padding:"2px 6px", borderRadius:3 }}>ASSUMABLE DEBT</span>}
           </div>
-          <span style={{ fontSize:9, color:"#958d80", textAlign:"right" }}>
+          <span style={{ fontSize:9, color:"#8a8983", textAlign:"right" }}>
             {[d.omDate ? (d.omDateSource === "upload-date" ? `uploaded ${d.omDate} (OM undated)` : `OM ${d.omDate}`) : null, d.pdfPages ? `${d.pdfPages}pp` : null].filter(Boolean).join(" · ")}
             {uploader && (uploader.userName || uploader.userEmail) && (
               <span title={uploader.inferred ? "No upload record for this deal — attributed to the library's primary uploader" : (uploader.at ? `Uploaded ${new Date(uploader.at).toLocaleDateString()}` : "Uploaded by")} style={{ display:"block" }}>
@@ -2733,7 +2733,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           const seen = new Set<string>();
           const parts = rawParts.filter((p) => { const k = p.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
           return parts.length > 0 ? (
-            <div style={{ fontSize:13, color:"#a69e91" }}>{parts.join(" · ")}</div>
+            <div style={{ fontSize:13, color:"#94928b" }}>{parts.join(" · ")}</div>
           ) : null;
         })()}
       </div>
@@ -2757,17 +2757,17 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         // Owned / Sold: what KPR paid, labelled as such (Eric, 10/17/26) — never shown as "Price".
         const kprOwned = d.status === "Owned" || d.status === "Sold";
         const acqPrice = kprOwned ? compactUSD(d.txnPurchasePrice) : null;
-        if (acqPrice) tiles.push({ l: "Acquisition price", v: acqPrice, c: "#6dba43" });
-        else { const price = compactUSD(d.askingPrice); if (price) tiles.push({ l: kprOwned ? "OM asking price" : "Price", v: price, c: "#6dba43" }); }
+        if (acqPrice) tiles.push({ l: "Acquisition price", v: acqPrice, c: "#5bba47" });
+        else { const price = compactUSD(d.askingPrice); if (price) tiles.push({ l: kprOwned ? "OM asking price" : "Price", v: price, c: "#5bba47" }); }
         if (Number.isFinite(sfNum) && sfNum > 0) tiles.push({ l: "GLA", v: sfNum >= 1000 ? `${Math.round(sfNum / 1000)}K SF` : `${sfNum} SF` });
         // Owned + a Datex snapshot: today's occupancy from Datex leads; the OM's figure is
         // kept and labelled with its own date (Eric, 10/16/26).
         const dx = d.status === "Owned" ? d.datexLive : null;
         if (dx?.occupancyPct != null) {
-          tiles.push({ l: `Occupancy · Datex ${String(dx.asOf || "").slice(5, 10).replace("-", "/")}`, v: `${dx.occupancyPct}%`, c: dx.occupancyPct < 85 ? "#dc2626" : dx.occupancyPct < 92 ? "#c97a18" : "#26281f",
+          tiles.push({ l: `Occupancy · Datex ${String(dx.asOf || "").slice(5, 10).replace("-", "/")}`, v: `${dx.occupancyPct}%`, c: dx.occupancyPct < 85 ? "#dc2626" : dx.occupancyPct < 92 ? "#c97a18" : "#232422",
             sub: occN != null ? `${occN}% at OM / roll date` : undefined, title: "Current occupancy from Datex (KPR's property-management system). The OM / rent-roll figure is shown underneath for comparison." });
-        } else if (occN != null && occN > 0) tiles.push({ l: "Occupancy", v: `${occN}%`, c: occN < 85 ? "#dc2626" : occN < 92 ? "#c97a18" : "#26281f" });
-        if (waltN != null && waltN > 0) tiles.push({ l: "WALT", v: `${waltN} yrs`, c: waltN < 3 ? "#dc2626" : waltN < 6 ? "#26281f" : "#0f9d63" });
+        } else if (occN != null && occN > 0) tiles.push({ l: "Occupancy", v: `${occN}%`, c: occN < 85 ? "#dc2626" : occN < 92 ? "#c97a18" : "#232422" });
+        if (waltN != null && waltN > 0) tiles.push({ l: "WALT", v: `${waltN} yrs`, c: waltN < 3 ? "#dc2626" : waltN < 6 ? "#232422" : "#0f9d63" });
         if (liveWtdRent) tiles.push({ l: "Avg Rent", v: `$${Number(liveWtdRent).toFixed(2)}` });
         if (d.pricePerSF) tiles.push({ l: "Price / SF", v: `$${d.pricePerSF}` });
         if (implied) {
@@ -2780,12 +2780,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         }
         if (tiles.length < 3) return null;   // too thin to be a useful summary
         return (
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(94px, 1fr))", gap:1, background:"#ece5d7", border:"1px solid #ece5d7", borderRadius:12, overflow:"hidden", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(94px, 1fr))", gap:1, background:"#ebeae5", border:"1px solid #ebeae5", borderRadius:12, overflow:"hidden", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
             {tiles.map((t, i) => (
               <div key={i} title={t.title} style={{ background:"#fff", padding:"11px 14px", gridColumn: t.wide ? "span 2" : undefined, cursor: t.title ? "help" : undefined }}>
-                <div style={{ fontSize:16.5, fontWeight:600, color:t.c || "#26281f", fontFamily:"'Fraunces',serif", lineHeight:1.05, whiteSpace:"nowrap" }}>{t.v}</div>
-                <div style={{ fontSize:8.5, letterSpacing:"0.09em", textTransform:"uppercase", color:"#a69e91", fontWeight:700, marginTop:4 }}>{t.l}</div>
-                {t.sub && <div style={{ fontSize:10, color:"#7d766a", marginTop:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{t.sub}</div>}
+                <div style={{ fontSize:16.5, fontWeight:600, color:t.c || "#232422", fontFamily:"'Lora',Georgia,serif", lineHeight:1.05, whiteSpace:"nowrap" }}>{t.v}</div>
+                <div style={{ fontSize:8.5, letterSpacing:"0.09em", textTransform:"uppercase", color:"#94928b", fontWeight:700, marginTop:4 }}>{t.l}</div>
+                {t.sub && <div style={{ fontSize:10, color:"#6b6a65", marginTop:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{t.sub}</div>}
               </div>
             ))}
           </div>
@@ -2841,7 +2841,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           <div style={{ display:"flex", alignItems:"center", gap:8, background:"#0f9d6310", border:"1px solid #0f9d6333", borderRadius:8, padding:"10px 14px", marginBottom:12 }}>
             <span style={{ color:"#0f9d63", fontSize:13 }}>✓</span>
             <span style={{ fontSize:11, color:"#0f6b46", fontWeight:500 }}>Data checks passed — extracted numbers are internally consistent.</span>
-            <span style={{ fontSize:9, color:"#958d80", marginLeft:"auto" }}>Verify against the OM before deciding.</span>
+            <span style={{ fontSize:9, color:"#8a8983", marginLeft:"auto" }}>Verify against the OM before deciding.</span>
           </div>
         );
       })()}
@@ -2852,12 +2852,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {/* ONE sticky bar (Eric, 10/18/26): the deal header and tab bar used to render twice —
           a floating copy plus this one — so the title, tabs and Add intel were all
           duplicated. Once the title scrolls away this bar picks up a compact title line. */}
-      <div onClick={e => e.stopPropagation()} style={{ position:"sticky", top:-20, zIndex:55, background:"#f6f2ea", margin:"-20px -24px 14px", padding:"26px 24px 0", boxShadow: titleScrolled ? "0 6px 18px -12px rgba(56,58,55,0.35)" : "none" }}>
+      <div onClick={e => e.stopPropagation()} style={{ position:"sticky", top:-20, zIndex:55, background:"#faf9f5", margin:"-20px -24px 14px", padding:"26px 24px 0", boxShadow: titleScrolled ? "0 6px 18px -12px rgba(56,58,55,0.35)" : "none" }}>
         {titleScrolled && (
           <div style={{ display:"flex", alignItems:"center", gap:10, padding:"2px 0 6px" }}>
-            <button onClick={onBack} title="Back" aria-label="Back" style={{ flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", width:28, height:28, borderRadius:"50%", background:"#fff", border:"1px solid #e0d8c8", color:"#5c5047", fontSize:14, cursor:"pointer", lineHeight:1 }}>←</button>
-            <div style={{ minWidth:0, fontFamily:"'Fraunces',serif", fontSize:15.5, fontWeight:600, color:"#26281f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} aria-hidden="true">
-              {d.propertyName || d.fileName}{fullAddress && <span style={{ fontFamily:"'Inter',sans-serif", fontSize:11, fontWeight:400, color:"#6f6a5f", marginLeft:8 }}>{fullAddress}</span>}
+            <button onClick={onBack} title="Back" aria-label="Back" style={{ flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", width:28, height:28, borderRadius:"50%", background:"#fff", border:"1px solid #dcdad3", color:"#4f4d48", fontSize:14, cursor:"pointer", lineHeight:1 }}>←</button>
+            <div style={{ minWidth:0, fontFamily:"'Lora',Georgia,serif", fontSize:15.5, fontWeight:600, color:"#232422", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} aria-hidden="true">
+              {d.propertyName || d.fileName}{fullAddress && <span style={{ fontFamily:"'Roboto',sans-serif", fontSize:11, fontWeight:400, color:"#676767", marginLeft:8 }}>{fullAddress}</span>}
             </div>
           </div>
         )}
@@ -2870,14 +2870,14 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           fill the whole first screen). */}
       {imgs?.cover && (
         <div id="section-cover"
-          style={{ position:"relative", display:"flex", justifyContent:"center", borderRadius:14, overflow:"hidden", marginBottom:16, boxShadow:"0 1px 2px rgba(56,58,55,0.05), 0 20px 40px -28px rgba(56,58,55,0.6)", border:"1px solid #ece5d7", background:"#faf7f0" }}>
+          style={{ position:"relative", display:"flex", justifyContent:"center", borderRadius:14, overflow:"hidden", marginBottom:16, boxShadow:"0 1px 2px rgba(56,58,55,0.05), 0 20px 40px -28px rgba(56,58,55,0.6)", border:"1px solid #ebeae5", background:"#faf9f5" }}>
           <img onClick={() => setLightbox(imgs.cover!)} title="Click to enlarge" src={imgs.cover} alt={`${d.propertyName||"Property"} cover`} style={{ width:"100%", height: isMobileNav ? 180 : 280, objectFit:"cover", display:"block", cursor:"zoom-in" }}/>
           <div style={{ position:"absolute", left:18, bottom:14, color:"#fff", fontSize:9, letterSpacing:"0.18em", textTransform:"uppercase", opacity:0.9, fontWeight:600, pointerEvents:"none", textShadow:"0 1px 3px rgba(0,0,0,0.6)" }}>From the offering memorandum</div>
           <button onClick={() => setConfirmDelImg("cover")} title="Remove cover photo"
             style={{ position:"absolute", top:10, right:10, background:"rgba(38,40,31,0.62)", border:"none", color:"#fff", width:30, height:30, borderRadius:8, cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>🗑</button>
           {(coverSave === "saving" || coverSave === "error") && (
             <div style={{ position:"absolute", inset:0, background: coverSave==="saving" ? "rgba(38,40,31,0.55)" : "rgba(120,30,20,0.55)", display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
-              <div style={{ background:"#fff", borderRadius:10, padding:"12px 20px", fontSize:14, fontWeight:700, fontFamily:"'Inter',sans-serif", color: coverSave==="saving" ? "#9a6a1e" : "#c0392b", boxShadow:"0 8px 24px rgba(0,0,0,0.35)", display:"flex", alignItems:"center", gap:8 }}>
+              <div style={{ background:"#fff", borderRadius:10, padding:"12px 20px", fontSize:14, fontWeight:700, fontFamily:"'Roboto',sans-serif", color: coverSave==="saving" ? "#9a6a1e" : "#c0392b", boxShadow:"0 8px 24px rgba(0,0,0,0.35)", display:"flex", alignItems:"center", gap:8 }}>
                 {coverSave === "saving" ? "⏳ Saving — don't leave this page yet…" : "⚠ Not saved — please try again"}
               </div>
             </div>
@@ -2889,25 +2889,25 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {imgs != null && (
         coverFinalized ? (
           <div style={{ marginBottom:16, textAlign:"right" }}>
-            <button onClick={() => finalizeCover(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit cover photo</button>
+            <button onClick={() => finalizeCover(false)} style={{ background:"transparent", border:"none", color:"#94928b", fontSize:10.5, cursor:"pointer", fontFamily:"'Roboto',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d4d2ca" }}>✎ edit cover photo</button>
           </div>
         ) : (
-          <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"12px 16px", marginBottom:16, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div style={{ background:"#fff", border:"1px solid #ebeae5", borderRadius:12, padding:"12px 16px", marginBottom:16, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
             {!imgs.cover && (
               <>
-                <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f", marginBottom:6 }}>Cover Photo — not set</div>
-                <p style={{ fontSize:11.5, color:"#6f6a5f", lineHeight:1.55, margin:"0 0 8px 0" }}>Upload a photo or set from a PDF page:</p>
+                <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#9b9992", marginBottom:6 }}>Cover Photo — not set</div>
+                <p style={{ fontSize:11.5, color:"#676767", lineHeight:1.55, margin:"0 0 8px 0" }}>Upload a photo or set from a PDF page:</p>
               </>
             )}
             <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
               <button onClick={() => coverPhotoRef.current?.click()}
-                style={{ background:"transparent", border:"1px solid #6dba43", color:"#3f7a1f", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+                style={{ background:"transparent", border:"1px solid #5bba47", color:"#3e8a2f", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>
                 Upload a photo
               </button>
               <input ref={coverPhotoRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleCoverImageFile}/>
               {coverSave !== "idle" && (
                 <span style={{
-                  fontSize:11, fontWeight:700, padding:"3px 8px", borderRadius:5, fontFamily:"'Inter',sans-serif",
+                  fontSize:11, fontWeight:700, padding:"3px 8px", borderRadius:5, fontFamily:"'Roboto',sans-serif",
                   color: coverSave==="saved" ? "#0f9d63" : coverSave==="error" ? "#c0392b" : "#9a6a1e",
                   background: coverSave==="saved" ? "#e7f8f0" : coverSave==="error" ? "#fdecea" : "#fff7e8",
                   border: `1px solid ${coverSave==="saved" ? "#a7f3d0" : coverSave==="error" ? "#f3c0b8" : "#f0d9a8"}`,
@@ -2916,22 +2916,22 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                 </span>
               )}
               <span style={{ fontSize:11, color:"#c4bba7" }}>·</span>
-              <span style={{ fontSize:11, color:"#7d766a" }}>{imgs.cover ? "Wrong cover? Set from" : "Set from"}</span>
-              <span style={{ fontSize:11, color:"#a69e91" }}>page</span>
+              <span style={{ fontSize:11, color:"#6b6a65" }}>{imgs.cover ? "Wrong cover? Set from" : "Set from"}</span>
+              <span style={{ fontSize:11, color:"#94928b" }}>page</span>
               <input value={coverFixPage} onChange={e => setCoverFixPage(e.target.value.replace(/[^0-9]/g,""))} placeholder="#" inputMode="numeric"
-                style={{ width:56, fontSize:12, padding:"5px 8px", border:"1px solid #e3dccd", borderRadius:6, color:"#383a37", textAlign:"center", fontFamily:"'Inter',sans-serif" }}/>
-              <span style={{ fontSize:11, color:"#a69e91" }}>spread?</span>
+                style={{ width:56, fontSize:12, padding:"5px 8px", border:"1px solid #dfddd6", borderRadius:6, color:"#383a37", textAlign:"center", fontFamily:"'Roboto',sans-serif" }}/>
+              <span style={{ fontSize:11, color:"#94928b" }}>spread?</span>
               <HalfToggle val={coverHalf} set={setCoverHalf}/>
               <button onClick={() => { if (parseInt(coverFixPage,10) >= 1) coverPdfRef.current?.click(); }} disabled={fixingCover || !(parseInt(coverFixPage,10)>=1)}
-                style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingCover||!(parseInt(coverFixPage,10)>=1))?"#a69e91":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:(fixingCover||!(parseInt(coverFixPage,10)>=1))?"default":"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+                style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingCover||!(parseInt(coverFixPage,10)>=1))?"#94928b":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:(fixingCover||!(parseInt(coverFixPage,10)>=1))?"default":"pointer", fontSize:11, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>
                 {fixingCover?"Rendering…":"Choose PDF & set"}
               </button>
               <input ref={coverPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleCoverPdf}/>
             </div>
             {imgs.cover && (
-              <div style={{ marginTop:10, borderTop:"1px solid #f1eadc", paddingTop:9, display:"flex", alignItems:"center", gap:6 }}>
-                <input type="checkbox" id="coverFinalChk" checked={coverFinalized} onChange={e => finalizeCover(e.target.checked)} style={{ accentColor:"#6dba43", width:13, height:13, cursor:"pointer" }}/>
-                <label htmlFor="coverFinalChk" style={{ fontSize:11, color:"#7d766a", cursor:"pointer", userSelect:"none" }}>Confirmed / finalize — hides this box</label>
+              <div style={{ marginTop:10, borderTop:"1px solid #efeee9", paddingTop:9, display:"flex", alignItems:"center", gap:6 }}>
+                <input type="checkbox" id="coverFinalChk" checked={coverFinalized} onChange={e => finalizeCover(e.target.checked)} style={{ accentColor:"#5bba47", width:13, height:13, cursor:"pointer" }}/>
+                <label htmlFor="coverFinalChk" style={{ fontSize:11, color:"#6b6a65", cursor:"pointer", userSelect:"none" }}>Confirmed / finalize — hides this box</label>
               </div>
             )}
           </div>
@@ -2946,15 +2946,15 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {/* Cover / site-plan delete confirmation */}
       {confirmDelImg && (
         <div onClick={() => setConfirmDelImg(null)} style={{ position:"fixed", inset:0, zIndex:700, background:"rgba(38,40,31,0.5)", backdropFilter:"blur(2px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:14, padding:"22px 24px", width:"min(380px, 92vw)", boxShadow:"0 20px 60px rgba(38,40,31,0.28)", fontFamily:"'Inter',sans-serif" }}>
-            <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, fontWeight:600, color:"#26281f", marginBottom:6 }}>Delete {confirmDelImg === "cover" ? "cover photo" : "site plan"}?</div>
-            <div style={{ fontSize:13, color:"#7d766a", lineHeight:1.55, marginBottom:18 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:14, padding:"22px 24px", width:"min(380px, 92vw)", boxShadow:"0 20px 60px rgba(38,40,31,0.28)", fontFamily:"'Roboto',sans-serif" }}>
+            <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:18, fontWeight:600, color:"#232422", marginBottom:6 }}>Delete {confirmDelImg === "cover" ? "cover photo" : "site plan"}?</div>
+            <div style={{ fontSize:13, color:"#6b6a65", lineHeight:1.55, marginBottom:18 }}>
               This removes the {confirmDelImg === "cover" ? "cover photo" : "site plan"} from this deal. You can upload a new one anytime.
             </div>
             <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
-              <button onClick={() => setConfirmDelImg(null)} style={{ background:"#f6f2ea", border:"1px solid #ddd4c2", color:"#52554e", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>Cancel</button>
+              <button onClick={() => setConfirmDelImg(null)} style={{ background:"#faf9f5", border:"1px solid #dad8d1", color:"#52554e", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>Cancel</button>
               <button onClick={() => { const which = confirmDelImg; setConfirmDelImg(null); if (which === "cover") deleteCover(); else deleteSitePlan(); }}
-                style={{ background:"#c0392b", border:"none", color:"#fff", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>Delete</button>
+                style={{ background:"#c0392b", border:"none", color:"#fff", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>Delete</button>
             </div>
           </div>
         </div>
@@ -2963,15 +2963,15 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {/* Delete-deal confirmation */}
       {confirmDel && (
         <div onClick={() => setConfirmDel(false)} style={{ position:"fixed", inset:0, zIndex:700, background:"rgba(38,40,31,0.5)", backdropFilter:"blur(2px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:14, padding:"22px 24px", width:"min(400px, 92vw)", boxShadow:"0 20px 60px rgba(38,40,31,0.28)", fontFamily:"'Inter',sans-serif" }}>
-            <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, fontWeight:600, color:"#26281f", marginBottom:6 }}>Delete this deal?</div>
-            <div style={{ fontSize:13, color:"#7d766a", lineHeight:1.55, marginBottom:18 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:14, padding:"22px 24px", width:"min(400px, 92vw)", boxShadow:"0 20px 60px rgba(38,40,31,0.28)", fontFamily:"'Roboto',sans-serif" }}>
+            <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:18, fontWeight:600, color:"#232422", marginBottom:6 }}>Delete this deal?</div>
+            <div style={{ fontSize:13, color:"#6b6a65", lineHeight:1.55, marginBottom:18 }}>
               Permanently delete <strong style={{ color:"#383a37" }}>{d.propertyName || d.fileName || "this deal"}</strong> — its tenants, financials, images, and comp entries. This can't be undone.
             </div>
             <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
-              <button onClick={() => setConfirmDel(false)} style={{ background:"#f6f2ea", border:"1px solid #ddd4c2", color:"#52554e", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>Cancel</button>
+              <button onClick={() => setConfirmDel(false)} style={{ background:"#faf9f5", border:"1px solid #dad8d1", color:"#52554e", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>Cancel</button>
               <button onClick={() => { setConfirmDel(false); onDelete(d.id); }}
-                style={{ background:"#c0392b", border:"none", color:"#fff", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>Delete permanently</button>
+                style={{ background:"#c0392b", border:"none", color:"#fff", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>Delete permanently</button>
             </div>
           </div>
         </div>
@@ -2982,11 +2982,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {tab === "ai" && (<>
       {/* AI highlights — surfaced near the top, just below the cover photo */}
       {(d.notes || d.analysisStale) && (
-        <div id="section-highlights" style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #e3dccd", borderLeft:"3px solid #6dba43", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+        <div id="section-highlights" style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #dfddd6", borderLeft:"3px solid #5bba47", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:9 }}>
             <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>{isOwnedDeal ? "Asset brief" : "AI Investment Highlights"}</div>
             {d.analysisStale && <StaleBadge />}
-            {isOwnedDeal && <span style={{ fontSize:10.5, color:"#958d80" }}>regenerates only when you ask — Actions → ✨ Refresh Analysis</span>}
+            {isOwnedDeal && <span style={{ fontSize:10.5, color:"#8a8983" }}>regenerates only when you ask — Actions → ✨ Refresh Analysis</span>}
           </div>
           {d.notes && <ExpandableNarrative text={d.notes} />}
         </div>
@@ -2999,7 +2999,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         <div id="section-market-sale" style={{ background:"#0d948810", border:"1px solid #0d948840", borderRadius:8, padding:"14px 16px", marginBottom:12 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:9, gap:10, flexWrap:"wrap" }}>
             <div style={{ fontSize:9, letterSpacing:"0.1em", color:"#0d9488", fontWeight:700 }}>↗ MARKET SALE — FOUND ONLINE</div>
-            <button onClick={() => onLookupSale(d.id)} disabled={saleBusy} style={{ background:"transparent", border:"1px solid #0d9488", color:saleBusy?"#a69e91":"#0d9488", padding:"3px 9px", borderRadius:4, cursor:saleBusy?"default":"pointer", fontSize:9, fontFamily:"'Inter',sans-serif" }}>{saleBusy?"SEARCHING…":"RE-CHECK"}</button>
+            <button onClick={() => onLookupSale(d.id)} disabled={saleBusy} style={{ background:"transparent", border:"1px solid #0d9488", color:saleBusy?"#94928b":"#0d9488", padding:"3px 9px", borderRadius:4, cursor:saleBusy?"default":"pointer", fontSize:9, fontFamily:"'Roboto',sans-serif" }}>{saleBusy?"SEARCHING…":"RE-CHECK"}</button>
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:9 }}>
             {([["SALE PRICE", d.marketSale.price!=null?fmtUSD(d.marketSale.price):null],
@@ -3009,14 +3009,14 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               <div key={i}><div style={{ fontSize:8, color:"#5f8a86" }}>{l}</div><div style={{ fontSize:12, color:"#0f5e57", fontWeight:600 }}>{v||"—"}</div></div>
             ))}
           </div>
-          {d.marketSale.summary && <div style={{ fontSize:11, color:"#6f6a5f", lineHeight:1.55, marginBottom:9 }}>{d.marketSale.summary}</div>}
-          <div style={{ fontSize:9, color:"#a69e91" }}>AI-gathered from public sources{d.marketSale.lookedUpAt?` on ${d.marketSale.lookedUpAt.slice(0,10)}`:""}. Verify before relying on it.</div>
+          {d.marketSale.summary && <div style={{ fontSize:11, color:"#676767", lineHeight:1.55, marginBottom:9 }}>{d.marketSale.summary}</div>}
+          <div style={{ fontSize:9, color:"#94928b" }}>AI-gathered from public sources{d.marketSale.lookedUpAt?` on ${d.marketSale.lookedUpAt.slice(0,10)}`:""}. Verify before relying on it.</div>
         </div>
       )}
       {!d.marketSale && d.marketSaleChecked && (
-        <div style={{ fontSize:11, color:"#a69e91", marginBottom:12 }}>
+        <div style={{ fontSize:11, color:"#94928b", marginBottom:12 }}>
           No confirmed sale found (checked {d.marketSaleChecked.slice(0,10)}).&nbsp;
-          <button onClick={() => onLookupSale(d.id)} disabled={saleBusy} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"2px 8px", borderRadius:4, cursor:"pointer", fontSize:9, fontFamily:"'Inter',sans-serif" }}>{saleBusy?"…":"Re-check"}</button>
+          <button onClick={() => onLookupSale(d.id)} disabled={saleBusy} style={{ background:"transparent", border:"1px solid #e6e4de", color:"#6b6a65", padding:"2px 8px", borderRadius:4, cursor:"pointer", fontSize:9, fontFamily:"'Roboto',sans-serif" }}>{saleBusy?"…":"Re-check"}</button>
         </div>
       )}
 
@@ -3044,18 +3044,18 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {imgs.sitePlan && imgs.sitePlan.length > 0 && (
         sitePlanFinalized ? (
           // Finalized: keep showing the site plan images; only the upload/confirm controls collapse.
-          <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div style={{ background:"#fff", border:"1px solid #ebeae5", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-              <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f" }}>Site Plan</div>
+              <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#9b9992" }}>Site Plan</div>
               <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                <button onClick={downloadSitePlan} title="Download the site plan image(s)" style={{ background:"transparent", border:"1px solid #6dba43", color:"#3f7a1f", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:10.5, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>⤓ Download</button>
-                <button onClick={() => finalizeSitePlan(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit site plan</button>
+                <button onClick={downloadSitePlan} title="Download the site plan image(s)" style={{ background:"transparent", border:"1px solid #5bba47", color:"#3e8a2f", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:10.5, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>⤓ Download</button>
+                <button onClick={() => finalizeSitePlan(false)} style={{ background:"transparent", border:"none", color:"#94928b", fontSize:10.5, cursor:"pointer", fontFamily:"'Roboto',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d4d2ca" }}>✎ edit site plan</button>
                 <button onClick={() => setConfirmDelImg("site")} title="Remove site plan" style={{ background:"transparent", border:"none", color:"#c0392b", fontSize:13, cursor:"pointer", padding:0 }}>🗑</button>
               </div>
             </div>
             <div style={{ display:"grid", gap:10 }}>
               {imgs.sitePlan.map((src, i) => (
-                <div key={i} style={{ position:"relative", borderRadius:9, overflow:"hidden", border:"1px solid #ece5d7", display:"flex", justifyContent:"center", background:"#faf7f0" }}>
+                <div key={i} style={{ position:"relative", borderRadius:9, overflow:"hidden", border:"1px solid #ebeae5", display:"flex", justifyContent:"center", background:"#faf9f5" }}>
                   <img src={src} alt={`Site plan ${i+1}`} onClick={() => setLightbox(src)} style={{ maxWidth:"100%", maxHeight:"75vh", width:"auto", height:"auto", objectFit:"contain", display:"block", cursor:"zoom-in" }}/>
                   <button onClick={(e) => { e.stopPropagation(); if (window.confirm(`Remove site-plan page ${i+1}?`)) deleteSitePlanPage(i); }}
                     title="Remove this page"
@@ -3065,17 +3065,17 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             </div>
           </div>
         ) : (
-          <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div style={{ background:"#fff", border:"1px solid #ebeae5", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-              <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f" }}>Site Plan</div>
+              <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#9b9992" }}>Site Plan</div>
               <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                <button onClick={downloadSitePlan} title="Download the site plan image(s)" style={{ background:"transparent", border:"1px solid #6dba43", color:"#3f7a1f", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:10.5, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>⤓ Download</button>
+                <button onClick={downloadSitePlan} title="Download the site plan image(s)" style={{ background:"transparent", border:"1px solid #5bba47", color:"#3e8a2f", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:10.5, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>⤓ Download</button>
                 <button onClick={() => setConfirmDelImg("site")} title="Remove site plan" style={{ background:"transparent", border:"none", color:"#c0392b", fontSize:13, cursor:"pointer", padding:0 }}>🗑</button>
               </div>
             </div>
             <div style={{ display:"grid", gap:10 }}>
               {imgs.sitePlan.map((src, i) => (
-                <div key={i} style={{ position:"relative", borderRadius:9, overflow:"hidden", border:"1px solid #ece5d7", display:"flex", justifyContent:"center", background:"#faf7f0" }}>
+                <div key={i} style={{ position:"relative", borderRadius:9, overflow:"hidden", border:"1px solid #ebeae5", display:"flex", justifyContent:"center", background:"#faf9f5" }}>
                   <img src={src} alt={`Site plan ${i+1}`} onClick={() => setLightbox(src)} style={{ maxWidth:"100%", maxHeight:"75vh", width:"auto", height:"auto", objectFit:"contain", display:"block", cursor:"zoom-in" }}/>
                   <button onClick={(e) => { e.stopPropagation(); if (window.confirm(`Remove site-plan page ${i+1}?`)) deleteSitePlanPage(i); }}
                     title="Remove this page"
@@ -3085,24 +3085,24 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             </div>
             <div style={{ marginTop:10, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
               <button onClick={() => sitePlanImgRef.current?.click()}
-                style={{ background:"transparent", border:"1px solid #6dba43", color:"#3f7a1f", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+                style={{ background:"transparent", border:"1px solid #5bba47", color:"#3e8a2f", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>
                 Upload image(s)
               </button>
               <input ref={sitePlanImgRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={handleSitePlanImageFiles}/>
               <span style={{ fontSize:11, color:"#c4bba7" }}>·</span>
-              <span style={{ fontSize:11, color:"#a89f8f" }}>Wrong page? Set from</span>
+              <span style={{ fontSize:11, color:"#9b9992" }}>Wrong page? Set from</span>
               <input value={fixPage} onChange={e => setFixPage(e.target.value.replace(/[^0-9,\-\s]/g,""))} placeholder="e.g. 5 or 3-6 or 3,5,7"
-                style={{ width:148, fontSize:11.5, padding:"5px 8px", border:"1px solid #e3dccd", borderRadius:6, color:"#383a37", fontFamily:"'Inter',sans-serif" }}/>
+                style={{ width:148, fontSize:11.5, padding:"5px 8px", border:"1px solid #dfddd6", borderRadius:6, color:"#383a37", fontFamily:"'Roboto',sans-serif" }}/>
               <HalfToggle val={sitePlanHalf} set={setSitePlanHalf}/>
               <button onClick={() => { if (fixPage.trim()) sitePlanPdfRef.current?.click(); }} disabled={fixingPlan||!fixPage.trim()}
-                style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingPlan||!fixPage.trim())?"#a69e91":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>
+                style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingPlan||!fixPage.trim())?"#94928b":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Roboto',sans-serif" }}>
                 {fixingPlan?"Rendering…":"Choose PDF & set"}
               </button>
               <input ref={sitePlanPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleSitePlanPdf}/>
             </div>
-            <div style={{ marginTop:10, borderTop:"1px solid #f1eadc", paddingTop:9, display:"flex", alignItems:"center", gap:6 }}>
-              <input type="checkbox" id="sitePlanFinalChk" checked={sitePlanFinalized} onChange={e => finalizeSitePlan(e.target.checked)} style={{ accentColor:"#6dba43", width:13, height:13, cursor:"pointer" }}/>
-              <label htmlFor="sitePlanFinalChk" style={{ fontSize:11, color:"#7d766a", cursor:"pointer", userSelect:"none" }}>Confirmed / finalize — hides this box</label>
+            <div style={{ marginTop:10, borderTop:"1px solid #efeee9", paddingTop:9, display:"flex", alignItems:"center", gap:6 }}>
+              <input type="checkbox" id="sitePlanFinalChk" checked={sitePlanFinalized} onChange={e => finalizeSitePlan(e.target.checked)} style={{ accentColor:"#5bba47", width:13, height:13, cursor:"pointer" }}/>
+              <label htmlFor="sitePlanFinalChk" style={{ fontSize:11, color:"#6b6a65", cursor:"pointer", userSelect:"none" }}>Confirmed / finalize — hides this box</label>
             </div>
           </div>
         )
@@ -3112,24 +3112,24 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {imgs != null && (!imgs.sitePlan || imgs.sitePlan.length === 0) && (!imgs.pagePicks || imgs.pagePicks.length === 0) && (
         sitePlanFinalized ? (
           <div style={{ marginBottom:12, textAlign:"right" }}>
-            <button onClick={() => finalizeSitePlan(false)} style={{ background:"transparent", border:"none", color:"#a69e91", fontSize:10.5, cursor:"pointer", fontFamily:"'Inter',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d8cfbd" }}>✎ edit site plan</button>
+            <button onClick={() => finalizeSitePlan(false)} style={{ background:"transparent", border:"none", color:"#94928b", fontSize:10.5, cursor:"pointer", fontFamily:"'Roboto',sans-serif", padding:0, textDecoration:"underline", textDecorationColor:"#d4d2ca" }}>✎ edit site plan</button>
           </div>
         ) : (
-        <div style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"12px 16px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-          <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f", marginBottom:6 }}>Site Plan — not set</div>
+        <div style={{ background:"#fff", border:"1px solid #ebeae5", borderRadius:12, padding:"12px 16px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#9b9992", marginBottom:6 }}>Site Plan — not set</div>
           <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
             <button onClick={() => sitePlanImgRef.current?.click()}
-              style={{ background:"transparent", border:"1px solid #6dba43", color:"#3f7a1f", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+              style={{ background:"transparent", border:"1px solid #5bba47", color:"#3e8a2f", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>
               Upload image(s)
             </button>
             <input ref={sitePlanImgRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={handleSitePlanImageFiles}/>
             <span style={{ fontSize:11, color:"#c4bba7" }}>·</span>
-            <span style={{ fontSize:11, color:"#a89f8f" }}>Set from page</span>
+            <span style={{ fontSize:11, color:"#9b9992" }}>Set from page</span>
             <input value={fixPage} onChange={e => setFixPage(e.target.value.replace(/[^0-9,\-\s]/g,""))} placeholder="e.g. 5 or 3-6 or 3,5,7"
-              style={{ width:148, fontSize:11.5, padding:"5px 8px", border:"1px solid #e3dccd", borderRadius:6, color:"#383a37", fontFamily:"'Inter',sans-serif" }}/>
+              style={{ width:148, fontSize:11.5, padding:"5px 8px", border:"1px solid #dfddd6", borderRadius:6, color:"#383a37", fontFamily:"'Roboto',sans-serif" }}/>
             <HalfToggle val={sitePlanHalf} set={setSitePlanHalf}/>
             <button onClick={() => { if (fixPage.trim()) sitePlanPdfRef.current?.click(); }} disabled={fixingPlan||!fixPage.trim()}
-              style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingPlan||!fixPage.trim())?"#a69e91":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>
+              style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingPlan||!fixPage.trim())?"#94928b":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Roboto',sans-serif" }}>
               {fixingPlan?"Rendering…":"Choose PDF & set"}
             </button>
             <input ref={sitePlanPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleSitePlanPdf}/>
@@ -3142,13 +3142,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {imgs != null && (!imgs.sitePlan || imgs.sitePlan.length===0) && imgs.pagePicks && imgs.pagePicks.length > 0 && (
         <div style={{ background:"#fff", border:"1px solid #e7c48f", borderRadius:12, padding:"16px 18px", marginBottom:12 }}>
           <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#b45309", marginBottom:8 }}>Site Plan — choose the page</div>
-          <p style={{ fontSize:11.5, color:"#6f6a5f", lineHeight:1.55, margin:"0 0 12px 0" }}>I couldn't confidently find the site plan. Tap the page that shows it.</p>
+          <p style={{ fontSize:11.5, color:"#676767", lineHeight:1.55, margin:"0 0 12px 0" }}>I couldn't confidently find the site plan. Tap the page that shows it.</p>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(108px, 1fr))", gap:9 }}>
             {imgs.pagePicks.map(pk => (
               <button key={pk.page} onClick={() => chooseSitePlan(pk.page)}
-                style={{ padding:0, border:"1px solid #ece5d7", borderRadius:9, overflow:"hidden", cursor:"pointer", background:"#faf7f0", position:"relative", transition:"border-color .15s, transform .15s" }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor="#6dba43"; e.currentTarget.style.transform="translateY(-2px)"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor="#ece5d7"; e.currentTarget.style.transform="none"; }}>
+                style={{ padding:0, border:"1px solid #ebeae5", borderRadius:9, overflow:"hidden", cursor:"pointer", background:"#faf9f5", position:"relative", transition:"border-color .15s, transform .15s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor="#5bba47"; e.currentTarget.style.transform="translateY(-2px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor="#ebeae5"; e.currentTarget.style.transform="none"; }}>
                 <img src={pk.img} alt={`Page ${pk.page}`} style={{ width:"100%", display:"block", aspectRatio:"3/4", objectFit:"cover", objectPosition:"top" }}/>
                 <span style={{ position:"absolute", bottom:5, right:5, background:"rgba(38,40,31,0.78)", color:"#fff", fontSize:9, fontWeight:600, padding:"1px 6px", borderRadius:10 }}>p.{pk.page}</span>
               </button>
@@ -3171,33 +3171,33 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               <input ref={rrPdfRef} type="file" accept="application/pdf,.pdf,.xlsx,.xls,.xlsm,.xlsb,.csv" style={{ display:"none" }} onChange={handleRentRoll}/>
               <button onClick={() => { setRrError(null); rrPdfRef.current?.click(); }} disabled={rrBusy}
                 title="Update the roster from a current rent roll (PDF or Excel)"
-                style={{ background: rrBusy ? "#e7ecde" : "#fff", border:"1px solid #8cbf63", color:"#3f7a1f", padding:"6px 13px", borderRadius:7, cursor: rrBusy ? "default" : "pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
+                style={{ background: rrBusy ? "#e7ecde" : "#fff", border:"1px solid #8cbf63", color:"#3e8a2f", padding:"6px 13px", borderRadius:7, cursor: rrBusy ? "default" : "pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Roboto',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
                 {rrBusy ? "Refreshing…" : "⬆ Refresh from rent roll"}
               </button>
               <button onClick={() => { setPastePanelOpen(o => !o); setPasteError(null); }}
                 title="Paste a roster JSON from Claude (no API call)"
-                style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color:"#5c5047", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
+                style={{ background:"#faf9f5", border:"1px solid #c4c1b8", color:"#4f4d48", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Roboto',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
                 {pastePanelOpen ? "Close paste box" : "⌘ Paste roster"}
               </button>
               <button onClick={() => setShowAbstractUpload(true)}
                 title="Upload one tenant's abstract or a whole-property file — it auto-routes to the right tenants"
-                style={{ background:"#fff", border:"1px solid #c2d6f0", color:"#1f4d8f", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
+                style={{ background:"#fff", border:"1px solid #c2d6f0", color:"#1f4d8f", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Roboto',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
                 ⬆ Upload abstracts
               </button>
-              <span style={{ fontSize:11.5, color: rrError ? "#dc2626" : "#3f7a1f" }}>
+              <span style={{ fontSize:11.5, color: rrError ? "#dc2626" : "#3e8a2f" }}>
                 {rrError || (d.tenantsSource === "rent-roll" && d.tenantsAsOf ? `✓ Refreshed ${d.tenantsAsOf}` : "")}
               </span>
             </div>
             <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
               <button onClick={() => exportRosterToExcel(d)}
                 title="Export this rent roll to a clean Excel file"
-                style={{ background:"#f6f2ea", border:"1px solid #c8b89a", color:"#5c5047", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
+                style={{ background:"#faf9f5", border:"1px solid #c4c1b8", color:"#4f4d48", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Roboto',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
                 ⬇ Rent roll — Excel
               </button>
               {abstracts.length > 0 && (
                 <button onClick={() => { void exportLeaseAbstractsWorkbook(d.propertyName || d.fileName || "deal", abstracts).catch(() => {}); }}
                   title="Export all lease abstracts on this deal to Excel — an Issues Summary plus one detailed tab per tenant"
-                  style={{ background:"#eafaf0", border:"1px solid #b7e4c7", color:"#1f6f43", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
+                  style={{ background:"#eafaf0", border:"1px solid #b7e4c7", color:"#1f6f43", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Roboto',sans-serif", display:"flex", alignItems:"center", gap:5 }}>
                   ⬇ Lease abstracts — Excel
                 </button>
               )}
@@ -3205,7 +3205,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                 fileName={`KPR_RentRoll_${(d.propertyName||d.fileName||"deal").replace(/[/\\?%*:|"<>]/g,"-").slice(0,80)}.pdf`}
                 makeDoc={async () => { const { default: RentRollPDF } = await import("./RentRollPDF"); return <RentRollPDF deal={d} />; }}
                 render={(busy) => (
-                  <span style={{ background:"#2a2c27", border:"1px solid #2a2c27", color:"#fff", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif", display:"inline-flex", alignItems:"center", gap:5 }}>
+                  <span style={{ background:"#232422", border:"1px solid #232422", color:"#fff", padding:"6px 13px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Roboto',sans-serif", display:"inline-flex", alignItems:"center", gap:5 }}>
                     {busy ? "Preparing…" : "⬇ Rent roll — PDF"}
                   </span>
                 )}
@@ -3214,7 +3214,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           </div>
           {rrBusy && (
             <div style={{ marginBottom:9, height:5, borderRadius:3, background:"#dfe7d2", overflow:"hidden" }}>
-              <div style={{ height:"100%", width:"40%", borderRadius:3, background:"#6dba43", animation:"rrIndeterminate 1.1s ease-in-out infinite" }}/>
+              <div style={{ height:"100%", width:"40%", borderRadius:3, background:"#5bba47", animation:"rrIndeterminate 1.1s ease-in-out infinite" }}/>
             </div>
           )}
           {pastePanelOpen && (
@@ -3227,11 +3227,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               {pasteError && <div style={{ fontSize:11, color:"#dc2626" }}>{pasteError}</div>}
               <div style={{ display:"flex", gap:8 }}>
                 <button onClick={applyPaste} disabled={!pasteText.trim()}
-                  style={{ background: pasteText.trim() ? "#6dba43" : "#ccc", border:"none", color:"#fff", padding:"7px 16px", borderRadius:7, cursor: pasteText.trim() ? "pointer" : "default", fontSize:12, fontWeight:700, fontFamily:"'Inter',sans-serif" }}>
+                  style={{ background: pasteText.trim() ? "#5bba47" : "#ccc", border:"none", color:"#fff", padding:"7px 16px", borderRadius:7, cursor: pasteText.trim() ? "pointer" : "default", fontSize:12, fontWeight:700, fontFamily:"'Roboto',sans-serif" }}>
                   Apply
                 </button>
                 <button onClick={() => { setPastePanelOpen(false); setPasteText(""); setPasteError(null); }}
-                  style={{ background:"transparent", border:"1px solid #b8d49a", color:"#6f6a5f", padding:"7px 12px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>
+                  style={{ background:"transparent", border:"1px solid #b8d49a", color:"#676767", padding:"7px 12px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Roboto',sans-serif" }}>
                   Cancel
                 </button>
               </div>
@@ -3350,11 +3350,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {tab === "ai" && (<>
       {/* Deal score */}
       {(d.dealScore || d.analysisStale) && (
-        <CollapsibleBox collapsedHeight={300} fadeColor="#faf7f0">
+        <CollapsibleBox collapsedHeight={300} fadeColor="#faf9f5">
           {(expanded) => { const fs = 1; void expanded; return (
-          <div id="section-dealscore" data-jump="AI Deal Score" style={{ background:"#faf7f0", border:"1px solid #e7e0d2", borderRadius:8, padding:"14px 16px" }}>
+          <div id="section-dealscore" data-jump="AI Deal Score" style={{ background:"#faf9f5", border:"1px solid #e6e4de", borderRadius:8, padding:"14px 16px" }}>
             <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
-              <div style={{ fontSize:8*fs, letterSpacing:"0.1em", color:"#958d80" }}>AI DEAL SCORE</div>
+              <div style={{ fontSize:8*fs, letterSpacing:"0.1em", color:"#8a8983" }}>AI DEAL SCORE</div>
               {d.dealScore && <ScoreBadge score={adjustedScore}/>}
               {watchImpact.notches > 0 && d.dealScore && (
                 <span title={`Lowered from ${d.dealScore.grade} for at-risk tenant exposure, weighted by share of income.`}
@@ -3366,7 +3366,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               {!d.analysisStale && d.dealScore && (d.analysisVersion ?? 0) < ANALYSIS_VERSION && (
                 <button onClick={() => handleRefreshAnalysis()} disabled={reanalyzeBusy}
                   title="This deal's written analysis predates the latest scoring logic. Click to refresh it (uses the cheap roster-analysis pass). Your badges and score adjustments are already up to date."
-                  style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#fffbeb", border:"1px solid #f59e0b", borderRadius:5, padding:"2px 8px", fontSize:9*fs, color:"#92400e", fontWeight:600, fontFamily:"'Inter',sans-serif", lineHeight:1.4, cursor:reanalyzeBusy?"default":"pointer" }}>
+                  style={{ display:"inline-flex", alignItems:"center", gap:4, background:"#fffbeb", border:"1px solid #f59e0b", borderRadius:5, padding:"2px 8px", fontSize:9*fs, color:"#92400e", fontWeight:600, fontFamily:"'Roboto',sans-serif", lineHeight:1.4, cursor:reanalyzeBusy?"default":"pointer" }}>
                   {reanalyzeBusy ? "Refreshing…" : "⚠ Analysis may be outdated — refresh"}
                 </button>
               )}
@@ -3376,11 +3376,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                 <div>
                   <div style={{ fontSize:8*fs, color:"#0f9d63", letterSpacing:"0.08em", marginBottom:5 }}>STRENGTHS</div>
-                  {(d.dealScore.strengths||[]).map((s,i) => <div key={i} style={{ fontSize:11*fs, color:"#7d766a", marginBottom:2 }}>› <BoldText text={s} /></div>)}
+                  {(d.dealScore.strengths||[]).map((s,i) => <div key={i} style={{ fontSize:11*fs, color:"#6b6a65", marginBottom:2 }}>› <BoldText text={s} /></div>)}
                 </div>
                 <div>
                   <div style={{ fontSize:8*fs, color:"#dc2626", letterSpacing:"0.08em", marginBottom:5 }}>RISKS</div>
-                  {(d.dealScore.risks||[]).map((r,i) => <div key={i} style={{ fontSize:11*fs, color:"#7d766a", marginBottom:2 }}>› <BoldText text={r} /></div>)}
+                  {(d.dealScore.risks||[]).map((r,i) => <div key={i} style={{ fontSize:11*fs, color:"#6b6a65", marginBottom:2 }}>› <BoldText text={r} /></div>)}
                 </div>
               </div>
             </>}
@@ -3453,15 +3453,15 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(unsignedFlag ? [unsignedFlag] : []), ...(salesTrendFlag ? [salesTrendFlag] : []), ...(reassessFlag ? [reassessFlag] : []), ...derivedExtra, ...watchImpact.flags, ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
         return (allRedFlags.length > 0 || d.analysisStale) && (
-          <CollapsibleBox collapsedHeight={300} fadeColor="#faf7f0">
+          <CollapsibleBox collapsedHeight={300} fadeColor="#faf9f5">
             {(expanded) => { const fs = 1; void expanded; return (
-            <div id="section-redflags" style={{ background:"#faf7f0", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px" }}>
+            <div id="section-redflags" style={{ background:"#faf9f5", border:"1px solid #dc262630", borderRadius:8, padding:"14px 16px" }}>
               <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:10 }}>
                 <div style={{ fontSize:8*fs, letterSpacing:"0.1em", color:"#dc2626" }}>⚠ RED FLAGS</div>
                 {d.analysisStale && <StaleBadge />}
               </div>
               {allRedFlags.map((f,i) => (
-                <div key={i} style={{ display:"flex", gap:10, padding:"6px 0", borderBottom:i<allRedFlags.length-1?"1px solid #e7e0d2":"none", alignItems:"flex-start" }}>
+                <div key={i} style={{ display:"flex", gap:10, padding:"6px 0", borderBottom:i<allRedFlags.length-1?"1px solid #e6e4de":"none", alignItems:"flex-start" }}>
                   <span style={{ fontSize:9*fs, padding:"2px 6px", borderRadius:3, background:f.severity==="high"?"#dc262615":f.severity==="medium"?"#f9731615":"#eab30815", color:f.severity==="high"?"#dc2626":f.severity==="medium"?"#ea6000":"#b08000", fontWeight:600, flexShrink:0 }}>{f.severity?.toUpperCase()}</span>
                   <span style={{ fontSize:11*fs, color:"#5c5f57" }}><BoldText text={f.description} /></span>
                 </div>
@@ -3499,7 +3499,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {/* AI Investment Highlights — mirrored from the AI Analysis tab so the narrative
           is visible on the main page too (no id: section-highlights stays unique). */}
       {d.notes && (
-        <div style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #e3dccd", borderLeft:"3px solid #6dba43", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+        <div style={{ background:"linear-gradient(180deg,#fff,#fcfbf6)", border:"1px solid #dfddd6", borderLeft:"3px solid #5bba47", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
           <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:9 }}>
             <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#3f6b24" }}>{isOwnedDeal ? "Asset brief" : "AI Investment Highlights"}</div>
             {d.analysisStale && <StaleBadge />}
@@ -3526,13 +3526,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           {isOwnedDeal ? (<>
             {/* Owned: the price is what KPR PAID, and cap / price-per-SF follow from it rather
                 than reading "—" when only the OM's (unpriced) fields are blank. */}
-            <Row l="ACQUISITION PRICE" v={ownedPx.price?fmtUSD(ownedPx.price):null} c="#6dba43"/>
+            <Row l="ACQUISITION PRICE" v={ownedPx.price?fmtUSD(ownedPx.price):null} c="#5bba47"/>
             <Row l="CAP RATE" v={ownedPx.cap!=null?`${ownedPx.cap.toFixed(2)}%`:null} c="#0f9d63"/>
-            {ownedPx.capSource && <div style={{ fontSize:9.5, color:"#a69e91", textAlign:"right", marginTop:-4, marginBottom:2 }}>{ownedPx.capSource}{ownedPx.priceSource && ownedPx.priceSource !== "acquisition price" ? ` · price from ${ownedPx.priceSource}` : ""}</div>}
+            {ownedPx.capSource && <div style={{ fontSize:9.5, color:"#94928b", textAlign:"right", marginTop:-4, marginBottom:2 }}>{ownedPx.capSource}{ownedPx.priceSource && ownedPx.priceSource !== "acquisition price" ? ` · price from ${ownedPx.priceSource}` : ""}</div>}
             <Row l="NOI" v={d.noi?fmtUSD(d.noi):null} c="#0f9d63" field="noi"/>
             <Row l="PRICE / SF" v={ownedPx.psf?`$${ownedPx.psf}`:null}/>
           </>) : (<>
-          <Row l="ASKING PRICE" v={d.askingPrice?fmtUSD(d.askingPrice):null} c="#6dba43" field="askingPrice"/>
+          <Row l="ASKING PRICE" v={d.askingPrice?fmtUSD(d.askingPrice):null} c="#5bba47" field="askingPrice"/>
           <Row l="CAP RATE" v={d.capRate?`${d.capRate}%`:null} c="#0f9d63" field="capRate"/>
           <Row l="NOI" v={d.noi?fmtUSD(d.noi):null} c="#0f9d63" field="noi"/>
           <Row l="PRICE / SF" v={d.pricePerSF?`$${d.pricePerSF}`:null} field="pricePerSF"/>
@@ -3621,7 +3621,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {(() => {
         const vcount = Object.keys(d.verified || {}).length;
         return (
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12, fontSize:11, color:vcount?"#0f6b46":"#a69e91" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12, fontSize:11, color:vcount?"#0f6b46":"#94928b" }}>
             <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:15, height:15, borderRadius:4, border:`1px solid ${vcount?"#0f9d63":"#cfd6dd"}`, background:vcount?"#0f9d63":"transparent", color:"#fff", fontSize:9, flexShrink:0 }}>{vcount?"✓":""}</span>
             {vcount ? `${vcount} figure${vcount>1?"s":""} verified — locked against re-analyze.` : "Tip: click ☐ beside a figure to verify/lock it."}
           </div>
@@ -3647,20 +3647,20 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {tab === "underwriting" && (<>
       {/* Cash flow */}
       {showUnderwriting && Array.isArray(d.cashFlowProjection) && d.cashFlowProjection.length > 0 && (
-        <div id="section-cashflow" style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", marginBottom:12, fontWeight:600, textTransform:"uppercase" }}>Cash Flow Projection — {d.cashFlowProjection!.length} periods</div>
+        <div id="section-cashflow" style={{ background:"#fff", border:"1px solid #ecebe6", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#94928b", marginBottom:12, fontWeight:600, textTransform:"uppercase" }}>Cash Flow Projection — {d.cashFlowProjection!.length} periods</div>
           <div style={{ overflowX:"auto" }}>
             <table style={{ borderCollapse:"collapse", fontSize:12, minWidth:150+d.cashFlowProjection!.length*108 }}>
               <thead>
-                <tr style={{ fontSize:10, color:"#a69e91", fontWeight:600 }}>
+                <tr style={{ fontSize:10, color:"#94928b", fontWeight:600 }}>
                   <th className="freeze-col" style={{ textAlign:"left", padding:"6px 10px", position:"sticky", left:0, background:"#fff", zIndex:1 }}></th>
-                  {d.cashFlowProjection!.map((r,i) => <th key={i} style={{ textAlign:"right", padding:"6px 10px", whiteSpace:"nowrap", fontWeight:i===0?700:600, color:i===0?"#383a37":"#a69e91" }}>{r.label}</th>)}
+                  {d.cashFlowProjection!.map((r,i) => <th key={i} style={{ textAlign:"right", padding:"6px 10px", whiteSpace:"nowrap", fontWeight:i===0?700:600, color:i===0?"#383a37":"#94928b" }}>{r.label}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {([["Base Rent","totalBaseRent","#5c5f57"],["Reimbursements","reimbursements","#5c5f57"],["Eff. Gross Rev.","egr","#383a37"],["Operating Expenses","operatingExpenses","#837c6e"],["NOI","noi","#0f9d63"]] as [string,string,string][]).map(([label,key,color]) => (
-                  <tr key={key} style={{ borderTop:"1px solid #f1eadc", background:key==="noi"?"#0f9d6308":"transparent" }}>
-                    <td className="freeze-col" style={{ textAlign:"left", padding:"8px 10px", color:key==="noi"?"#0f7a4e":"#a69e91", fontWeight:key==="noi"?700:500, whiteSpace:"nowrap", position:"sticky", left:0, background:key==="noi"?"#f2faef":"#fff", zIndex:1 }}>{label}</td>
+                  <tr key={key} style={{ borderTop:"1px solid #efeee9", background:key==="noi"?"#0f9d6308":"transparent" }}>
+                    <td className="freeze-col" style={{ textAlign:"left", padding:"8px 10px", color:key==="noi"?"#0f7a4e":"#94928b", fontWeight:key==="noi"?700:500, whiteSpace:"nowrap", position:"sticky", left:0, background:key==="noi"?"#f2faef":"#fff", zIndex:1 }}>{label}</td>
                     {d.cashFlowProjection!.map((r,ci) => (
                       <td key={ci} style={{ textAlign:"right", padding:"8px 10px", color, fontWeight:key==="noi"?700:400, whiteSpace:"nowrap" }}>{fmtUSD((r as any)[key])}</td>
                     ))}
@@ -3692,7 +3692,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         };
         const Grp = ({ title }: { title: string }) => (
           <div style={{ gridColumn:"1 / -1", fontSize:13, fontWeight:600, color:"#383a37", marginTop:8, marginBottom:-2, display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ width:6, height:6, borderRadius:"50%", background:"#6dba43" }}/>{title}
+            <span style={{ width:6, height:6, borderRadius:"50%", background:"#5bba47" }}/>{title}
           </div>
         );
         const pp = Number(d.txnPurchasePrice)||0, sp = Number(d.txnSalePrice)||0;
@@ -3703,12 +3703,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const goingInCap   = pp && noiClose ? (noiClose/pp*100) : null;
         const pricePerSFCalc = pp && d.totalSF ? (pp/Number(d.totalSF)) : null;
         return (
-          <div id="section-acquisition" data-jump={owned ? "Purchase Metrics" : "Transaction Details"} style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div id="section-acquisition" data-jump={owned ? "Purchase Metrics" : "Transaction Details"} style={{ background:"#ffffff", border:"1px solid #ecebe6", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14, flexWrap:"wrap", gap:8 }}>
-              <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>
+              <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#94928b", fontWeight:600, textTransform:"uppercase" }}>
                 {owned ? "Purchase Metrics" : "Transaction Details"}
               </div>
-              <div style={{ fontSize:12, color:"#a69e91" }}>
+              <div style={{ fontSize:12, color:"#94928b" }}>
                 {owned ? "Complete the closing details below" : "Set status to Owned when acquired to record full closing details"}
               </div>
             </div>
@@ -3729,7 +3729,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                     <span style={{ fontSize:13, fontWeight:600, color:done?"#0f7a3d":"#9a6a1e" }}>
                       {done ? "✓ Purchase metrics complete" : `Purchase metrics ${pct}% complete — ${missing.length} key detail${missing.length===1?"":"s"} still needed`}
                     </span>
-                    <div style={{ width:90, height:6, background:"#efe8da", borderRadius:4, overflow:"hidden", flexShrink:0 }}>
+                    <div style={{ width:90, height:6, background:"#ecebe6", borderRadius:4, overflow:"hidden", flexShrink:0 }}>
                       <div style={{ width:`${pct}%`, height:"100%", background:done?"#0f9d63":"#d9a441", borderRadius:4, transition:"width 0.3s" }}/>
                     </div>
                   </div>
@@ -3746,7 +3746,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
             {/* Acquisition */}
             <div style={{ fontSize:13, fontWeight:600, color:"#383a37", marginBottom:10, display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ width:6, height:6, borderRadius:"50%", background:"#6dba43" }}/>{owned ? "Deal Terms" : "Acquisition"}
+              <span style={{ width:6, height:6, borderRadius:"50%", background:"#5bba47" }}/>{owned ? "Deal Terms" : "Acquisition"}
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14, marginBottom:18 }}>
               {tf({ label:"Purchase Price", field:"txnPurchasePrice", placeholder:"e.g. 42,500,000", prefix:"$" })}
@@ -3772,10 +3772,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             </div>
 
             {owned && (allInBasis || goingInCap || pricePerSFCalc) && (
-              <div style={{ marginBottom:18, paddingBottom:16, borderBottom:"1px solid #f1eadc", display:"flex", gap:30, flexWrap:"wrap" }}>
-                {goingInCap && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Going-In Cap (calc)</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#0f9d63" }}>{goingInCap.toFixed(2)}%</div></div>}
-                {pricePerSFCalc && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Price / SF</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#383a37" }}>${pricePerSFCalc.toFixed(0)}</div></div>}
-                {allInBasis && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>All-In Basis</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#383a37" }}>{fmtUSD(allInBasis)}</div></div>}
+              <div style={{ marginBottom:18, paddingBottom:16, borderBottom:"1px solid #efeee9", display:"flex", gap:30, flexWrap:"wrap" }}>
+                {goingInCap && <div><div style={{ fontSize:11, color:"#94928b", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Going-In Cap (calc)</div><div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:21, fontWeight:600, color:"#0f9d63" }}>{goingInCap.toFixed(2)}%</div></div>}
+                {pricePerSFCalc && <div><div style={{ fontSize:11, color:"#94928b", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Price / SF</div><div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:21, fontWeight:600, color:"#383a37" }}>${pricePerSFCalc.toFixed(0)}</div></div>}
+                {allInBasis && <div><div style={{ fontSize:11, color:"#94928b", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>All-In Basis</div><div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:21, fontWeight:600, color:"#383a37" }}>{fmtUSD(allInBasis)}</div></div>}
               </div>
             )}
 
@@ -3792,7 +3792,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                     <span style={{ fontSize:13, fontWeight:600, color:done?"#0a7d72":"#9a6a1e" }}>
                       {done ? "✓ Disposition record complete" : `Disposition record ${pct}% complete — ${missing.length} detail${missing.length===1?"":"s"} still needed`}
                     </span>
-                    <div style={{ width:90, height:6, background:"#efe8da", borderRadius:4, overflow:"hidden", flexShrink:0 }}>
+                    <div style={{ width:90, height:6, background:"#ecebe6", borderRadius:4, overflow:"hidden", flexShrink:0 }}>
                       <div style={{ width:`${pct}%`, height:"100%", background:done?"#0d9488":"#d9a441", borderRadius:4, transition:"width 0.3s" }}/>
                     </div>
                   </div>
@@ -3813,8 +3813,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             </div>
 
             {gain != null && (
-              <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc", display:"flex", gap:30, flexWrap:"wrap" }}>
-                <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Realized Gain / (Loss)</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:gain>=0?"#0f9d63":"#dc2626" }}>{gain>=0?"":"-"}${Math.abs(gain).toLocaleString()}</div></div>
+              <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #efeee9", display:"flex", gap:30, flexWrap:"wrap" }}>
+                <div><div style={{ fontSize:11, color:"#94928b", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Realized Gain / (Loss)</div><div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:21, fontWeight:600, color:gain>=0?"#0f9d63":"#dc2626" }}>{gain>=0?"":"-"}${Math.abs(gain).toLocaleString()}</div></div>
               </div>
             )}
             </DispositionSection>}
@@ -3835,7 +3835,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           truth); the older manual loan form stays reachable but folded away. */}
       {isOwnedDeal && <OwnedFinancing deal={d} />}
       {isOwnedDeal && (
-        <button onClick={() => setShowManualLoan(v => !v)} style={{ background:"transparent", border:"1px solid #e3dccd", color:"#7d766a", borderRadius:8, padding:"6px 12px", fontSize:11.5, cursor:"pointer", marginBottom:12 }}>
+        <button onClick={() => setShowManualLoan(v => !v)} style={{ background:"transparent", border:"1px solid #dfddd6", color:"#6b6a65", borderRadius:8, padding:"6px 12px", fontSize:11.5, cursor:"pointer", marginBottom:12 }}>
           {showManualLoan ? "Hide" : "Show"} the older manual loan form
         </button>
       )}
@@ -3846,7 +3846,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           <TxnField key={p.field as string} {...p} initial={d[p.field]} dealId={d.id} onUpdate={onUpdate} />;
         const Group = ({ title }: { title: string }) => (
           <div style={{ gridColumn:"1 / -1", fontSize:13, fontWeight:600, color:"#383a37", marginTop:6, marginBottom:-2, display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ width:6, height:6, borderRadius:"50%", background:"#6dba43" }}/>{title}
+            <span style={{ width:6, height:6, borderRadius:"50%", background:"#5bba47" }}/>{title}
           </div>
         );
         const amt = Number(d.debtLoanAmount)||0, rate = Number(d.debtRate)||0, amortY = Number(d.debtAmortYears)||0;
@@ -3859,7 +3859,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const dscrCalc = annualDS && noi2 ? noi2/annualDS : null;
 
         if (!owned) return (
-          <div id="section-financing" data-jump="Financing & Debt" style={{ background:"#ffffff", border:"1px dashed #ddd4c2", borderRadius:12, padding:"16px 20px", marginBottom:14, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+          <div id="section-financing" data-jump="Financing & Debt" style={{ background:"#ffffff", border:"1px dashed #dad8d1", borderRadius:12, padding:"16px 20px", marginBottom:14, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
             <div style={{ fontSize:13, color:"#837c6e" }}>
               <span style={{ fontWeight:600, color:"#383a37" }}>Financing & Debt</span> — set this deal's status to <span style={{ fontWeight:600 }}>Under Contract</span> or <span style={{ fontWeight:600 }}>Owned</span> to record financing or upload a term sheet.
             </div>
@@ -3869,7 +3869,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                 Mark Under Contract
               </button>
               <button onClick={() => onUpdate(d.id, { status:"Owned" })}
-                style={{ background:"#6dba43", border:"none", color:"#1f2b16", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>
+                style={{ background:"#5bba47", border:"none", color:"#1f2b16", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>
                 Mark as Owned
               </button>
             </div>
@@ -3878,8 +3878,8 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
         return (
           <div id="section-financing" style={isOwnedDeal && !showManualLoan ? { display:"none" } : undefined}>
-            <div id={isOwnedDeal ? "section-manual-loan" : "section-senior-loan"} style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-            <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:14 }}>Senior Loan</div>
+            <div id={isOwnedDeal ? "section-manual-loan" : "section-senior-loan"} style={{ background:"#ffffff", border:"1px solid #ecebe6", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+            <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#94928b", fontWeight:600, textTransform:"uppercase", marginBottom:14 }}>Senior Loan</div>
             <TermSheetImport deal={d} onUpdate={onUpdate}/>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14 }}>
               <Group title="Lender & Loan"/>
@@ -3915,21 +3915,21 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               {f({ label:"Notes", field:"debtNotes", placeholder:"Anything else worth recording", wide:true })}
             </div>
             {(annualDS || dscrCalc) && (
-              <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #f1eadc", display:"flex", gap:30, flexWrap:"wrap" }}>
-                {annualDS && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Est. Annual Debt Service</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:"#383a37" }}>${Math.round(annualDS).toLocaleString()}</div></div>}
-                {dscrCalc && <div><div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Implied DSCR (NOI)</div><div style={{ fontFamily:"'Fraunces',serif", fontSize:21, fontWeight:600, color:dscrCalc<1.2?"#dc2626":"#0f9d63" }}>{dscrCalc.toFixed(2)}x</div></div>}
+              <div style={{ marginTop:18, paddingTop:16, borderTop:"1px solid #efeee9", display:"flex", gap:30, flexWrap:"wrap" }}>
+                {annualDS && <div><div style={{ fontSize:11, color:"#94928b", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Est. Annual Debt Service</div><div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:21, fontWeight:600, color:"#383a37" }}>${Math.round(annualDS).toLocaleString()}</div></div>}
+                {dscrCalc && <div><div style={{ fontSize:11, color:"#94928b", fontWeight:600, textTransform:"uppercase", marginBottom:4 }}>Implied DSCR (NOI)</div><div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:21, fontWeight:600, color:dscrCalc<1.2?"#dc2626":"#0f9d63" }}>{dscrCalc.toFixed(2)}x</div></div>}
               </div>
             )}
             <div style={{ marginTop:12, fontSize:11, color:"#b3aa9b", lineHeight:1.5 }}>Derived figures are estimates (debt service assumes level amortization; DSCR uses the OM NOI). For reference only.</div>
             </div>{/* /Senior Loan box */}
 
             {/* Amortization schedule — its own box */}
-            <div id="section-amortization" style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+            <div id="section-amortization" style={{ background:"#ffffff", border:"1px solid #ecebe6", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
               <AmortizationCard deal={d} onUpdate={onUpdate} />
             </div>
 
             {/* Prepayment & swap breakage — its own box */}
-            <div id="section-prepay" style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+            <div id="section-prepay" style={{ background:"#ffffff", border:"1px solid #ecebe6", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
               <PrepayCalculator deal={d} onUpdate={onUpdate} />
             </div>
 
@@ -3938,12 +3938,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               const hasPref = [d.prefLender, d.prefAmount, d.prefRateCurrent, d.prefRateAllIn, d.prefReturnType, d.prefOriginationDate, d.prefMaturityDate, d.prefTermYears, d.prefRecourse, d.prefNotes].some(v => v != null && v !== "");
               const prefOpen = hasPref || showPrefManual;
               return (
-                <div id="section-pref-equity" style={{ background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+                <div id="section-pref-equity" style={{ background:"#ffffff", border:"1px solid #ecebe6", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
                   <div onClick={() => { if (!hasPref) setShowPrefManual(v => !v); }}
                     style={{ fontSize:13, fontWeight:600, color:"#383a37", marginBottom: prefOpen ? 10 : 0, display:"flex", alignItems:"center", gap:8, cursor: hasPref ? "default" : "pointer", userSelect:"none" }}>
-                    <span style={{ width:6, height:6, borderRadius:"50%", background:"#6dba43" }}/>
+                    <span style={{ width:6, height:6, borderRadius:"50%", background:"#5bba47" }}/>
                     Preferred Equity (if applicable)
-                    {!hasPref && <span style={{ fontSize:11, fontWeight:600, color:"#a69e91" }}>{prefOpen ? "▾ hide" : "▸ add"}</span>}
+                    {!hasPref && <span style={{ fontSize:11, fontWeight:600, color:"#94928b" }}>{prefOpen ? "▾ hide" : "▸ add"}</span>}
                   </div>
                   {prefOpen && (
                     <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:14 }}>
@@ -3985,7 +3985,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:2 }}>
             <button onClick={() => onGetMarket(d.id)} disabled={marketBusy || !(d.address || d.city || d.state)}
               title="Derive Market & Submarket from the address (free US Census geocoder — no tokens)"
-              style={{ background:"transparent", border:"1px solid #0d9488", color:(marketBusy||!(d.address||d.city||d.state))?"#a69e91":"#0d9488", padding:"4px 10px", borderRadius:5, cursor:(marketBusy||!(d.address||d.city||d.state))?"default":"pointer", fontSize:9.5, fontWeight:600, fontFamily:"'Inter',sans-serif", letterSpacing:"0.04em" }}>
+              style={{ background:"transparent", border:"1px solid #0d9488", color:(marketBusy||!(d.address||d.city||d.state))?"#94928b":"#0d9488", padding:"4px 10px", borderRadius:5, cursor:(marketBusy||!(d.address||d.city||d.state))?"default":"pointer", fontSize:9.5, fontWeight:600, fontFamily:"'Roboto',sans-serif", letterSpacing:"0.04em" }}>
               {marketBusy ? "PULLING…" : ((d.market||d.submarket) ? "RE-PULL MARKET" : "PULL MARKET FROM ADDRESS")}
             </button>
           </div>
@@ -3997,11 +3997,11 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             const derivedMkt = !!(d.marketGeo?.market && d.market && d.market === d.marketGeo.market);
             const derivedSub = !!(d.marketGeo?.submarket && d.submarket && d.submarket === d.marketGeo.submarket);
             const infoRow = (l: string, v: unknown, derived: boolean) => (
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom:"1px solid #e7e0d2" }}>
-                <span style={{ fontSize:10, color:"#6f6a5f", letterSpacing:"0.05em" }}>{l}</span>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom:"1px solid #e6e4de" }}>
+                <span style={{ fontSize:10, color:"#676767", letterSpacing:"0.05em" }}>{l}</span>
                 <span style={{ display:"flex", alignItems:"center", gap:6 }}>
                   {derived && tag}
-                  <span style={{ fontSize:11, color:"#383a37", fontWeight:500 }}>{(v != null && v !== "") ? String(v) : <span style={{ color:"#958d80" }}>—</span>}</span>
+                  <span style={{ fontSize:11, color:"#383a37", fontWeight:500 }}>{(v != null && v !== "") ? String(v) : <span style={{ color:"#8a8983" }}>—</span>}</span>
                 </span>
               </div>
             );
@@ -4029,23 +4029,23 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               ["AVG. HHI 3MI", d.avgHHIncome3mi?fmtUSD(d.avgHHIncome3mi):null],
             ].map(([l,v]) => (
               <div key={l as string} style={{ background:"#fff", padding:"8px 10px", borderRadius:5 }}>
-                <div style={{ fontSize:8, color:"#958d80", marginBottom:3 }}>{l as string}</div>
+                <div style={{ fontSize:8, color:"#8a8983", marginBottom:3 }}>{l as string}</div>
                 <div style={{ fontSize:12, color:"#5c5f57", fontWeight:500 }}>{v as string||"—"}</div>
               </div>
             ))}
           </div>
-          {d.proximityHighways && <div style={{ marginTop:8, fontSize:11, color:"#7d766a" }}>Highways: {d.proximityHighways}</div>}
-          {d.retailCotenants && <div style={{ marginTop:4, fontSize:11, color:"#7d766a" }}>Co-tenants: {d.retailCotenants}</div>}
+          {d.proximityHighways && <div style={{ marginTop:8, fontSize:11, color:"#6b6a65" }}>Highways: {d.proximityHighways}</div>}
+          {d.retailCotenants && <div style={{ marginTop:4, fontSize:11, color:"#6b6a65" }}>Co-tenants: {d.retailCotenants}</div>}
         </Card></div>
       )}
       {(d.trafficCountVPD || d.population3mi || d.medianHHIncome3mi) && <div style={{ height:12 }}/>}
 
       {/* Trade area demographics pull */}
-      <div id="section-trade-area" style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"16px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+      <div id="section-trade-area" style={{ background:"#fff", border:"1px solid #ecebe6", borderRadius:12, padding:"16px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, marginBottom:d.marketDemographics?12:9, flexWrap:"wrap" }}>
-          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Trade Area — 1 / 3 / 5 Mile<span style={{ textTransform:"none", letterSpacing:"normal", fontWeight:500, color:"#bcae97" }}> (Source: Address-based Census data pull)</span></div>
+          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#94928b", fontWeight:600, textTransform:"uppercase" }}>Trade Area — 1 / 3 / 5 Mile<span style={{ textTransform:"none", letterSpacing:"normal", fontWeight:500, color:"#b8b5ad" }}> (Source: Address-based Census data pull)</span></div>
           <button onClick={() => onGetDemo(d.id)} disabled={demoBusy}
-            style={{ background:"transparent", border:"1px solid #0d9488", color:demoBusy?"#a69e91":"#0d9488", padding:"5px 11px", borderRadius:5, cursor:demoBusy?"default":"pointer", fontSize:10, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+            style={{ background:"transparent", border:"1px solid #0d9488", color:demoBusy?"#94928b":"#0d9488", padding:"5px 11px", borderRadius:5, cursor:demoBusy?"default":"pointer", fontSize:10, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>
             {demoBusy?"PULLING…":(d.marketDemographics?"RE-PULL":"PULL DEMOGRAPHICS")}
           </button>
         </div>
@@ -4053,26 +4053,26 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           const m = d.marketDemographics!;
           const fmtN = (v: number|null|undefined) => v!=null ? Number(v).toLocaleString() : "—";
           const fmtD = (v: number|null|undefined) => v!=null ? fmtUSD(v) : "—";
-          const cc = m.confidence==="high"?"#0f9d63":m.confidence==="medium"?"#d9890c":"#a69e91";
+          const cc = m.confidence==="high"?"#0f9d63":m.confidence==="medium"?"#d9890c":"#94928b";
           return (
             <>
               <div style={{ overflowX:"auto" }}>
                 <table style={{ borderCollapse:"collapse", fontSize:12, width:"100%", minWidth:360 }}>
-                  <thead><tr style={{ fontSize:10, color:"#a69e91", fontWeight:600 }}>
+                  <thead><tr style={{ fontSize:10, color:"#94928b", fontWeight:600 }}>
                     <th style={{ textAlign:"left", padding:"5px 8px" }}></th>
                     <th style={{ textAlign:"right", padding:"5px 8px" }}>1 MILE</th>
                     <th style={{ textAlign:"right", padding:"5px 8px" }}>3 MILE</th>
                     <th style={{ textAlign:"right", padding:"5px 8px" }}>5 MILE</th>
                   </tr></thead>
                   <tbody>
-                    <tr style={{ borderTop:"1px solid #f1eadc" }}>
-                      <td style={{ padding:"7px 8px", color:"#a69e91" }}>Population</td>
+                    <tr style={{ borderTop:"1px solid #efeee9" }}>
+                      <td style={{ padding:"7px 8px", color:"#94928b" }}>Population</td>
                       <td style={{ padding:"7px 8px", textAlign:"right", color:"#383a37" }}>{fmtN(m.pop1mi)}</td>
                       <td style={{ padding:"7px 8px", textAlign:"right", color:"#383a37" }}>{fmtN(m.pop3mi)}</td>
                       <td style={{ padding:"7px 8px", textAlign:"right", color:"#383a37" }}>{fmtN(m.pop5mi)}</td>
                     </tr>
-                    <tr style={{ borderTop:"1px solid #f1eadc" }}>
-                      <td style={{ padding:"7px 8px", color:"#a69e91" }}>Avg HH Income</td>
+                    <tr style={{ borderTop:"1px solid #efeee9" }}>
+                      <td style={{ padding:"7px 8px", color:"#94928b" }}>Avg HH Income</td>
                       <td style={{ padding:"7px 8px", textAlign:"right", color:"#0f9d63", fontWeight:500 }}>{fmtD(m.avgHHI1mi)}</td>
                       <td style={{ padding:"7px 8px", textAlign:"right", color:"#0f9d63", fontWeight:500 }}>{fmtD(m.avgHHI3mi)}</td>
                       <td style={{ padding:"7px 8px", textAlign:"right", color:"#0f9d63", fontWeight:500 }}>{fmtD(m.avgHHI5mi)}</td>
@@ -4084,33 +4084,33 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                 <span style={{ fontSize:9, fontWeight:700, color:cc, background:`${cc}1a`, padding:"2px 8px", borderRadius:10, textTransform:"uppercase" }}>{m.confidence} confidence</span>
                 {m.source && <span style={{ fontSize:10.5, color:"#837c6e" }}>{m.source}{m.asOf?` · ${m.asOf}`:""}</span>}
               </div>
-              {m.note && <div style={{ fontSize:10.5, color:"#7d766a", lineHeight:1.55, marginTop:7 }}>{m.note}</div>}
-              <div style={{ fontSize:9, color:"#a69e91", marginTop:9 }}>Sourced from US Census Bureau ACS 5-Year Estimates. Block-group centroids apportioned within radius rings — a close estimate; verify before relying on it.</div>
+              {m.note && <div style={{ fontSize:10.5, color:"#6b6a65", lineHeight:1.55, marginTop:7 }}>{m.note}</div>}
+              <div style={{ fontSize:9, color:"#94928b", marginTop:9 }}>Sourced from US Census Bureau ACS 5-Year Estimates. Block-group centroids apportioned within radius rings — a close estimate; verify before relying on it.</div>
 
             </>
           );
         })() : (
-          <div style={{ fontSize:11.5, color:"#a69e91", lineHeight:1.55 }}>Auto-pulled on deal creation from US Census ACS 5-Year Estimates. Click "RE-PULL" to refresh.</div>
+          <div style={{ fontSize:11.5, color:"#94928b", lineHeight:1.55 }}>Auto-pulled on deal creation from US Census ACS 5-Year Estimates. Click "RE-PULL" to refresh.</div>
         )}
       </div>
 
       </>)}
       {tab === "overview" && (<>
       {/* User notes */}
-      <div id="section-notes" style={{ background:"#fff", border:"1px solid #ece5d7", borderRadius:12, padding:"16px 18px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+      <div id="section-notes" style={{ background:"#fff", border:"1px solid #ebeae5", borderRadius:12, padding:"16px 18px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-          <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#a89f8f" }}>Your Notes</div>
-          {!notesOpen && <button onClick={() => setNotesOpen(true)} style={{ fontSize:10, color:"#7d766a", background:"transparent", border:"1px solid #e7e0d2", padding:"3px 9px", borderRadius:5, cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>Edit</button>}
+          <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#9b9992" }}>Your Notes</div>
+          {!notesOpen && <button onClick={() => setNotesOpen(true)} style={{ fontSize:10, color:"#6b6a65", background:"transparent", border:"1px solid #e6e4de", padding:"3px 9px", borderRadius:5, cursor:"pointer", fontFamily:"'Roboto',sans-serif" }}>Edit</button>}
         </div>
         {notesOpen ? (
           <div>
             <textarea value={notesVal} onChange={e => setNotesVal(e.target.value)} rows={5}
-              style={{ width:"100%", fontFamily:"'Inter',sans-serif", fontSize:13, padding:"10px 12px", border:"1px solid #e3dccd", borderRadius:8, color:"#383a37", background:"#faf7f0", resize:"vertical", boxSizing:"border-box" }}/>
+              style={{ width:"100%", fontFamily:"'Roboto',sans-serif", fontSize:13, padding:"10px 12px", border:"1px solid #dfddd6", borderRadius:8, color:"#383a37", background:"#faf9f5", resize:"vertical", boxSizing:"border-box" }}/>
             <div style={{ display:"flex", gap:8, marginTop:6 }}>
               <button onClick={() => { onUpdate(d.id, { userNotes:notesVal }); setNotesOpen(false); }}
-                style={{ background:"#26281f", border:"none", color:"#e8e0cf", padding:"6px 14px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>Save</button>
+                style={{ background:"#232422", border:"none", color:"#e8e0cf", padding:"6px 14px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Roboto',sans-serif" }}>Save</button>
               <button onClick={() => { setNotesVal(d.userNotes||""); setNotesOpen(false); }}
-                style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"6px 14px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>Cancel</button>
+                style={{ background:"transparent", border:"1px solid #e6e4de", color:"#6b6a65", padding:"6px 14px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Roboto',sans-serif" }}>Cancel</button>
             </div>
           </div>
         ) : (
@@ -4245,18 +4245,18 @@ function TxnField({ label, field, initial, placeholder, prefix, suffix, options,
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:5, gridColumn: wide?"1 / -1":"auto" }}>
-      <label style={{ fontSize:11, color:"#a69e91", fontWeight:600, letterSpacing:"0.03em", textTransform:"uppercase", display:"flex", alignItems:"center", gap:6 }}>
-        {label}{saved && <span style={{ color:"#3f7a1f", fontSize:10, fontWeight:700 }}>✓ saved</span>}
+      <label style={{ fontSize:11, color:"#94928b", fontWeight:600, letterSpacing:"0.03em", textTransform:"uppercase", display:"flex", alignItems:"center", gap:6 }}>
+        {label}{saved && <span style={{ color:"#3e8a2f", fontSize:10, fontWeight:700 }}>✓ saved</span>}
       </label>
       {options ? (
         <select value={val} onChange={e => { setVal(e.target.value); valRef.current = e.target.value; dirtyRef.current = true; commit(); }}
-          style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"10px", fontSize:14, color:"#383a37", outline:"none" }}>
+          style={{ background:"#f5f1e8", border:"1px solid #e3e1db", borderRadius:8, padding:"10px", fontSize:14, color:"#383a37", outline:"none" }}>
           <option value="">—</option>
           {options.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
       ) : (
-        <div style={{ display:"flex", alignItems:"center", background:"#f5f1e8", border:"1px solid "+(saved?"#8cbf63":"#e6dfd0"), borderRadius:8, padding:"0 10px", transition:"border-color 0.3s" }}>
-          {prefix && <span style={{ color:"#a69e91", fontSize:14 }}>{prefix}</span>}
+        <div style={{ display:"flex", alignItems:"center", background:"#f5f1e8", border:"1px solid "+(saved?"#8cbf63":"#e3e1db"), borderRadius:8, padding:"0 10px", transition:"border-color 0.3s" }}>
+          {prefix && <span style={{ color:"#94928b", fontSize:14 }}>{prefix}</span>}
           <input
             value={val}
             onFocus={() => { focusedRef.current = true; }}
@@ -4273,7 +4273,7 @@ function TxnField({ label, field, initial, placeholder, prefix, suffix, options,
             onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }}
             placeholder={placeholder}
             style={{ flex:1, background:"transparent", border:"none", outline:"none", padding:"10px 6px", fontSize:14, color:"#383a37" }}/>
-          {suffix && <span style={{ color:"#a69e91", fontSize:13 }}>{suffix}</span>}
+          {suffix && <span style={{ color:"#94928b", fontSize:13 }}>{suffix}</span>}
         </div>
       )}
     </div>
@@ -4304,16 +4304,16 @@ function AkaEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patc
     return (
       <div style={{ marginBottom: 12 }}>
         <button onClick={() => setOpen(true)}
-          style={{ background: "transparent", border: "1px dashed #d8cfbd", color: "#7d766a", padding: "5px 11px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+          style={{ background: "transparent", border: "1px dashed #d4d2ca", color: "#6b6a65", padding: "5px 11px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}>
           + Add "also known as" name
         </button>
       </div>
     );
   }
   return (
-    <div style={{ marginBottom: 12, background: "#fff", border: "1px solid #efe8da", borderRadius: 10, padding: "12px 14px" }}>
-      <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "#a69e91", fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>Also Known As</div>
-      <div style={{ fontSize: 11, color: "#9a917f", marginBottom: 8, lineHeight: 1.5 }}>
+    <div style={{ marginBottom: 12, background: "#fff", border: "1px solid #ecebe6", borderRadius: 10, padding: "12px 14px" }}>
+      <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "#94928b", fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>Also Known As</div>
+      <div style={{ fontSize: 11, color: "#8f8d86", marginBottom: 8, lineHeight: 1.5 }}>
         Other names this property goes by — a borrowing entity (e.g. "Voorhees MZL LLC"), a broker's phase name, or an old name. Any uploaded document under one of these names will route straight to this deal.
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
@@ -4323,15 +4323,15 @@ function AkaEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patc
             <button onClick={() => remove(name)} title="Remove" style={{ background: "transparent", border: "none", color: "#7d9a5c", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: "0 2px" }}>×</button>
           </span>
         ))}
-        {aka.length === 0 && <span style={{ fontSize: 11.5, color: "#bcae97" }}>No aliases yet.</span>}
+        {aka.length === 0 && <span style={{ fontSize: 11.5, color: "#b8b5ad" }}>No aliases yet.</span>}
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <input value={draft} autoFocus={open && aka.length === 0}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") add(); }}
           placeholder='e.g. Voorhees MZL LLC'
-          style={{ flex: 1, border: "1px solid #c8b89a", borderRadius: 7, padding: "7px 10px", fontSize: 13, color: "#383a37", outline: "none", background: "#fff" }} />
-        <button onClick={add} style={{ background: "#3f7a1f", border: "none", color: "#fff", padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Add</button>
+          style={{ flex: 1, border: "1px solid #c4c1b8", borderRadius: 7, padding: "7px 10px", fontSize: 13, color: "#383a37", outline: "none", background: "#fff" }} />
+        <button onClick={add} style={{ background: "#3e8a2f", border: "none", color: "#fff", padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Add</button>
       </div>
     </div>
   );
@@ -4361,13 +4361,13 @@ function MetricsEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, 
   return (
     <div style={{ marginBottom:14 }}>
       <button onClick={() => setOpen(o => !o)}
-        style={{ background:open?"#383a37":"transparent", color:open?"#f6f2ea":"#5c5f57", border:"1px solid "+(open?"#383a37":"#d8cfbd"), padding:"6px 13px", borderRadius:8, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+        style={{ background:open?"#383a37":"transparent", color:open?"#faf9f5":"#5c5f57", border:"1px solid "+(open?"#383a37":"#d4d2ca"), padding:"6px 13px", borderRadius:8, cursor:"pointer", fontSize:11.5, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>
         {open ? "✕ Close metric editor" : "✎ Edit metrics"}
       </button>
       {open && (
-        <div style={{ marginTop:11, background:"#ffffff", border:"1px solid #efe8da", borderRadius:12, padding:"16px 18px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-          <div style={{ fontSize:11, color:"#9a917f", marginBottom:13, lineHeight:1.5 }}>
-            Correct any figure that doesn't match the OM. Changes save automatically as you type — you'll see a green <b style={{ color:"#3f7a1f" }}>✓ saved</b> on each field — and are logged in this deal's edit history. The fields you most often correct get flagged for extra care on future extractions.
+        <div style={{ marginTop:11, background:"#ffffff", border:"1px solid #ecebe6", borderRadius:12, padding:"16px 18px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div style={{ fontSize:11, color:"#8f8d86", marginBottom:13, lineHeight:1.5 }}>
+            Correct any figure that doesn't match the OM. Changes save automatically as you type — you'll see a green <b style={{ color:"#3e8a2f" }}>✓ saved</b> on each field — and are logged in this deal's edit history. The fields you most often correct get flagged for extra care on future extractions.
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(190px, 1fr))", gap:13 }}>
             {fields.map(f => (
@@ -4423,10 +4423,10 @@ function PrefImportButton({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv" style={{ display:"none" }}
         onChange={e => { const f = e.target.files?.[0]; if (f) handle(f); }} />
       <button onClick={() => fileRef.current?.click()} disabled={busy}
-        style={{ background: busy ? "#dfe9d3" : "#fff", border:"1px solid #8cbf63", color:"#3f7a1f", padding:"6px 12px", borderRadius:7, cursor: busy ? "default" : "pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+        style={{ background: busy ? "#dfe9d3" : "#fff", border:"1px solid #8cbf63", color:"#3e8a2f", padding:"6px 12px", borderRadius:7, cursor: busy ? "default" : "pointer", fontSize:12, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>
         {busy ? "Reading…" : "⬆ Import pref-equity terms (PDF / Excel)"}
       </button>
-      <span style={{ fontSize:11.5, color: isErr ? "#c0392b" : msg ? "#3f7a1f" : "#7d766a", lineHeight:1.4 }}>
+      <span style={{ fontSize:11.5, color: isErr ? "#c0392b" : msg ? "#3e8a2f" : "#6b6a65", lineHeight:1.4 }}>
         {msg || "Drop a JV agreement or pref term sheet — it fills the blank fields below."}
       </span>
     </div>
@@ -4452,20 +4452,20 @@ function PrefScheduleCard({ deal }: { deal: Deal }) {
   useEffect(() => { if (showAll) currentRowRef.current?.scrollIntoView({ block: "center" }); }, [showAll]);
 
   return (
-    <div style={{ marginTop:8, background:"#faf8f3", border:"1px solid #efe8da", borderRadius:10, padding:"12px 14px" }}>
+    <div style={{ marginTop:8, background:"#faf8f3", border:"1px solid #ecebe6", borderRadius:10, padding:"12px 14px" }}>
       <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:12, flexWrap:"wrap", marginBottom:8 }}>
         <div>
-          <div style={{ fontSize:10.5, color:"#a69e91", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.04em", marginBottom:3 }}>Current Accrued Pref Balance (today)</div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:600, color:"#383a37" }}>{fmt$(balance)}</div>
-          {row?.date && <div style={{ fontSize:10, color:"#a69e91", marginTop:2 }}>as of {row.date}</div>}
+          <div style={{ fontSize:10.5, color:"#94928b", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.04em", marginBottom:3 }}>Current Accrued Pref Balance (today)</div>
+          <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:22, fontWeight:600, color:"#383a37" }}>{fmt$(balance)}</div>
+          {row?.date && <div style={{ fontSize:10, color:"#94928b", marginTop:2 }}>as of {row.date}</div>}
         </div>
-        <span style={{ fontSize:10, color:"#bcae97", maxWidth:240, lineHeight:1.4, textAlign:"right" }}>From the uploaded pref schedule — the unreturned preferred balance plus accrued return.</span>
+        <span style={{ fontSize:10, color:"#b8b5ad", maxWidth:240, lineHeight:1.4, textAlign:"right" }}>From the uploaded pref schedule — the unreturned preferred balance plus accrued return.</span>
       </div>
       {shown.length > 0 && (
         <div style={{ overflowX:"auto", maxHeight: showAll ? 280 : undefined, overflowY: showAll ? "auto" : undefined, border:"1px solid #f0e9da", borderRadius:8 }}>
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11.5 }}>
             <thead>
-              <tr style={{ fontSize:9, color:"#a69e91", fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", background:"#fff" }}>
+              <tr style={{ fontSize:9, color:"#94928b", fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", background:"#fff" }}>
                 <th style={{ textAlign:"left", padding:"6px 8px" }}>Date</th>
                 <th style={{ textAlign:"right", padding:"6px 8px" }}>Payment</th>
                 <th style={{ textAlign:"right", padding:"6px 8px" }}>Balance</th>
@@ -4476,8 +4476,8 @@ function PrefScheduleCard({ deal }: { deal: Deal }) {
                 const isCurrent = currentDate && r.date === currentDate;
                 return (
                   <tr key={r.date + i} ref={isCurrent ? currentRowRef : undefined} style={{ borderTop:"1px solid #f5efe2", background: isCurrent ? "#eef5e8" : undefined }}>
-                    <td style={{ padding:"6px 8px", color: isCurrent ? "#2d5a0e" : "#52554e", fontWeight: isCurrent ? 700 : 400, whiteSpace:"nowrap" }}>{r.date}{isCurrent ? <span style={{ color:"#3f7a1f", fontWeight:700 }}> · next</span> : null}</td>
-                    <td style={{ padding:"6px 8px", textAlign:"right", color:"#7d766a" }}>{fmt$(r.payment)}</td>
+                    <td style={{ padding:"6px 8px", color: isCurrent ? "#2d5a0e" : "#52554e", fontWeight: isCurrent ? 700 : 400, whiteSpace:"nowrap" }}>{r.date}{isCurrent ? <span style={{ color:"#3e8a2f", fontWeight:700 }}> · next</span> : null}</td>
+                    <td style={{ padding:"6px 8px", textAlign:"right", color:"#6b6a65" }}>{fmt$(r.payment)}</td>
                     <td style={{ padding:"6px 8px", textAlign:"right", color:"#383a37", fontWeight:500 }}>{fmt$(r.balance)}</td>
                   </tr>
                 );
@@ -4488,7 +4488,7 @@ function PrefScheduleCard({ deal }: { deal: Deal }) {
       )}
       {(rows.length > shown.length || showAll) && (
         <button onClick={() => setShowAll(s => !s)}
-          style={{ marginTop:8, background:"transparent", border:"none", color:"#6dba43", cursor:"pointer", fontSize:11.5, fontWeight:600, padding:0 }}>
+          style={{ marginTop:8, background:"transparent", border:"none", color:"#5bba47", cursor:"pointer", fontSize:11.5, fontWeight:600, padding:0 }}>
           {showAll ? "▾ Show fewer" : `▸ Show all ${rows.length} periods (past & future)`}
         </button>
       )}
@@ -4573,12 +4573,12 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
   return (
     <div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:10 }}>
-        <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Amortization &amp; Current Balance</div>
+        <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#94928b", fontWeight:600, textTransform:"uppercase" }}>Amortization &amp; Current Balance</div>
         <div>
           <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.csv" style={{ display:"none" }}
             onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); }} />
           <button onClick={() => fileRef.current?.click()} disabled={busy}
-            style={{ background: busy ? "#e9e3d6" : "#fff", border:"1px solid #c8b89a", color:"#5c5047", padding:"5px 11px", borderRadius:7, cursor: busy ? "default" : "pointer", fontSize:11.5, fontWeight:600 }}>
+            style={{ background: busy ? "#e9e3d6" : "#fff", border:"1px solid #c4c1b8", color:"#4f4d48", padding:"5px 11px", borderRadius:7, cursor: busy ? "default" : "pointer", fontSize:11.5, fontWeight:600 }}>
             {busy ? "Reading…" : deal.customAmortSchedule?.length ? "Replace schedule" : "Upload amortization schedule"}
           </button>
         </div>
@@ -4586,29 +4586,29 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
       {err && <div style={{ fontSize:11, color:"#c0392b", marginBottom:6 }}>{err}</div>}
 
       {result.error ? (
-        <div style={{ fontSize:12, color:"#9a917f", lineHeight:1.5 }}>{result.error} (or upload the lender's amortization schedule).</div>
+        <div style={{ fontSize:12, color:"#8f8d86", lineHeight:1.5 }}>{result.error} (or upload the lender's amortization schedule).</div>
       ) : (
         <>
           <div style={{ display:"flex", gap:24, flexWrap:"wrap", alignItems:"flex-end", marginBottom:12 }}>
             <div>
-              <div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:3 }}>Current Balance (today)</div>
-              <div style={{ fontFamily:"'Fraunces',serif", fontSize:24, fontWeight:600, color:"#383a37" }}>{fmt$(result.currentBalance)}</div>
+              <div style={{ fontSize:11, color:"#94928b", fontWeight:600, textTransform:"uppercase", marginBottom:3 }}>Current Balance (today)</div>
+              <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:24, fontWeight:600, color:"#383a37" }}>{fmt$(result.currentBalance)}</div>
             </div>
             {result.payment != null && (
               <div>
-                <div style={{ fontSize:11, color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:3 }}>{Number(deal.debtIOPeriod) > 0 ? "Payment (post-IO)" : "Monthly Payment"}</div>
-                <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, fontWeight:600, color:"#52554e" }}>{fmt$(result.payment)}</div>
+                <div style={{ fontSize:11, color:"#94928b", fontWeight:600, textTransform:"uppercase", marginBottom:3 }}>{Number(deal.debtIOPeriod) > 0 ? "Payment (post-IO)" : "Monthly Payment"}</div>
+                <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:18, fontWeight:600, color:"#52554e" }}>{fmt$(result.payment)}</div>
               </div>
             )}
             {result.currentBalance != null && Number(deal.debtLoanAmount) > 0 && (
               <button onClick={() => onUpdate(deal.id, { loanBalance: Math.round(result.currentBalance!) })}
-                style={{ background:"#fff", border:"1px solid #8cbf63", color:"#3f7a1f", padding:"6px 12px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, alignSelf:"center" }}>
+                style={{ background:"#fff", border:"1px solid #8cbf63", color:"#3e8a2f", padding:"6px 12px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600, alignSelf:"center" }}>
                 Set as loan balance
               </button>
             )}
           </div>
 
-          <div style={{ fontSize:10.5, color:"#a69e91", marginBottom:8 }}>
+          <div style={{ fontSize:10.5, color:"#94928b", marginBottom:8 }}>
             {result.basis === "uploaded" ? "From your uploaded schedule." : "Generated from the loan terms."}
             {result.basis !== "uploaded" && rateNote ? ` ${rateNote}` : ""}
             {result.assumptions.length > 0 && ` ${result.assumptions.join(" ")}`}
@@ -4618,7 +4618,7 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
             <div style={{ overflowX:"auto", maxHeight: showAll ? 320 : undefined, overflowY: showAll ? "auto" : undefined, border:"1px solid #f0e9da", borderRadius:8 }}>
               <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11.5 }}>
                 <thead>
-                  <tr style={{ fontSize:9, color:"#a69e91", fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", background:"#faf7f0" }}>
+                  <tr style={{ fontSize:9, color:"#94928b", fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", background:"#faf9f5" }}>
                     <th style={{ textAlign:"left", padding:"6px 8px" }}>Payment Date</th>
                     <th style={{ textAlign:"right", padding:"6px 8px" }}>Interest</th>
                     <th style={{ textAlign:"right", padding:"6px 8px" }}>Principal</th>
@@ -4630,9 +4630,9 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
                     const isCurrent = currentDate && r.date === currentDate;
                     return (
                       <tr key={r.date + i} ref={isCurrent ? currentRowRef : undefined} style={{ borderTop:"1px solid #f5efe2", background: isCurrent ? "#eef5e8" : undefined }}>
-                        <td style={{ padding:"6px 8px", color: isCurrent ? "#2d5a0e" : "#52554e", fontWeight: isCurrent ? 700 : 400, whiteSpace:"nowrap" }}>{r.date}{isCurrent ? <span style={{ color:"#3f7a1f", fontWeight:700 }}> · next payment</span> : null}</td>
-                        <td style={{ padding:"6px 8px", textAlign:"right", color:"#7d766a" }}>{fmt$(r.interest)}</td>
-                        <td style={{ padding:"6px 8px", textAlign:"right", color:"#7d766a" }}>{fmt$(r.principal)}</td>
+                        <td style={{ padding:"6px 8px", color: isCurrent ? "#2d5a0e" : "#52554e", fontWeight: isCurrent ? 700 : 400, whiteSpace:"nowrap" }}>{r.date}{isCurrent ? <span style={{ color:"#3e8a2f", fontWeight:700 }}> · next payment</span> : null}</td>
+                        <td style={{ padding:"6px 8px", textAlign:"right", color:"#6b6a65" }}>{fmt$(r.interest)}</td>
+                        <td style={{ padding:"6px 8px", textAlign:"right", color:"#6b6a65" }}>{fmt$(r.principal)}</td>
                         <td style={{ padding:"6px 8px", textAlign:"right", color:"#383a37", fontWeight:500 }}>{fmt$(r.balance)}</td>
                       </tr>
                     );
@@ -4643,11 +4643,11 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
           )}
           {rows.length > shown.length || showAll ? (
             <button onClick={() => setShowAll(s => !s)}
-              style={{ marginTop:8, background:"transparent", border:"none", color:"#6dba43", cursor:"pointer", fontSize:11.5, fontWeight:600, padding:0 }}>
+              style={{ marginTop:8, background:"transparent", border:"none", color:"#5bba47", cursor:"pointer", fontSize:11.5, fontWeight:600, padding:0 }}>
               {showAll ? "▾ Show fewer" : `▸ Show all ${rows.length} payments (past & future)`}
             </button>
           ) : null}
-          <div style={{ marginTop:10, fontSize:10, color:"#bcae97", lineHeight:1.5 }}>
+          <div style={{ marginTop:10, fontSize:10, color:"#b8b5ad", lineHeight:1.5 }}>
             {result.basis === "generated" ? "Estimate — assumes a fixed rate and level amortization. Upload the lender's schedule for the exact balance." : "Read from your uploaded schedule."}
           </div>
         </>
@@ -4794,8 +4794,8 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
 
   const breakage = calcSwapBreakage(swap, { valuationDate: payoff, marketSwapRatePct: swapRate });
   const fmt$ = (v: number | null) => v == null ? "—" : `$${Math.round(v).toLocaleString()}`;
-  const basisColor = result.basis === "exact" ? "#0f9d63" : result.basis === "estimate" ? "#b08a3e" : result.basis === "locked" ? "#dc2626" : "#7d766a";
-  const swapColor = breakage.direction === "credit" ? "#0f9d63" : breakage.direction === "cost" ? "#c0392b" : "#7d766a";
+  const basisColor = result.basis === "exact" ? "#0f9d63" : result.basis === "estimate" ? "#b08a3e" : result.basis === "locked" ? "#dc2626" : "#6b6a65";
+  const swapColor = breakage.direction === "credit" ? "#0f9d63" : breakage.direction === "cost" ? "#c0392b" : "#6b6a65";
 
   // A swapped loan's early-payoff economics ARE the swap breakage — the underlying
   // floating note is prepayable at par — so we show ONE of the two, never both (and
@@ -4804,26 +4804,26 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
   return (
     <div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:10 }}>
-        <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>
+        <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#94928b", fontWeight:600, textTransform:"uppercase" }}>
           {swap ? "Swap Breakage — Early Payoff" : "Prepayment Penalty"}
         </div>
         <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
           {!swap && (
             <button onClick={openManualSwap}
-              style={{ background:"#fff", border:"1px solid #c8b89a", color:"#5c5047", padding:"5px 11px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600 }}>
+              style={{ background:"#fff", border:"1px solid #c4c1b8", color:"#4f4d48", padding:"5px 11px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600 }}>
               Enter swap manually
             </button>
           )}
           {swap && (
             <button onClick={openEditSwap}
-              style={{ background:"#fff", border:"1px solid #c8b89a", color:"#5c5047", padding:"5px 11px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600 }}>
+              style={{ background:"#fff", border:"1px solid #c4c1b8", color:"#4f4d48", padding:"5px 11px", borderRadius:7, cursor:"pointer", fontSize:11.5, fontWeight:600 }}>
               Edit terms
             </button>
           )}
           <input ref={swapFileRef} type="file" accept=".pdf" style={{ display:"none" }}
             onChange={e => { const f = e.target.files?.[0]; if (f) importSwap(f); }} />
           <button onClick={() => swapFileRef.current?.click()} disabled={swapBusy}
-            style={{ background: swapBusy ? "#e9e3d6" : "#fff", border:"1px solid #c8b89a", color:"#5c5047", padding:"5px 11px", borderRadius:7, cursor: swapBusy ? "default" : "pointer", fontSize:11.5, fontWeight:600 }}>
+            style={{ background: swapBusy ? "#e9e3d6" : "#fff", border:"1px solid #c4c1b8", color:"#4f4d48", padding:"5px 11px", borderRadius:7, cursor: swapBusy ? "default" : "pointer", fontSize:11.5, fontWeight:600 }}>
             {swapBusy ? "Reading…" : swap ? "Replace swap confirmation" : "Import swap confirmation"}
           </button>
         </div>
@@ -4832,16 +4832,16 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
 
       {/* Shared payoff date; prepay-type selector only when there's no swap. */}
       <div style={{ display:"flex", gap:14, flexWrap:"wrap", alignItems:"flex-end", marginBottom:12 }}>
-        <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+        <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#6b6a65" }}>
           Payoff date
           <input type="date" value={payoff} onChange={e => setPayoff(e.target.value)}
-            style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37" }}/>
+            style={{ background:"#f5f1e8", border:"1px solid #e3e1db", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37" }}/>
         </label>
         {!swap && (
-          <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+          <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#6b6a65" }}>
             Prepay type (from loan docs)
             <select value={terms?.type || "none"} onChange={e => setType(e.target.value as NonNullable<Deal["prepayTerms"]>["type"])}
-              style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37" }}>
+              style={{ background:"#f5f1e8", border:"1px solid #e3e1db", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37" }}>
               <option value="none">None / open</option>
               <option value="stepdown">Step-down %</option>
               <option value="yield_maintenance">Yield maintenance</option>
@@ -4852,7 +4852,7 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
           </label>
         )}
         {!swap && needsRate && (
-          <div style={{ fontSize:11, color:"#7d766a" }}>
+          <div style={{ fontSize:11, color:"#6b6a65" }}>
             Reinvestment (Treasury): <span style={{ fontWeight:600, color:"#383a37" }}>{reinvest != null ? `${reinvest.toFixed(2)}%` : "loading…"}</span>
           </div>
         )}
@@ -4860,28 +4860,28 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
 
       {manualOpen && (
         <div style={{ background:"#fbf8f1", border:"1px solid #e0d2b4", borderRadius:10, padding:"12px 14px", marginBottom:12 }}>
-          <div style={{ fontSize:11.5, fontWeight:600, color:"#5c5047", marginBottom:8 }}>{swap ? "Edit swap terms" : "Enter swap terms (no confirmation needed)"}</div>
+          <div style={{ fontSize:11.5, fontWeight:600, color:"#4f4d48", marginBottom:8 }}>{swap ? "Edit swap terms" : "Enter swap terms (no confirmation needed)"}</div>
           <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"flex-end" }}>
-            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#6b6a65" }}>
               Notional ($)
               <input value={manualDraft.notional} onChange={e => setManualDraft(d => ({ ...d, notional: e.target.value }))} placeholder="e.g. 25,000,000"
-                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:150 }}/>
+                style={{ background:"#fff", border:"1px solid #e3e1db", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:150 }}/>
             </label>
-            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#6b6a65" }}>
               Swap fixed rate (%)
               <input value={manualDraft.fixedRatePct} onChange={e => setManualDraft(d => ({ ...d, fixedRatePct: e.target.value }))} placeholder="e.g. 5.10"
-                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:120 }}/>
+                style={{ background:"#fff", border:"1px solid #e3e1db", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:120 }}/>
             </label>
-            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#6b6a65" }}>
               Termination date
               <input type="date" value={manualDraft.terminationDate} onChange={e => setManualDraft(d => ({ ...d, terminationDate: e.target.value }))}
-                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37" }}/>
+                style={{ background:"#fff", border:"1px solid #e3e1db", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37" }}/>
             </label>
-            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#6b6a65" }}>
               Floating index (optional)
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <input value={manualDraft.floatingIndex} onChange={e => setManualDraft(d => ({ ...d, floatingIndex: e.target.value }))} placeholder="e.g. USD-SOFR CME Term 1M"
-                  style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:200 }}/>
+                  style={{ background:"#fff", border:"1px solid #e3e1db", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:200 }}/>
                 {(() => {
                   const v = manualDraft.floatingIndex.trim();
                   if (!v) return null;
@@ -4894,35 +4894,35 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
                   );
                   return (
                     <span title={rec.note ? `${rec.label} — ${rec.note}` : `Recognized rate index: ${rec.label}`}
-                      style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:11, fontWeight:700, whiteSpace:"nowrap", color: rec.warn ? "#9a6a12" : "#3f7a1f" }}>
+                      style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:11, fontWeight:700, whiteSpace:"nowrap", color: rec.warn ? "#9a6a12" : "#3e8a2f" }}>
                       {rec.warn ? "⚠" : "✓"} {rec.label}
                     </span>
                   );
                 })()}
               </div>
             </label>
-            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#6b6a65" }}>
               Floating spread (bps, optional)
               <input value={manualDraft.floatingSpreadBps} onChange={e => setManualDraft(d => ({ ...d, floatingSpreadBps: e.target.value }))} placeholder="e.g. 200"
-                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:140 }}/>
+                style={{ background:"#fff", border:"1px solid #e3e1db", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:140 }}/>
             </label>
-            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#6b6a65" }}>
               Dealer / counterparty (optional)
               <input value={manualDraft.counterparty} onChange={e => setManualDraft(d => ({ ...d, counterparty: e.target.value }))} placeholder="e.g. Webster Bank, N.A."
-                style={{ background:"#fff", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:200 }}/>
+                style={{ background:"#fff", border:"1px solid #e3e1db", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:200 }}/>
             </label>
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={saveManualSwap}
-                style={{ background:"#3f7a1f", border:"none", color:"#fff", padding:"8px 14px", borderRadius:7, cursor:"pointer", fontSize:12, fontWeight:600 }}>
+                style={{ background:"#3e8a2f", border:"none", color:"#fff", padding:"8px 14px", borderRadius:7, cursor:"pointer", fontSize:12, fontWeight:600 }}>
                 {swap ? "Save terms" : "Calculate breakage"}
               </button>
               <button onClick={() => { setManualOpen(false); setSwapErr(null); }}
-                style={{ background:"#fff", border:"1px solid #ddd4c2", color:"#7d766a", padding:"8px 14px", borderRadius:7, cursor:"pointer", fontSize:12 }}>
+                style={{ background:"#fff", border:"1px solid #dad8d1", color:"#6b6a65", padding:"8px 14px", borderRadius:7, cursor:"pointer", fontSize:12 }}>
                 Cancel
               </button>
             </div>
           </div>
-          <div style={{ marginTop:8, fontSize:10, color:"#bcae97", lineHeight:1.5 }}>
+          <div style={{ marginTop:8, fontSize:10, color:"#b8b5ad", lineHeight:1.5 }}>
             Notional usually equals the loan amount, the fixed rate is your locked swap rate, and termination is the swap/loan maturity. The current market swap rate is filled in automatically from Today's Rates once you save — replace it with your bank's quote for a tighter estimate.
           </div>
         </div>
@@ -4930,66 +4930,66 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
 
       {!swap ? (
         <>
-          <div style={{ background:"#faf7f0", border:`1px solid ${basisColor}33`, borderRadius:10, padding:"12px 14px" }}>
+          <div style={{ background:"#faf9f5", border:`1px solid ${basisColor}33`, borderRadius:10, padding:"12px 14px" }}>
             <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
               <span style={{ fontSize:12.5, fontWeight:600, color:"#383a37" }}>{result.label}</span>
-              <span style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:600, color:basisColor }}>
-                {fmt$(result.penalty)}{result.pct != null ? <span style={{ fontSize:13, color:"#a69e91", marginLeft:6 }}>({result.pct}%)</span> : null}
+              <span style={{ fontFamily:"'Lora',Georgia,serif", fontSize:22, fontWeight:600, color:basisColor }}>
+                {fmt$(result.penalty)}{result.pct != null ? <span style={{ fontSize:13, color:"#94928b", marginLeft:6 }}>({result.pct}%)</span> : null}
               </span>
             </div>
-            {result.detail && <div style={{ fontSize:11.5, color:"#6f6a5f", marginTop:5, lineHeight:1.5 }}>{result.detail}</div>}
+            {result.detail && <div style={{ fontSize:11.5, color:"#676767", marginTop:5, lineHeight:1.5 }}>{result.detail}</div>}
             {result.warnings.map((w, i) => <div key={i} style={{ fontSize:10.5, color:"#b08a3e", marginTop:4 }}>⚠ {w}</div>)}
           </div>
           {terms?.type === "stepdown" && (
-            <div style={{ marginTop:8, fontSize:11, color:"#7d766a" }}>
+            <div style={{ marginTop:8, fontSize:11, color:"#6b6a65" }}>
               Step-down schedule (%, by loan year):
               <input value={(terms.stepdown || []).join(", ")}
                 onChange={e => onUpdate(deal.id, { prepayTerms: { ...terms, stepdown: e.target.value.split(",").map(s => Number(s.trim())).filter(n => !isNaN(n)) } })}
                 placeholder="e.g. 5, 4, 3, 2, 1"
-                style={{ marginLeft:8, background:"#fff", border:"1px solid #e6dfd0", borderRadius:7, padding:"5px 9px", fontSize:12, width:180 }}/>
+                style={{ marginLeft:8, background:"#fff", border:"1px solid #e3e1db", borderRadius:7, padding:"5px 9px", fontSize:12, width:180 }}/>
             </div>
           )}
-          <div style={{ marginTop:8, fontSize:10, color:"#bcae97", lineHeight:1.5 }}>Reflects the prepayment terms in the loan documents. Step-down is exact; yield-maintenance & defeasance are indicative estimates (servicer conventions vary — confirm before payoff). No swap on file — import a swap confirmation above if this loan is hedged.</div>
+          <div style={{ marginTop:8, fontSize:10, color:"#b8b5ad", lineHeight:1.5 }}>Reflects the prepayment terms in the loan documents. Step-down is exact; yield-maintenance & defeasance are indicative estimates (servicer conventions vary — confirm before payoff). No swap on file — import a swap confirmation above if this loan is hedged.</div>
         </>
       ) : (
         <>
           {/* Swap terms summary */}
-          <div style={{ display:"flex", gap:14, flexWrap:"wrap", fontSize:11.5, color:"#6f6a5f", marginBottom:10 }}>
+          <div style={{ display:"flex", gap:14, flexWrap:"wrap", fontSize:11.5, color:"#676767", marginBottom:10 }}>
             <span>Notional <b style={{ color:"#383a37" }}>{fmt$(swap.notional ?? null)}</b></span>
             <span>Fixed <b style={{ color:"#383a37" }}>{swap.fixedRatePct != null ? `${swap.fixedRatePct}%` : "—"}</b></span>
             {swap.floatingIndex && <span>Float <b style={{ color:"#383a37" }}>{swap.floatingIndex}{swap.floatingSpreadBps != null ? ` + ${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""}</b>{(() => {
               const rec = recognizeRateIndex(swap.floatingIndex);
               if (!rec) return <span title="Not a recognized rate index — double-check the name/tenor" style={{ marginLeft:4, fontWeight:700, color:"#b3403f" }}>⚠ unrecognized</span>;
-              return <span title={rec.note ? `${rec.label} — ${rec.note}` : `Recognized rate index: ${rec.label}`} style={{ marginLeft:4, fontWeight:700, color: rec.warn ? "#9a6a12" : "#3f7a1f" }}>{rec.warn ? "⚠" : "✓"}</span>;
+              return <span title={rec.note ? `${rec.label} — ${rec.note}` : `Recognized rate index: ${rec.label}`} style={{ marginLeft:4, fontWeight:700, color: rec.warn ? "#9a6a12" : "#3e8a2f" }}>{rec.warn ? "⚠" : "✓"}</span>;
             })()}</span>}
             <span>Matures <b style={{ color:"#383a37" }}>{swap.terminationDate || "—"}</b></span>
             {swap.counterparty && <span>Dealer <b style={{ color:"#383a37" }}>{swap.counterparty}</b></span>}
           </div>
 
           <div style={{ display:"flex", gap:14, flexWrap:"wrap", alignItems:"flex-end", marginBottom:10 }}>
-            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#7d766a" }}>
+            <label style={{ display:"flex", flexDirection:"column", gap:4, fontSize:11, color:"#6b6a65" }}>
               Current market swap rate (%)
               <input type="number" step="0.01" value={swapRate ?? ""} onChange={e => { setSwapRateTouched(true); setSwapRate(e.target.value === "" ? null : Number(e.target.value)); }}
-                style={{ background:"#f5f1e8", border:"1px solid #e6dfd0", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:140 }}/>
+                style={{ background:"#f5f1e8", border:"1px solid #e3e1db", borderRadius:8, padding:"8px 10px", fontSize:13, color:"#383a37", width:140 }}/>
             </label>
-            <div style={{ fontSize:10, color:"#bcae97", maxWidth:300, lineHeight:1.5 }}>
+            <div style={{ fontSize:10, color:"#b8b5ad", maxWidth:300, lineHeight:1.5 }}>
               All-in rate (current {/daily|simple|compound|\bOIS\b/i.test(swap.floatingIndex ?? "") && !/term/i.test(swap.floatingIndex ?? "") ? "SOFR (annual/annual)" : "1M Term SOFR"} swap rate for your remaining term + your {swap.floatingSpreadBps != null ? `${(swap.floatingSpreadBps/100).toFixed(2)}%` : ""} spread), seeded from the live swap curve in Today's Rates — replace with your bank's actual quote for a tighter estimate. Breakage is very rate-sensitive, so a few bps here moves the number a lot.
             </div>
           </div>
 
-          <div style={{ background:"#faf7f0", border:`1px solid ${swapColor}33`, borderRadius:10, padding:"12px 14px" }}>
+          <div style={{ background:"#faf9f5", border:`1px solid ${swapColor}33`, borderRadius:10, padding:"12px 14px" }}>
             <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
               <span style={{ fontSize:12.5, fontWeight:600, color:"#383a37" }}>{breakage.label}</span>
-              <span style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:600, color:swapColor }}>
+              <span style={{ fontFamily:"'Lora',Georgia,serif", fontSize:22, fontWeight:600, color:swapColor }}>
                 {breakage.value == null ? "—" : `${breakage.value > 0 ? "+" : breakage.value < 0 ? "−" : ""}${fmt$(Math.abs(breakage.value))}`}
               </span>
             </div>
-            {breakage.detail && <div style={{ fontSize:11.5, color:"#6f6a5f", marginTop:5, lineHeight:1.5 }}>{breakage.detail}</div>}
+            {breakage.detail && <div style={{ fontSize:11.5, color:"#676767", marginTop:5, lineHeight:1.5 }}>{breakage.detail}</div>}
             {breakage.direction === "credit" && <div style={{ fontSize:11, color:"#0f9d63", marginTop:4 }}>Rates rose above your locked fixed rate — breaking the swap would pay you.</div>}
             {breakage.direction === "cost" && <div style={{ fontSize:11, color:"#c0392b", marginTop:4 }}>Rates fell below your locked fixed rate — breaking the swap would cost you.</div>}
             {breakage.warnings.map((w, i) => <div key={i} style={{ fontSize:10.5, color:"#b08a3e", marginTop:4 }}>⚠ {w}</div>)}
           </div>
-          <div style={{ marginTop:8, fontSize:10, color:"#bcae97", lineHeight:1.5 }}>Swapped loan — the underlying note is prepayable at par, so the early-payoff economics are the swap breakage above (the exact figure is your dealer's mark-to-market). Confirm with the bank before payoff.</div>
+          <div style={{ marginTop:8, fontSize:10, color:"#b8b5ad", lineHeight:1.5 }}>Swapped loan — the underlying note is prepayable at par, so the early-payoff economics are the swap breakage above (the exact figure is your dealer's mark-to-market). Confirm with the bank before payoff.</div>
         </>
       )}
     </div>
@@ -5034,7 +5034,7 @@ function TermSheetImport({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string
     <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:14, background:"#fffaf2", border:"1px dashed #e7c48f", borderRadius:10, padding:"10px 14px" }}>
       <input ref={fileRef} type="file" accept="application/pdf" style={{ display:"none" }} onChange={handle}/>
       <button onClick={() => fileRef.current?.click()} disabled={busy}
-        style={{ background:busy?"#efe8da":"#fff", border:"1px solid #e7c48f", color:"#9a6a1e", padding:"8px 14px", borderRadius:8, cursor:busy?"default":"pointer", fontSize:12, fontWeight:600, fontFamily:"'Inter',sans-serif" }}>
+        style={{ background:busy?"#ecebe6":"#fff", border:"1px solid #e7c48f", color:"#9a6a1e", padding:"8px 14px", borderRadius:8, cursor:busy?"default":"pointer", fontSize:12, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}>
         {busy ? "Importing…" : "⬆ Import term sheet (PDF) to auto-fill blanks"}
       </button>
       <span style={{ fontSize:12, color:status.startsWith("✓")?"#0a7d4f":"#9a6a1e" }}>
@@ -5049,7 +5049,7 @@ function _pcInlineFmt(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
   return parts.map((p, i) => {
     if (p.startsWith("**") && p.endsWith("**")) return <strong key={i}>{p.slice(2, -2)}</strong>;
-    if (p.startsWith("`") && p.endsWith("`")) return <code key={i} style={{ background:"#f1eadc", borderRadius:3, padding:"0 4px", fontSize:"0.9em" }}>{p.slice(1, -1)}</code>;
+    if (p.startsWith("`") && p.endsWith("`")) return <code key={i} style={{ background:"#efeee9", borderRadius:3, padding:"0 4px", fontSize:"0.9em" }}>{p.slice(1, -1)}</code>;
     return p;
   });
 }
@@ -5058,12 +5058,12 @@ function _pcMarkdown({ text }: { text: string }) {
   const els: React.ReactNode[] = [];
   lines.forEach((line, i) => {
     const hm = /^(#{1,6})\s+(.*)$/.exec(line);
-    if (hm && (hm[1].length === 1 || hm[1].length >= 4)) els.push(<div key={i} style={{ fontWeight:600, fontSize: hm[1].length === 1 ? 15 : 13, color:"#26281f", marginTop:8, marginBottom:2 }}>{_pcInlineFmt(hm[2])}</div>);
-    else if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) els.push(<div key={i} style={{ height:1, background:"#e7e0d2", margin:"8px 0" }}/>);
-    else if (line.startsWith("### ")) els.push(<div key={i} style={{ fontWeight:600, fontSize:13, color:"#26281f", marginTop:8, marginBottom:2 }}>{_pcInlineFmt(line.slice(4))}</div>);
-    else if (line.startsWith("## ")) els.push(<div key={i} style={{ fontWeight:600, fontSize:14, color:"#26281f", marginTop:10, marginBottom:2 }}>{_pcInlineFmt(line.slice(3))}</div>);
-    else if (/^[-*] /.test(line)) els.push(<div key={i} style={{ display:"flex", gap:7, marginLeft:2 }}><span style={{ color:"#6dba43", flexShrink:0 }}>›</span><span>{_pcInlineFmt(line.slice(2))}</span></div>);
-    else if (/^\d+\. /.test(line)) { const [num2,...rest] = line.split(". "); els.push(<div key={i} style={{ display:"flex", gap:7, marginLeft:2 }}><span style={{ color:"#a89f8f", flexShrink:0 }}>{num2}.</span><span>{_pcInlineFmt(rest.join(". "))}</span></div>); }
+    if (hm && (hm[1].length === 1 || hm[1].length >= 4)) els.push(<div key={i} style={{ fontWeight:600, fontSize: hm[1].length === 1 ? 15 : 13, color:"#232422", marginTop:8, marginBottom:2 }}>{_pcInlineFmt(hm[2])}</div>);
+    else if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) els.push(<div key={i} style={{ height:1, background:"#e6e4de", margin:"8px 0" }}/>);
+    else if (line.startsWith("### ")) els.push(<div key={i} style={{ fontWeight:600, fontSize:13, color:"#232422", marginTop:8, marginBottom:2 }}>{_pcInlineFmt(line.slice(4))}</div>);
+    else if (line.startsWith("## ")) els.push(<div key={i} style={{ fontWeight:600, fontSize:14, color:"#232422", marginTop:10, marginBottom:2 }}>{_pcInlineFmt(line.slice(3))}</div>);
+    else if (/^[-*] /.test(line)) els.push(<div key={i} style={{ display:"flex", gap:7, marginLeft:2 }}><span style={{ color:"#5bba47", flexShrink:0 }}>›</span><span>{_pcInlineFmt(line.slice(2))}</span></div>);
+    else if (/^\d+\. /.test(line)) { const [num2,...rest] = line.split(". "); els.push(<div key={i} style={{ display:"flex", gap:7, marginLeft:2 }}><span style={{ color:"#9b9992", flexShrink:0 }}>{num2}.</span><span>{_pcInlineFmt(rest.join(". "))}</span></div>); }
     else if (line === "") els.push(<div key={i} style={{ height:5 }}/>);
     else els.push(<span key={i}>{_pcInlineFmt(line)}<br/></span>);
   });
@@ -5199,7 +5199,7 @@ function PropertyChat({ deal, abstracts }: { deal: Deal; abstracts: LeaseAbstrac
       <button onClick={() => setOpen(o => !o)} title="Ask AI about this property" aria-label="Ask AI about this property"
         // Phones: a compact round button, so it covers as little of the page as possible
         // (it sat on the "Review ›" link — Eric, 10/17/26).
-        style={{ position:"fixed", bottom: phone ? 74 : 24, right: phone ? 14 : 24, zIndex:160, height: phone ? 46 : 52, width: phone ? 46 : undefined, padding: phone ? 0 : "0 20px", borderRadius:26, background:"#6dba43", color:"#1f2b16", border:"none", boxShadow:"0 8px 24px -6px rgba(56,58,55,0.5)", cursor:"pointer", fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:8, fontFamily:"'Inter',sans-serif" }}>
+        style={{ position:"fixed", bottom: phone ? 74 : 24, right: phone ? 14 : 24, zIndex:160, height: phone ? 46 : 52, width: phone ? 46 : undefined, padding: phone ? 0 : "0 20px", borderRadius:26, background:"#5bba47", color:"#1f2b16", border:"none", boxShadow:"0 8px 24px -6px rgba(56,58,55,0.5)", cursor:"pointer", fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:8, fontFamily:"'Roboto',sans-serif" }}>
         {phone ? "✦" : "✦ Ask about this property"}
       </button>
       {open && (
@@ -5211,23 +5211,23 @@ function PropertyChat({ deal, abstracts }: { deal: Deal; abstracts: LeaseAbstrac
           <div role="dialog" aria-label="Property assistant"
             style={{ position:"fixed", top:0, right:0, bottom:0, zIndex:1101, width: wide ? "clamp(440px, 42vw, 720px)" : "100vw", background:"#fff", borderLeft: wide ? "1px solid #d8d2c1" : "none", boxShadow:"-8px 0 40px rgba(38,40,31,0.18)", display:"flex", flexDirection:"column", overflow:"hidden", animation:"slideInRight 0.2s ease both" }}>
           {/* Header */}
-          <div style={{ padding:"13px 16px", borderBottom:"1px solid #f1eadc", background:"#faf7f0", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+          <div style={{ padding:"13px 16px", borderBottom:"1px solid #efeee9", background:"#faf9f5", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
             <div style={{ minWidth:0 }}>
-              <div style={{ fontFamily:"'Fraunces',serif", fontWeight:600, fontSize:15, color:"#26281f" }}>Property assistant</div>
-              <div style={{ fontSize:11, color:"#a69e91", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{deal.propertyName || "This property"}</div>
+              <div style={{ fontFamily:"'Lora',Georgia,serif", fontWeight:600, fontSize:15, color:"#232422" }}>Property assistant</div>
+              <div style={{ fontSize:11, color:"#94928b", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{deal.propertyName || "This property"}</div>
             </div>
             <button onClick={() => setOpen(false)} aria-label="Close"
-              style={{ background:"transparent", border:"1px solid #e3dccd", color:"#7d766a", width:32, height:32, borderRadius:8, cursor:"pointer", fontSize:16, lineHeight:1, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+              style={{ background:"transparent", border:"1px solid #dfddd6", color:"#6b6a65", width:32, height:32, borderRadius:8, cursor:"pointer", fontSize:16, lineHeight:1, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
           </div>
           {/* Messages */}
           <div style={{ flex:1, overflowY:"auto", padding:"14px 16px", display:"flex", flexDirection:"column", gap:11 }}>
             {msgs.length === 0 && (
-              <div style={{ color:"#9a917f", fontSize:12.5, lineHeight:1.6 }}>
+              <div style={{ color:"#8f8d86", fontSize:12.5, lineHeight:1.6 }}>
                 Ask anything about this property — e.g. what a specific tenant pays and their sales. Try:
                 <div style={{ display:"flex", flexDirection:"column", gap:6, marginTop:10 }}>
                   {suggestions.map(s => (
                     <button key={s} onClick={() => ask(s)}
-                      style={{ textAlign:"left", background:"#f3eee3", border:"1px solid #e7e0d2", borderRadius:9, padding:"7px 11px", fontSize:12, color:"#5c5f57", cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>{s}</button>
+                      style={{ textAlign:"left", background:"#f3eee3", border:"1px solid #e6e4de", borderRadius:9, padding:"7px 11px", fontSize:12, color:"#5c5f57", cursor:"pointer", fontFamily:"'Roboto',sans-serif" }}>{s}</button>
                   ))}
                 </div>
               </div>
@@ -5237,18 +5237,18 @@ function PropertyChat({ deal, abstracts }: { deal: Deal; abstracts: LeaseAbstrac
                 ? <div key={i} style={{ alignSelf:"flex-end", background:"#383a37", color:"#fff", borderRadius:"12px 12px 4px 12px", padding:"8px 12px", fontSize:13, maxWidth:"85%" }}>{m.content}</div>
                 : <div key={i} style={{ alignSelf:"flex-start", background:"#f5f1e8", borderRadius:"12px 12px 12px 4px", padding:"10px 13px", fontSize:13, color:"#383a37", maxWidth:"92%", lineHeight:1.55 }}><_pcMarkdown text={m.content}/></div>
             ))}
-            {thinking && <div style={{ alignSelf:"flex-start", color:"#a69e91", fontSize:12.5 }}>Thinking…</div>}
+            {thinking && <div style={{ alignSelf:"flex-start", color:"#94928b", fontSize:12.5 }}>Thinking…</div>}
             <div ref={endRef}/>
           </div>
           {/* Input */}
-          <div ref={inputWrapRef} style={{ borderTop:"1px solid #f1eadc", padding:"10px 12px", display:"flex", gap:7, flexShrink:0, position:"relative" }}>
+          <div ref={inputWrapRef} style={{ borderTop:"1px solid #efeee9", padding:"10px 12px", display:"flex", gap:7, flexShrink:0, position:"relative" }}>
             {showSuggestions && (
-              <div style={{ position:"absolute", bottom:"100%", left:12, right:12, background:"#fff", border:"1px solid #e3dccd", borderRadius:10, boxShadow:"0 4px 16px rgba(56,58,55,0.13)", overflow:"hidden", zIndex:10 }}>
+              <div style={{ position:"absolute", bottom:"100%", left:12, right:12, background:"#fff", border:"1px solid #dfddd6", borderRadius:10, boxShadow:"0 4px 16px rgba(56,58,55,0.13)", overflow:"hidden", zIndex:10 }}>
                 {suggestions.map(s => (
                   <button key={s}
                     onMouseDown={e => { e.preventDefault(); setInput(s); setShowSuggestions(false); }}
-                    style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", borderBottom:"1px solid #f1eadc", padding:"9px 12px", fontSize:12.5, color:"#5c5f57", cursor:"pointer", fontFamily:"'Inter',sans-serif", lineHeight:1.4 }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "#faf7f0")}
+                    style={{ display:"block", width:"100%", textAlign:"left", background:"transparent", border:"none", borderBottom:"1px solid #efeee9", padding:"9px 12px", fontSize:12.5, color:"#5c5f57", cursor:"pointer", fontFamily:"'Roboto',sans-serif", lineHeight:1.4 }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "#faf9f5")}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                   >{s}</button>
                 ))}
@@ -5259,9 +5259,9 @@ function PropertyChat({ deal, abstracts }: { deal: Deal; abstracts: LeaseAbstrac
               onFocus={() => { if (!input) setShowSuggestions(true); }}
               onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); setShowSuggestions(false); ask(input); } if (e.key === "Escape") setShowSuggestions(false); }}
               disabled={thinking} placeholder="Ask about this property…"
-              style={{ flex:1, background:"#fff", border:"1px solid #e3dccd", borderRadius:9, padding:"9px 12px", fontSize:13, color:"#383a37", outline:"none", fontFamily:"'Inter',sans-serif" }}/>
+              style={{ flex:1, background:"#fff", border:"1px solid #dfddd6", borderRadius:9, padding:"9px 12px", fontSize:13, color:"#383a37", outline:"none", fontFamily:"'Roboto',sans-serif" }}/>
             <button onClick={() => { setShowSuggestions(false); ask(input); }} disabled={thinking || !input.trim()}
-              style={{ background:(!thinking && input.trim()) ? "#6dba43" : "#efe8da", color:(!thinking && input.trim()) ? "#1f2b16" : "#b3aa9b", border:"none", borderRadius:9, padding:"0 15px", fontSize:15, fontWeight:700, cursor:(!thinking && input.trim()) ? "pointer" : "default" }}>↑</button>
+              style={{ background:(!thinking && input.trim()) ? "#5bba47" : "#ecebe6", color:(!thinking && input.trim()) ? "#1f2b16" : "#b3aa9b", border:"none", borderRadius:9, padding:"0 15px", fontSize:15, fontWeight:700, cursor:(!thinking && input.trim()) ? "pointer" : "default" }}>↑</button>
           </div>
           </div>
         </>
@@ -5282,17 +5282,17 @@ function PriceCapEditor({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string,
   useEffect(() => { setPrice(deal.askingPrice != null ? Math.round(deal.askingPrice).toLocaleString("en-US") : ""); setCap(deal.capRate ?? ""); }, [deal.id]);
   const saveP = () => { const v = price===""?null:Number(String(price).replace(/,/g,"")); if (price===""?deal.askingPrice!=null:(!isNaN(Number(String(price).replace(/,/g,"")))&&v!==(deal.askingPrice??null))) onUpdate(deal.id, { askingPrice:v }); };
   const saveC = () => { const v = cap===""?null:Number(cap); if (cap===""?deal.capRate!=null:(!isNaN(Number(cap))&&v!==(deal.capRate??null))) onUpdate(deal.id, { capRate:v }); };
-  const inp = { fontSize:12, padding:"5px 9px", border:"1px solid #e3dccd", borderRadius:6, color:"#383a37", background:"#fff", width:"100%", fontFamily:"'Inter',sans-serif", boxSizing:"border-box" as const };
+  const inp = { fontSize:12, padding:"5px 9px", border:"1px solid #dfddd6", borderRadius:6, color:"#383a37", background:"#fff", width:"100%", fontFamily:"'Roboto',sans-serif", boxSizing:"border-box" as const };
   return (
-    <div style={{ marginTop:12, paddingTop:12, borderTop:"1px dashed #e7e0d2" }}>
-      <div style={{ fontSize:8.5, letterSpacing:"0.12em", color:"#a89f8f", marginBottom:7, textTransform:"uppercase", fontWeight:700 }}>Enter price / cap manually</div>
+    <div style={{ marginTop:12, paddingTop:12, borderTop:"1px dashed #e6e4de" }}>
+      <div style={{ fontSize:8.5, letterSpacing:"0.12em", color:"#9b9992", marginBottom:7, textTransform:"uppercase", fontWeight:700 }}>Enter price / cap manually</div>
       <div style={{ display:"flex", gap:8 }}>
         <div style={{ flex:1 }}>
-          <div style={{ fontSize:9, color:"#a69e91", marginBottom:3 }}>ASKING PRICE $</div>
+          <div style={{ fontSize:9, color:"#94928b", marginBottom:3 }}>ASKING PRICE $</div>
           <input type="text" inputMode="numeric" value={price} onChange={e => setPrice(e.target.value)} onBlur={() => { setPrice(v => commaFmt(v)); saveP(); }} onFocus={() => setPrice(v => v.replace(/,/g, ""))} onKeyDown={e => e.key==="Enter"&&e.currentTarget.blur()} placeholder="—" style={inp}/>
         </div>
         <div style={{ width:92 }}>
-          <div style={{ fontSize:9, color:"#a69e91", marginBottom:3 }}>CAP RATE %</div>
+          <div style={{ fontSize:9, color:"#94928b", marginBottom:3 }}>CAP RATE %</div>
           <input value={cap} onChange={e => setCap(e.target.value)} onBlur={saveC} onKeyDown={e => e.key==="Enter"&&e.currentTarget.blur()} placeholder="—" inputMode="decimal" style={inp}/>
         </div>
       </div>

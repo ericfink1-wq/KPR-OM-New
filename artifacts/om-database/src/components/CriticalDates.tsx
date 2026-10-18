@@ -21,7 +21,7 @@ interface Ev {
 }
 
 const KIND_COLOR: Record<Kind, { bg: string; fg: string }> = {
-  "Lease expiry": { bg: "#eef5e6", fg: "#3f7a1f" },
+  "Lease expiry": { bg: "#eef5e6", fg: "#3e8a2f" },
   "Debt maturity": { bg: "#fdecec", fg: "#b3403f" },
   "Pref maturity": { bg: "#fff2e0", fg: "#b3711a" },
 };
@@ -138,20 +138,20 @@ export default function CriticalDates({ deals, onOpenDeal }: Props) {
     const days = Math.round((e.date.getTime() - today.getTime()) / 86_400_000);
     const c = KIND_COLOR[e.kind];
     return (
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "11px 4px", borderBottom: "1px solid #f1eadc" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "11px 4px", borderBottom: "1px solid #efeee9" }}>
         <div style={{ minWidth: 92, flexShrink: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: "#2a2c28" }}>{fmtDate(e.date)}</div>
-          <div style={{ fontSize: 10.5, color: days < 0 ? "#b3403f" : "#a89f8f" }}>{relLabel(days)}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: "#232422" }}>{fmtDate(e.date)}</div>
+          <div style={{ fontSize: 10.5, color: days < 0 ? "#b3403f" : "#9b9992" }}>{relLabel(days)}</div>
         </div>
         <span style={{ flexShrink: 0, fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: c.fg, background: c.bg, padding: "3px 7px", borderRadius: 5, marginTop: 1 }}>
           {e.kind === "Lease expiry" ? "Lease" : e.kind === "Debt maturity" ? "Debt" : "Pref"}
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#2a2c28", overflow: "hidden", textOverflow: "ellipsis" }}>{e.who}</div>
-          <div style={{ fontSize: 11.5, color: "#7d766a" }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#232422", overflow: "hidden", textOverflow: "ellipsis" }}>{e.who}</div>
+          <div style={{ fontSize: 11.5, color: "#6b6a65" }}>
             <button
               onClick={() => onOpenDeal(e.dealId)}
-              style={{ background: "none", border: "none", padding: 0, color: "#3f7a1f", cursor: "pointer", fontWeight: 600, fontSize: 11.5, fontFamily: "inherit" }}
+              style={{ background: "none", border: "none", padding: 0, color: "#3e8a2f", cursor: "pointer", fontWeight: 600, fontSize: 11.5, fontFamily: "inherit" }}
             >
               {e.dealName}
             </button>
@@ -163,9 +163,9 @@ export default function CriticalDates({ deals, onOpenDeal }: Props) {
   };
 
   return (
-    <div style={{ padding: "20px 18px 80px", maxWidth: 940, margin: "0 auto", width: "100%", boxSizing: "border-box", fontFamily: "'Inter',sans-serif" }}>
-      <h2 style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: 22, fontWeight: 600, color: "#26281f", margin: "0 0 4px" }}>Critical Dates</h2>
-      <p style={{ fontSize: 12.5, color: "#7d766a", margin: "0 0 18px", lineHeight: 1.5 }}>
+    <div style={{ padding: "20px 18px 80px", maxWidth: 940, margin: "0 auto", width: "100%", boxSizing: "border-box", fontFamily: "'Roboto',sans-serif" }}>
+      <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 600, color: "#232422", margin: "0 0 4px" }}>Critical Dates</h2>
+      <p style={{ fontSize: 12.5, color: "#6b6a65", margin: "0 0 18px", lineHeight: 1.5 }}>
         Upcoming lease expirations and loan maturities across the portfolio — what needs attention, soonest first.
       </p>
 
@@ -177,9 +177,9 @@ export default function CriticalDates({ deals, onOpenDeal }: Props) {
         {HORIZONS.map(h => (
           <button key={h.label} onClick={() => setHorizonDays(h.days)}
             style={{ padding: "7px 13px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 34,
-              border: `1px solid ${horizonDays === h.days ? "#6dba43" : "#e0d8c8"}`,
+              border: `1px solid ${horizonDays === h.days ? "#5bba47" : "#dcdad3"}`,
               background: horizonDays === h.days ? "#f0fae8" : "#fff",
-              color: horizonDays === h.days ? "#3f7a1f" : "#8b8578" }}>
+              color: horizonDays === h.days ? "#3e8a2f" : "#7a7973" }}>
             {h.label}
           </button>
         ))}
@@ -188,7 +188,7 @@ export default function CriticalDates({ deals, onOpenDeal }: Props) {
         {(["Lease expiry", "Debt maturity", "Pref maturity"] as Kind[]).map(k => (
           <button key={k} onClick={() => toggleKind(k)}
             style={{ padding: "6px 11px", borderRadius: 999, fontSize: 11.5, fontWeight: 600, cursor: "pointer", minHeight: 32,
-              border: `1px solid ${kinds.has(k) ? KIND_COLOR[k].fg : "#e0d8c8"}`,
+              border: `1px solid ${kinds.has(k) ? KIND_COLOR[k].fg : "#dcdad3"}`,
               background: kinds.has(k) ? KIND_COLOR[k].bg : "#fff",
               color: kinds.has(k) ? KIND_COLOR[k].fg : "#b0a899" }}>
             {kinds.has(k) ? "✓ " : ""}{k}
@@ -197,9 +197,9 @@ export default function CriticalDates({ deals, onOpenDeal }: Props) {
       </div>
 
       {filtered.length === 0 ? (
-        <p style={{ fontSize: 13, color: "#a89f8f", fontStyle: "italic" }}>No dated events in this window. Try a longer horizon.</p>
+        <p style={{ fontSize: 13, color: "#9b9992", fontStyle: "italic" }}>No dated events in this window. Try a longer horizon.</p>
       ) : (
-        <div style={{ background: "#fff", border: "1px solid #e7e0d2", borderRadius: 12, padding: "8px 16px" }}>
+        <div style={{ background: "#fff", border: "1px solid #e6e4de", borderRadius: 12, padding: "8px 16px" }}>
           {pastDue.length > 0 && (
             <div style={{ marginBottom: 6 }}>
               <div style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 700, color: "#b3403f", padding: "12px 0 4px" }}>
@@ -210,7 +210,7 @@ export default function CriticalDates({ deals, onOpenDeal }: Props) {
           )}
           {groups.map(([k, evs]) => (
             <div key={k}>
-              <div style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 700, color: "#a89f8f", padding: "14px 0 4px" }}>
+              <div style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 700, color: "#9b9992", padding: "14px 0 4px" }}>
                 {k} ({evs.length})
               </div>
               {evs.map((e, i) => <Row key={`${k}${i}`} e={e} />)}

@@ -117,7 +117,7 @@ function OccTip({ val, source, breakdown, grade }: { val: number; source: "state
 
   // A non-finite occ-cost (e.g. a NaN slipping through from sales data) would
   // render as "NaN%" — show a dash instead. (After hooks, so order is stable.)
-  if (!isFinite(val)) return <span style={{ color: "#a69e91" }}>—</span>;
+  if (!isFinite(val)) return <span style={{ color: "#94928b" }}>—</span>;
 
   return (
     <span ref={ref} style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 3 }}>
@@ -128,44 +128,44 @@ function OccTip({ val, source, breakdown, grade }: { val: number; source: "state
         style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}
       >
         <span style={{ color: grade ? grade.color : undefined, fontWeight: grade && grade.tier !== "healthy" ? 700 : undefined }}>{val.toFixed(1)}%</span>
-        <span style={{ fontSize: 8, letterSpacing: "0.04em", color: isStated ? "#0f9d63" : "#7d766a", background: isStated ? "#e7f8f0" : "#f3f4f6", border: `1px solid ${isStated ? "#a7f3d0" : "#d1d5db"}`, borderRadius: 3, padding: "0px 3px", fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
+        <span style={{ fontSize: 8, letterSpacing: "0.04em", color: isStated ? "#0f9d63" : "#6b6a65", background: isStated ? "#e7f8f0" : "#f3f4f6", border: `1px solid ${isStated ? "#a7f3d0" : "#d1d5db"}`, borderRadius: 3, padding: "0px 3px", fontWeight: 700, fontFamily: "'Roboto',sans-serif" }}>
           {source}
         </span>
       </span>
       {open && pos && createPortal(
         <div style={{
           position: "fixed", top: pos.top, left: pos.left, transform: pos.flip ? "none" : "translateY(-100%)",
-          background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
+          background: "#fff", border: "1px solid #e3e1db", borderRadius: 10,
           boxShadow: "0 8px 24px rgba(56,58,55,0.18)", padding: "10px 14px",
           zIndex: 10000, width: 290, maxWidth: "calc(100vw - 24px)",
-          fontSize: 11, fontFamily: "'Inter',sans-serif",
+          fontSize: 11, fontFamily: "'Roboto',sans-serif",
         }}>
           {breakdown ? (
             <>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
-                <span style={{ color: "#a89f8f" }}>Base rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.base)}</span>
+                <span style={{ color: "#9b9992" }}>Base rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.base)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
-                <span style={{ color: "#a89f8f" }}>{recoveryLabel(breakdown)}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.reimbursements)}</span>
+                <span style={{ color: "#9b9992" }}>{recoveryLabel(breakdown)}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.reimbursements)}</span>
               </div>
               <RecoveryWorking b={breakdown} />
               {breakdown.percentRent > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
-                  <span style={{ color: "#a89f8f" }}>+ % Rent{breakdown.percentRentFormula ? " (lease formula)" : ""}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.percentRent)}</span>
+                  <span style={{ color: "#9b9992" }}>+ % Rent{breakdown.percentRentFormula ? " (lease formula)" : ""}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.percentRent)}</span>
                 </div>
               )}
               {breakdown.other > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
-                  <span style={{ color: "#a89f8f" }}>+ Other rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.other)}</span>
+                  <span style={{ color: "#9b9992" }}>+ Other rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.other)}</span>
                 </div>
               )}
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3, borderTop: "1px solid #f1eadc", paddingTop: 4, marginTop: 2 }}>
-                <span style={{ color: "#a89f8f" }}>= Total</span><span style={{ fontWeight: 700 }}>{fmt$(breakdown.total)}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3, borderTop: "1px solid #efeee9", paddingTop: 4, marginTop: 2 }}>
+                <span style={{ color: "#9b9992" }}>= Total</span><span style={{ fontWeight: 700 }}>{fmt$(breakdown.total)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 4 }}>
-                <span style={{ color: "#a89f8f" }}>÷ Sales</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.sales)}</span>
+                <span style={{ color: "#9b9992" }}>÷ Sales</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.sales)}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, borderTop: "1px solid #f1eadc", paddingTop: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, borderTop: "1px solid #efeee9", paddingTop: 4 }}>
                 <span style={{ fontWeight: 600, color: "#383a37" }}>Occ Cost</span><span style={{ fontWeight: 700, color: "#383a37" }}>{val.toFixed(1)}%</span>
               </div>
             </>
@@ -173,7 +173,7 @@ function OccTip({ val, source, breakdown, grade }: { val: number; source: "state
             <div style={{ color: "#383a37" }}>OM-stated: <b>{val.toFixed(1)}%</b></div>
           )}
           {grade && (
-            <div style={{ marginTop: 7, paddingTop: 6, borderTop: "1px solid #f1eadc", display: "flex", alignItems: "flex-start", gap: 6 }}>
+            <div style={{ marginTop: 7, paddingTop: 6, borderTop: "1px solid #efeee9", display: "flex", alignItems: "flex-start", gap: 6 }}>
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: grade.color, flexShrink: 0, marginTop: 3 }} />
               <span style={{ color: "#5c5f57", lineHeight: 1.4 }}><b style={{ color: grade.color }}>{grade.short}.</b> {grade.detail}</span>
             </div>
@@ -262,8 +262,8 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
             top: pos.top,
             left: pos.left,
             transform: pos.flip ? "translateY(-100%)" : "none",
-            background: "#26281f",
-            color: "#f6f2ea",
+            background: "#232422",
+            color: "#faf9f5",
             padding: "9px 13px",
             borderRadius: 7,
             fontSize: 12,
@@ -299,8 +299,8 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
               left: "50%",
               transform: "translate(-50%, -50%)",
               zIndex: 9999,
-              background: "#26281f",
-              color: "#f6f2ea",
+              background: "#232422",
+              color: "#faf9f5",
               padding: "20px 20px 16px",
               borderRadius: 12,
               fontSize: 13,
@@ -319,12 +319,12 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
               style={{
                 background: "#3c3f35",
                 border: "none",
-                color: "#f6f2ea",
+                color: "#faf9f5",
                 padding: "10px 16px",
                 borderRadius: 8,
                 cursor: "pointer",
                 fontSize: 13,
-                fontFamily: "'Inter',sans-serif",
+                fontFamily: "'Roboto',sans-serif",
                 fontWeight: 500,
                 width: "100%",
               }}
@@ -421,7 +421,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   const setSort = (k: string, e?: React.MouseEvent) => sort.onHeaderClick(k, e);
   const arrow = (k: string) => sort.marker(k);
   const chip = (key: string, label: string) => (
-    <button key={key} onClick={() => setQuick(key)} style={{ background:quick===key?"#2a2c27":"transparent", color:quick===key?"#f6f2ea":"#7d766a", border:`1px solid ${quick===key?"#2a2c27":"#e3dccd"}`, padding:"4px 11px", borderRadius:20, fontSize:11, cursor:"pointer", fontWeight:500, fontFamily:"'Inter',sans-serif" }}>{label}</button>
+    <button key={key} onClick={() => setQuick(key)} style={{ background:quick===key?"#232422":"transparent", color:quick===key?"#faf9f5":"#6b6a65", border:`1px solid ${quick===key?"#232422":"#dfddd6"}`, padding:"4px 11px", borderRadius:20, fontSize:11, cursor:"pointer", fontWeight:500, fontFamily:"'Roboto',sans-serif" }}>{label}</button>
   );
 
   const cols: [string, string, boolean][] = [
@@ -516,12 +516,12 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   const asOfLabel = tenantsSource === "rent-roll" ? "RENT ROLL" : "OM";
 
   return (
-    <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+    <div style={{ background:"#fff", border:"1px solid #ecebe6", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, marginBottom:8, flexWrap:"wrap" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Tenant Roster — {rows.length===tenants.length ? `${occupiedCount} tenant${occupiedCount!==1?"s":""}${vacantCount>0?` · ${vacantCount} vacant`:""}` : `${rows.length} of ${tenants.length}`}</div>
+          <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#94928b", fontWeight:600, textTransform:"uppercase" }}>Tenant Roster — {rows.length===tenants.length ? `${occupiedCount} tenant${occupiedCount!==1?"s":""}${vacantCount>0?` · ${vacantCount} vacant`:""}` : `${rows.length} of ${tenants.length}`}</div>
           {asOfDate && (
-            <span style={{ fontSize:9, letterSpacing:"0.07em", fontWeight:600, color: tenantsSource==="rent-roll" ? "#0d9488" : "#a89f8f", background: tenantsSource==="rent-roll" ? "#f0fdfa" : "#f6f2ea", border:`1px solid ${tenantsSource==="rent-roll" ? "#99f6e4" : "#e3dccd"}`, borderRadius:8, padding:"2px 8px", textTransform:"uppercase", whiteSpace:"nowrap" }}>
+            <span style={{ fontSize:9, letterSpacing:"0.07em", fontWeight:600, color: tenantsSource==="rent-roll" ? "#0d9488" : "#9b9992", background: tenantsSource==="rent-roll" ? "#f0fdfa" : "#faf9f5", border:`1px solid ${tenantsSource==="rent-roll" ? "#99f6e4" : "#dfddd6"}`, borderRadius:8, padding:"2px 8px", textTransform:"uppercase", whiteSpace:"nowrap" }}>
               AS OF {fmtAsOf(asOfDate)} · {asOfLabel}
             </span>
           )}
@@ -539,7 +539,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           {tenants.some(t => t.isDark) && chip("dark","Dark")}
           {tenants.some(t => t.assumptionNote) && chip("footnotes","Has footnote")}
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Filter tenants…"
-            style={{ fontSize:12, padding:"5px 10px", border:"1px solid #e3dccd", borderRadius:7, color:"#383a37", background:"#fff", width:150, fontFamily:"'Inter',sans-serif" }}/>
+            style={{ fontSize:12, padding:"5px 10px", border:"1px solid #dfddd6", borderRadius:7, color:"#383a37", background:"#fff", width:150, fontFamily:"'Roboto',sans-serif" }}/>
         </div>
       </div>
       {(scrubRows || proposedCount > 0) && (() => {
@@ -571,8 +571,8 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
       {pctOccupied != null && (
         <div style={{ marginBottom:13 }}>
           <span title="Occupied vs vacant by square footage (NAP / owner-occupied parcels excluded; dark stores count as occupied since they still pay rent). The parenthetical adds dark — closed but still-paying — stores to vacancy."
-            style={{ display:"inline-block", fontSize:9, letterSpacing:"0.07em", fontWeight:600, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", borderRadius:8, padding:"3px 9px", textTransform:"uppercase", lineHeight:1.6 }}>
-            {fmtPct(pctOccupied)} OCCUPIED · <span style={{ color: (pctVacant ?? 0) > 0 ? "#c97a18" : "#3f7a1f" }}>{fmtPct(pctVacant ?? 0)} VACANT</span>
+            style={{ display:"inline-block", fontSize:9, letterSpacing:"0.07em", fontWeight:600, color:"#3e8a2f", background:"#eef3e6", border:"1px solid #b8d49a", borderRadius:8, padding:"3px 9px", textTransform:"uppercase", lineHeight:1.6 }}>
+            {fmtPct(pctOccupied)} OCCUPIED · <span style={{ color: (pctVacant ?? 0) > 0 ? "#c97a18" : "#3e8a2f" }}>{fmtPct(pctVacant ?? 0)} VACANT</span>
             {darkSF > 0 && pctVacantInclDark != null && (
               <span style={{ color:"#9a5b12", fontWeight:700 }}> ({fmtPct(pctVacantInclDark)} INC. DARK TENANTS)</span>
             )}
@@ -587,28 +587,28 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           <thead>
             <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
               {cols.map(([k,label,right]) => (
-                <th key={k} title={k === "salesPSF" ? "Sales / SF (latest). Two markers may appear: ↗ / ↘ = year-over-year sales trend; ▲ / ▼ = this store vs the brand's median across your library (green = strong, red = weak)." : NOSORT.has(k) ? undefined : "Click to sort by this column · Shift-click to add it as a tiebreaker"} onClick={NOSORT.has(k) ? undefined : (e) => setSort(k, e)} className={k === "name" ? "freeze-col" : undefined} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: NOSORT.has(k) ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sort.isSorted(k)?"#383a37":"#a69e91", fontWeight:600, ...(k === "name" ? stickyFirstCol("#fff", true) : null) }}>{label}{NOSORT.has(k) ? null : arrow(k)}</th>
+                <th key={k} title={k === "salesPSF" ? "Sales / SF (latest). Two markers may appear: ↗ / ↘ = year-over-year sales trend; ▲ / ▼ = this store vs the brand's median across your library (green = strong, red = weak)." : NOSORT.has(k) ? undefined : "Click to sort by this column · Shift-click to add it as a tiebreaker"} onClick={NOSORT.has(k) ? undefined : (e) => setSort(k, e)} className={k === "name" ? "freeze-col" : undefined} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: NOSORT.has(k) ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sort.isSorted(k)?"#383a37":"#94928b", fontWeight:600, ...(k === "name" ? stickyFirstCol("#fff", true) : null) }}>{label}{NOSORT.has(k) ? null : arrow(k)}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rows.map((t,i) => (
-              <tr key={i} className="kpr-roster-row" onClick={e => { if ((e.target as HTMLElement).closest("button,input,select,a,[data-noprop]")) return; setExpandedReimb(i); }} style={{ cursor:"pointer", borderTop:"1px solid #f1eadc", opacity: isNAPTenant(t) ? 0.7 : isVacantRow(t) ? 0.65 : 1, background: t.isDark && !isVacantRow(t) ? "#fbf1e4" : undefined }}>
+              <tr key={i} className="kpr-roster-row" onClick={e => { if ((e.target as HTMLElement).closest("button,input,select,a,[data-noprop]")) return; setExpandedReimb(i); }} style={{ cursor:"pointer", borderTop:"1px solid #efeee9", opacity: isNAPTenant(t) ? 0.7 : isVacantRow(t) ? 0.65 : 1, background: t.isDark && !isVacantRow(t) ? "#fbf1e4" : undefined }}>
                 <td className="freeze-col" style={{ padding:"8px 10px", whiteSpace:"nowrap", ...stickyFirstCol(t.isDark && !isVacantRow(t) ? "#fbf1e4" : "#fff") }}>
                   {isVacantRow(t) ? (
                     isNonGLA(t)
-                      ? <span title="Not leasable GLA (a utility / meter closet or similar) — excluded from GLA and vacancy" style={{ color:"#a69e91", fontStyle:"italic", fontWeight:400, fontSize:11 }}>{t.name && !/^vacant$/i.test(t.name.trim()) ? t.name : "Utility / non-GLA space"} <span style={{ fontStyle:"normal", fontSize:8.5, fontWeight:700, color:"#6f6a5f", background:"#f1f0ec", padding:"1px 6px", borderRadius:9 }}>NON-GLA</span></span>
-                      : <span style={{ color:"#a69e91", fontStyle:"italic", fontWeight:400, fontSize:11 }}>Vacant</span>
+                      ? <span title="Not leasable GLA (a utility / meter closet or similar) — excluded from GLA and vacancy" style={{ color:"#94928b", fontStyle:"italic", fontWeight:400, fontSize:11 }}>{t.name && !/^vacant$/i.test(t.name.trim()) ? t.name : "Utility / non-GLA space"} <span style={{ fontStyle:"normal", fontSize:8.5, fontWeight:700, color:"#676767", background:"#f1f0ec", padding:"1px 6px", borderRadius:9 }}>NON-GLA</span></span>
+                      : <span style={{ color:"#94928b", fontStyle:"italic", fontWeight:400, fontSize:11 }}>Vacant</span>
                   ) : (
                     <div style={{ display:"flex", alignItems:"center", flexWrap:"nowrap", gap:4, minWidth:0 }}>
                       <span data-noprop=""
                         onClick={onTenantClick && t.name ? () => onTenantClick(t.name!) : undefined}
                         title={onTenantClick && t.name ? `View ${t.name} across your portfolio` : undefined}
-                        style={{ color: t.isDark ? "#9a5b12" : "#383a37", fontWeight:600, cursor:onTenantClick?"pointer":"default", textDecoration:onTenantClick?"underline":"none", textDecorationColor:"#d8cfbd", textUnderlineOffset:"2px", whiteSpace:"nowrap" }}>
+                        style={{ color: t.isDark ? "#9a5b12" : "#383a37", fontWeight:600, cursor:onTenantClick?"pointer":"default", textDecoration:onTenantClick?"underline":"none", textDecorationColor:"#d4d2ca", textUnderlineOffset:"2px", whiteSpace:"nowrap" }}>
                         {t.name}
                       </span>
                       {t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, fontWeight:600 }}>ANCHOR</span>}
-                      {isNonGLA(t) && <span title="Not leasable GLA (ATM, antenna, license, utility space) — its rent counts, its SF doesn't count toward GLA or vacancy" style={{ fontSize:9, color:"#6f6a5f", background:"#f1f0ec", padding:"1px 6px", borderRadius:10, fontWeight:700 }}>NON-GLA</span>}
+                      {isNonGLA(t) && <span title="Not leasable GLA (ATM, antenna, license, utility space) — its rent counts, its SF doesn't count toward GLA or vacancy" style={{ fontSize:9, color:"#676767", background:"#f1f0ec", padding:"1px 6px", borderRadius:10, fontWeight:700 }}>NON-GLA</span>}
                       {isHoldover(t) && <span title={`Lease expired ${fmtLeaseDate(t.leaseExpiry)} but the tenant is still on the roll — a holdover (month-to-month) tenancy, not a firm lease. Confirm a renewal or extension.`} style={{ fontSize:9, color:"#b3403f", background:"#fdecec", padding:"1px 6px", borderRadius:10, fontWeight:700 }}>HOLDOVER</span>}
                       {(() => {
                         // TJX combo box — two banners (e.g. Marshalls + HomeGoods) on one
@@ -641,7 +641,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                       {t.leaseStatus === "signed-not-open" && (
                         <span title="Lease executed but the store has not opened / rent has not commenced — confirm rent-commencement date." style={{ fontSize:9, color:"#1f4d8f", background:"#eaf1fb", border:"1px solid #c2d6f0", padding:"1px 6px", borderRadius:10, fontWeight:700, letterSpacing:"0.03em", whiteSpace:"nowrap" }}>SIGNED · NOT OPEN</span>
                       )}
-                      {t.name && isInvestmentGrade(t.name, t.creditRating) && <span title="Investment-grade credit" style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 5px", borderRadius:4, fontWeight:700 }}>IG</span>}
+                      {t.name && isInvestmentGrade(t.name, t.creditRating) && <span title="Investment-grade credit" style={{ fontSize:9, color:"#3e8a2f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 5px", borderRadius:4, fontWeight:700 }}>IG</span>}
                       {(() => {
                         // "OVERAGE" pill: tenant's sales exceed its percentage-rent
                         // breakpoint, so it is paying (or near) overage rent — a sign
@@ -708,7 +708,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                           onClick={(e) => { e.stopPropagation(); onAddAbstract(t.name!); }}
                           title="Add a lease abstract for this tenant"
                           aria-label="Add a lease abstract"
-                          style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:22, height:20, fontSize:12, color:"#a69e91", border:"1px dashed #d8cfbd", borderRadius:5, cursor:"pointer" }}>
+                          style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:22, height:20, fontSize:12, color:"#94928b", border:"1px dashed #d4d2ca", borderRadius:5, cursor:"pointer" }}>
                           +
                         </span>
                       );
@@ -751,7 +751,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                 {scrubRows && (() => {
                   const sr = scrubOf(t), b = sr?.bench;
                   if (!b?.rentMedian) return <td style={{ padding:"0 10px", textAlign:"right", color:"#d6d0c4" }}>—</td>;
-                  return <td title={`Market: $${b.rentMedian.toFixed(2)}/SF median rent — ${b.basisLabel} (n=${b.rentN}).${b.salesMedian ? ` Chain median sales $${b.salesMedian}/SF (n=${b.salesN}).` : ""}`} style={{ padding:"0 10px", textAlign:"right", color:"#676767", whiteSpace:"nowrap", fontVariantNumeric:"tabular-nums" }}>${b.rentMedian.toFixed(2)}<span style={{ fontSize:9.5, color:"#a69e91", marginLeft:3 }}>{b.basis === "brand" ? "" : b.basis === "category" ? "cat" : "mkt"} n={b.rentN}</span></td>;
+                  return <td title={`Market: $${b.rentMedian.toFixed(2)}/SF median rent — ${b.basisLabel} (n=${b.rentN}).${b.salesMedian ? ` Chain median sales $${b.salesMedian}/SF (n=${b.salesN}).` : ""}`} style={{ padding:"0 10px", textAlign:"right", color:"#676767", whiteSpace:"nowrap", fontVariantNumeric:"tabular-nums" }}>${b.rentMedian.toFixed(2)}<span style={{ fontSize:9.5, color:"#94928b", marginLeft:3 }}>{b.basis === "brand" ? "" : b.basis === "category" ? "cat" : "mkt"} n={b.rentN}</span></td>;
                 })()}
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{n(t.annualRent)!=null?`$${Math.round(n(t.annualRent)!).toLocaleString()}`:"—"}</td>
                 <td style={{ padding:"8px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{fmtLeaseDate(t.leaseStart)}</td>
@@ -771,7 +771,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                       <span title={tip} style={{ display:"inline-flex", alignItems:"center", gap:3, whiteSpace:"nowrap" }}>
                         {r.flag ? <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.04em", color:r.flag.color, background:r.flag.bg, padding:"1px 6px", borderRadius:9 }}>{r.flag.label}</span>
                           : <span style={{ color:r.textColor, overflow:"hidden", textOverflow:"ellipsis", maxWidth:110, display:"inline-block", verticalAlign:"bottom" }}>{r.body}</span>}
-                        {(r.chips.length > 0 || r.fromAbstract) && <span style={{ fontSize:9, color:"#a69e91" }}>{r.fromAbstract ? "◆" : ""}{r.chips.length ? `+${r.chips.length}` : ""}</span>}
+                        {(r.chips.length > 0 || r.fromAbstract) && <span style={{ fontSize:9, color:"#94928b" }}>{r.fromAbstract ? "◆" : ""}{r.chips.length ? `+${r.chips.length}` : ""}</span>}
                       </span>
                     );
                   })()}
@@ -875,7 +875,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   }
 
                   const occGrade = occ != null ? gradeOccupancyCost(t.canonicalName || t.name || "", occ) : null;
-                  const color = occ != null ? (occGrade ? occGrade.color : (occ > 15 ? "#dc2626" : "#0f9d63")) : "#a69e91";
+                  const color = occ != null ? (occGrade ? occGrade.color : (occ > 15 ? "#dc2626" : "#0f9d63")) : "#94928b";
                   const canEdit = !!onUpdateTenant && !isVacant(t) && !isNAPTenant(t);
                   return (
                     <td style={{ padding: "8px 10px", textAlign: "right", whiteSpace: "nowrap", color }}>
@@ -909,8 +909,8 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     const steps = rentStepList(t);
                     if (!steps.length) return <span style={{ color:"#c4bbaa" }}>{toStepString(t.rentSchedule) || toStepString(t.rentBumps) ? "Flat" : "—"}</span>;
                     const nx = nextRentStep(t);
-                    if (!nx && steps.every(x => /^flat\b/i.test(x) || !/\d{4}/.test(x))) return <span style={{ color:"#a69e91" }} title={steps.join("\n")}>Flat</span>;
-                    return <span title={steps.join("\n")}>{nx ? nx.label : <span style={{ color:"#a69e91" }}>no future step</span>}{steps.length > 1 && <span style={{ color:"#a69e91", marginLeft:4 }}>+{steps.length - 1}</span>}</span>;
+                    if (!nx && steps.every(x => /^flat\b/i.test(x) || !/\d{4}/.test(x))) return <span style={{ color:"#94928b" }} title={steps.join("\n")}>Flat</span>;
+                    return <span title={steps.join("\n")}>{nx ? nx.label : <span style={{ color:"#94928b" }}>no future step</span>}{steps.length > 1 && <span style={{ color:"#94928b", marginLeft:4 }}>+{steps.length - 1}</span>}</span>;
                   })()}
                 </td>
                 <td style={{ padding:"0 10px", color:"#5c5f57", fontSize:11, whiteSpace:"nowrap" }}>
@@ -934,7 +934,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     return <FlagTip content={k.tip} color="#b45309"><span style={{ fontSize:9.5, fontWeight:700, color:"#9a3412", background:"#fdecdc", border:"1px solid #f0c08a", borderRadius:4, padding:"1px 6px", whiteSpace:"nowrap" }}>{k.label}</span></FlagTip>;
                   })()}
                 </td>
-                <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.recentlyExercisedRenewal?"#0f9d63":"#a69e91" }}>
+                <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.recentlyExercisedRenewal?"#0f9d63":"#94928b" }}>
                   {(() => {
                     const spread = n(t.recentRenewalSpreadPct);
                     return (
@@ -956,9 +956,9 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           </tbody>
           {rows.length > 0 && (
             <tfoot>
-              <tr style={{ borderTop:"2px solid #d9d2c4", background:"#faf7f0", fontWeight:700, color:"#26281f" }}>
+              <tr style={{ borderTop:"2px solid #d7d5ce", background:"#faf9f5", fontWeight:700, color:"#232422" }}>
                 {cols.map(([k, , right], idx) => {
-                  const sub = (v: string) => <div style={{ fontSize:9.5, fontWeight:500, color:"#8b8578", marginTop:2, whiteSpace:"nowrap" }}>{v}</div>;
+                  const sub = (v: string) => <div style={{ fontSize:9.5, fontWeight:500, color:"#7a7973", marginTop:2, whiteSpace:"nowrap" }}>{v}</div>;
                   let cell: React.ReactNode = null;
                   if (k === "name") cell = (<>
                     {totalsFiltered ? "Totals (filtered)" : "Totals"}
@@ -983,7 +983,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   else if (k === "salesPSF") cell = totals.salesPSF != null ? (<>${Math.round(totals.salesPSF).toLocaleString()}{sub(`wtd avg · ${totals.salesReporting} reporting`)}</>) : null;
                   return (
                     <td key={k} className={idx === 0 ? "freeze-col" : undefined}
-                      style={{ padding:"9px 10px", textAlign: right ? "right" : "left", whiteSpace:"nowrap", verticalAlign:"top", ...(idx === 0 ? stickyFirstCol("#faf7f0", false) : null) }}>
+                      style={{ padding:"9px 10px", textAlign: right ? "right" : "left", whiteSpace:"nowrap", verticalAlign:"top", ...(idx === 0 ? stickyFirstCol("#faf9f5", false) : null) }}>
                       {cell}
                     </td>
                   );
@@ -1000,17 +1000,17 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           const notices = isVacantRow(t) ? [] : passedOptionNotices(t, abstractsByTenant?.get((t.name || "").trim().toLowerCase()));
           const kick = kickoutByTenant?.get(tenantKey(t.canonicalName || t.name));
           const H = ({ children }: { children: React.ReactNode }) => <div style={{ fontFamily:"'Montserrat',sans-serif", fontSize:10.5, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:"#383A37", marginTop:16, marginBottom:5 }}>{children}</div>;
-          const fact = (l: string, v: React.ReactNode) => <div><div style={{ fontSize:10, color:"#8b8578", textTransform:"uppercase", letterSpacing:"0.06em" }}>{l}</div><div style={{ fontSize:13.5, color:"#232422", fontVariantNumeric:"tabular-nums" }}>{v ?? "—"}</div></div>;
+          const fact = (l: string, v: React.ReactNode) => <div><div style={{ fontSize:10, color:"#7a7973", textTransform:"uppercase", letterSpacing:"0.06em" }}>{l}</div><div style={{ fontSize:13.5, color:"#232422", fontVariantNumeric:"tabular-nums" }}>{v ?? "—"}</div></div>;
           return (
             <>
               <div onClick={() => setExpandedReimb(null)} style={{ position:"fixed", inset:0, zIndex:1300, background:"rgba(35,36,34,0.32)" }} />
               <aside role="dialog" aria-label={`Tenant detail — ${t.name}`} style={{ position:"fixed", top:0, right:0, bottom:0, width:"min(480px, 100vw)", zIndex:1301, background:"#fff", boxShadow:"-12px 0 40px rgba(35,36,34,0.22)", padding:"18px 18px 32px", overflowY:"auto", boxSizing:"border-box", fontFamily:"'Roboto',sans-serif" }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
                   <div style={{ minWidth:0 }}>
-                    <div style={{ fontFamily:"'Montserrat',sans-serif", fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"#a69e91", fontWeight:700 }}>Tenant{t.suite ? ` · suite ${t.suite}` : ""}</div>
+                    <div style={{ fontFamily:"'Montserrat',sans-serif", fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"#94928b", fontWeight:700 }}>Tenant{t.suite ? ` · suite ${t.suite}` : ""}</div>
                     <div style={{ fontFamily:"'Lora',serif", fontSize:21, color:"#232422", marginTop:2 }}>{t.name}</div>
                   </div>
-                  <button onClick={() => setExpandedReimb(null)} aria-label="Close" style={{ background:"#fff", border:"1px solid #e0d8c8", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontSize:14 }}>✕</button>
+                  <button onClick={() => setExpandedReimb(null)} aria-label="Close" style={{ background:"#fff", border:"1px solid #dcdad3", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontSize:14 }}>✕</button>
                 </div>
                 {sr && sr.flags.length > 0 && (
                   <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginTop:10 }}>
@@ -1040,7 +1040,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   <H>Recovery terms</H>
                   <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
                     {r.flag && <span style={{ fontSize:10, fontWeight:700, color:r.flag.color, background:r.flag.bg, padding:"2px 8px", borderRadius:9 }}>{r.flag.label}</span>}
-                    {r.chips.map(c => <span key={c} style={{ fontSize:10.5, color:"#5c5f57", background:"#f3f1ea", border:"1px solid #e7e0d2", padding:"1px 8px", borderRadius:9 }}>{c}</span>)}
+                    {r.chips.map(c => <span key={c} style={{ fontSize:10.5, color:"#5c5f57", background:"#f3f1ea", border:"1px solid #e6e4de", padding:"1px 8px", borderRadius:9 }}>{c}</span>)}
                     {r.fromAbstract && <span style={{ fontSize:10, color:"#1f4d8f" }}>from the lease abstract</span>}
                   </div>
                   {r.body && <div style={{ fontSize:13, color:"#383a37", marginTop:8, lineHeight:1.6, whiteSpace:"pre-wrap" }}>{r.body}</div>}
@@ -1060,10 +1060,10 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                       <div key={key} style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginTop:8, background:"#fff8ec", borderRadius:8, padding:"6px 8px" }}>
                         <span style={{ fontSize:12.5 }}>{pn.option} notice was due <b>{fmtLeaseDate(pn.noticeDate)}</b></span>
                         {onSetOptionStatus ? (
-                          <select aria-label="Option status" value={st ?? ""} onChange={e => e.target.value && onSetOptionStatus(t.name || "", pn.option, pn.noticeDate, e.target.value)} style={{ fontSize:12, border:"1px solid #e0d8c8", borderRadius:6, padding:"3px 6px", background:"#fff" }}>
+                          <select aria-label="Option status" value={st ?? ""} onChange={e => e.target.value && onSetOptionStatus(t.name || "", pn.option, pn.noticeDate, e.target.value)} style={{ fontSize:12, border:"1px solid #dcdad3", borderRadius:6, padding:"3px 6px", background:"#fff" }}>
                             <option value="">status?</option><option>Exercised</option><option>Pending</option><option>Lapsed</option>
                           </select>
-                        ) : <span style={{ fontSize:12, color:"#6f6a5f" }}>{st ?? "status not recorded"}</span>}
+                        ) : <span style={{ fontSize:12, color:"#676767" }}>{st ?? "status not recorded"}</span>}
                       </div>
                     );
                   })}
@@ -1076,7 +1076,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           );
         })()}
       </div>
-      <div style={{ fontSize:10, color:"#a69e91", marginTop:9 }}>Click a column to sort · scroll sideways for more · tap or hover the ⓘ icon for tenant notes.</div>
+      <div style={{ fontSize:10, color:"#94928b", marginTop:9 }}>Click a column to sort · scroll sideways for more · tap or hover the ⓘ icon for tenant notes.</div>
       {editingOcc != null && onUpdateTenant && createPortal(
         <>
           <div
@@ -1092,13 +1092,13 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
               boxShadow: "0 24px 60px rgba(0,0,0,0.22)",
               padding: "20px 22px 18px",
               width: "min(340px, 92vw)",
-              fontFamily: "'Inter',sans-serif",
+              fontFamily: "'Roboto',sans-serif",
             }}
           >
             <div style={{ fontWeight: 700, fontSize: 13, color: "#383a37", marginBottom: 4 }}>
               Edit Occupancy Cost Components
             </div>
-            <div style={{ fontSize: 11, color: "#a89f8f", marginBottom: 14, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 11, color: "#9b9992", marginBottom: 14, lineHeight: 1.5 }}>
               {tenants[editingOcc]?.canonicalName || tenants[editingOcc]?.name || "Tenant"}<br />
               Enter OM-disclosed annual dollar amounts. Base rent is already captured above.
               Occ cost = (Base + Recoveries + % Rent + Other) ÷ Sales.
@@ -1119,9 +1119,9 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   onChange={e => setEditVals(prev => ({ ...prev, [key]: e.target.value }))}
                   style={{
                     width: "100%", boxSizing: "border-box",
-                    border: "1px solid #e6dfd0", borderRadius: 8,
+                    border: "1px solid #e3e1db", borderRadius: 8,
                     padding: "8px 10px", fontSize: 13, color: "#383a37",
-                    fontFamily: "'Inter',sans-serif", outline: "none",
+                    fontFamily: "'Roboto',sans-serif", outline: "none",
                     background: "#faf8f4",
                   }}
                 />
@@ -1142,9 +1142,9 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   setEditingOcc(null);
                 }}
                 style={{
-                  flex: 1, background: "#3f7a1f", color: "#fff",
+                  flex: 1, background: "#3e8a2f", color: "#fff",
                   border: "none", borderRadius: 8, padding: "10px 0",
-                  fontFamily: "'Inter',sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer",
+                  fontFamily: "'Roboto',sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer",
                 }}
               >
                 Save
@@ -1154,7 +1154,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                 style={{
                   flex: 1, background: "#f3f4f6", color: "#383a37",
                   border: "none", borderRadius: 8, padding: "10px 0",
-                  fontFamily: "'Inter',sans-serif", fontWeight: 500, fontSize: 13, cursor: "pointer",
+                  fontFamily: "'Roboto',sans-serif", fontWeight: 500, fontSize: 13, cursor: "pointer",
                 }}
               >
                 Cancel
@@ -1167,9 +1167,9 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
       {editingScreens != null && onUpdateTenant && createPortal(
         <>
           <div onClick={() => setEditingScreens(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.32)", zIndex: 9998 }} />
-          <div onClick={e => e.stopPropagation()} style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 9999, background: "#fff", borderRadius: 14, boxShadow: "0 24px 60px rgba(0,0,0,0.22)", padding: "20px 22px 18px", width: "min(360px, 92vw)", fontFamily: "'Inter',sans-serif" }}>
+          <div onClick={e => e.stopPropagation()} style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 9999, background: "#fff", borderRadius: 14, boxShadow: "0 24px 60px rgba(0,0,0,0.22)", padding: "20px 22px 18px", width: "min(360px, 92vw)", fontFamily: "'Roboto',sans-serif" }}>
             <div style={{ fontWeight: 700, fontSize: 13, color: "#383a37", marginBottom: 4 }}>Theater sales &amp; screens</div>
-            <div style={{ fontSize: 11, color: "#a89f8f", marginBottom: 14, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 11, color: "#9b9992", marginBottom: 14, lineHeight: 1.5 }}>
               {tenants[editingScreens]?.canonicalName || tenants[editingScreens]?.name || "Theater"}<br />
               A cinema is judged on sales <b>per screen</b>, not per SF. Enter the screen count and EITHER the sales per screen OR the total annual sales — the app computes the rest.
             </div>
@@ -1182,7 +1182,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                 <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>{label}</div>
                 <input type="number" min="0" step={step} placeholder={placeholder} value={screensForm[key]}
                   onChange={e => setScreensForm(prev => ({ ...prev, [key]: e.target.value }))}
-                  style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e6dfd0", borderRadius: 8, padding: "8px 10px", fontSize: 13, color: "#383a37", fontFamily: "'Inter',sans-serif", outline: "none", background: "#faf8f4" }} />
+                  style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e3e1db", borderRadius: 8, padding: "8px 10px", fontSize: 13, color: "#383a37", fontFamily: "'Roboto',sans-serif", outline: "none", background: "#faf8f4" }} />
               </div>
             ))}
             <div style={{ fontSize: 10, color: "#c4bbaa", marginBottom: 14, lineHeight: 1.5 }}>
@@ -1205,9 +1205,9 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   onUpdateTenant!(idx, patch);
                   setEditingScreens(null);
                 }}
-                style={{ flex: 1, background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 8, padding: "10px 0", fontFamily: "'Inter',sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+                style={{ flex: 1, background: "#3e8a2f", color: "#fff", border: "none", borderRadius: 8, padding: "10px 0", fontFamily: "'Roboto',sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
               >Save</button>
-              <button onClick={() => setEditingScreens(null)} style={{ flex: 1, background: "#f3f4f6", color: "#383a37", border: "none", borderRadius: 8, padding: "10px 0", fontFamily: "'Inter',sans-serif", fontWeight: 500, fontSize: 13, cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => setEditingScreens(null)} style={{ flex: 1, background: "#f3f4f6", color: "#383a37", border: "none", borderRadius: 8, padding: "10px 0", fontFamily: "'Roboto',sans-serif", fontWeight: 500, fontSize: 13, cursor: "pointer" }}>Cancel</button>
             </div>
           </div>
         </>,

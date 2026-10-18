@@ -226,17 +226,17 @@ export default function ImportReview({ deal, onClose, onUpdate, extraChecks }: {
     if (r.ok) { const id = teachFor; setTaught(t => ({ ...t, [id]: true })); setTeachFor(null); setTeachText(""); }
   };
   const teachTrigger = (q: ReviewQuestion) => taught[q.id]
-    ? <span style={{ fontSize: 11, color: "#3f7a1f", fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>📚 ✓ Taught</span>
-    : <button onClick={() => (teachFor === q.id ? setTeachFor(null) : openTeach(q))} style={{ background: "none", border: "none", color: "#9a6a1e", cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: 0 }}>📚 {teachFor === q.id ? "Cancel" : "Teach a rule"}</button>;
+    ? <span style={{ fontSize: 11, color: "#3e8a2f", fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}>📚 ✓ Taught</span>
+    : <button onClick={() => (teachFor === q.id ? setTeachFor(null) : openTeach(q))} style={{ background: "none", border: "none", color: "#9a6a1e", cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Roboto',sans-serif", padding: 0 }}>📚 {teachFor === q.id ? "Cancel" : "Teach a rule"}</button>;
   const teachBox = (q: ReviewQuestion) => (teachFor === q.id && !taught[q.id]) ? (
     <div style={{ marginTop: 8, background: "#fbf7ee", border: "1px solid #e7d9bd", borderRadius: 8, padding: "9px 11px" }}>
       <div style={{ fontSize: 10.5, color: "#9a6a1e", fontWeight: 700, marginBottom: 5 }}>📚 Teach the analyst — this rule guides EVERY future OM read</div>
       <textarea value={teachText} onChange={e => setTeachText(e.target.value)} rows={3}
-        style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e0d7c6", borderRadius: 6, padding: "7px 9px", fontSize: 12, fontFamily: "'Inter',sans-serif", color: "#383a37", resize: "vertical", background: "#fff", lineHeight: 1.4 }} />
+        style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e0d7c6", borderRadius: 6, padding: "7px 9px", fontSize: 12, fontFamily: "'Roboto',sans-serif", color: "#383a37", resize: "vertical", background: "#fff", lineHeight: 1.4 }} />
       <div style={{ display: "flex", gap: 8, marginTop: 7, alignItems: "center", flexWrap: "wrap" }}>
-        <button onClick={saveTeach} disabled={teachBusy || !teachText.trim()} style={{ background: "#3f7a1f", border: "none", color: "#fff", padding: "5px 12px", borderRadius: 6, cursor: (teachBusy || !teachText.trim()) ? "default" : "pointer", fontSize: 11.5, fontWeight: 600, opacity: (teachBusy || !teachText.trim()) ? 0.6 : 1, fontFamily: "'Inter',sans-serif" }}>{teachBusy ? "Saving…" : "Save rule"}</button>
-        <button onClick={() => setTeachFor(null)} style={{ background: "none", border: "none", color: "#a89f8f", cursor: "pointer", fontSize: 11.5, fontFamily: "'Inter',sans-serif" }}>Skip</button>
-        <span style={{ fontSize: 10, color: "#bcae97" }}>Edit first — applied to all future extractions at top priority.</span>
+        <button onClick={saveTeach} disabled={teachBusy || !teachText.trim()} style={{ background: "#3e8a2f", border: "none", color: "#fff", padding: "5px 12px", borderRadius: 6, cursor: (teachBusy || !teachText.trim()) ? "default" : "pointer", fontSize: 11.5, fontWeight: 600, opacity: (teachBusy || !teachText.trim()) ? 0.6 : 1, fontFamily: "'Roboto',sans-serif" }}>{teachBusy ? "Saving…" : "Save rule"}</button>
+        <button onClick={() => setTeachFor(null)} style={{ background: "none", border: "none", color: "#9b9992", cursor: "pointer", fontSize: 11.5, fontFamily: "'Roboto',sans-serif" }}>Skip</button>
+        <span style={{ fontSize: 10, color: "#b8b5ad" }}>Edit first — applied to all future extractions at top priority.</span>
       </div>
     </div>
   ) : null;
@@ -511,23 +511,23 @@ USER CORRECTION: ${instruction}`;
     }
   };
 
-  const sevColor = (s: string) => s === "high" ? "#dc2626" : s === "medium" ? "#d9890c" : "#a89f8f";
-  const sevBg = (s: string) => s === "high" ? "#fef2f2" : s === "medium" ? "#fffaf2" : "#faf7f0";
+  const sevColor = (s: string) => s === "high" ? "#dc2626" : s === "medium" ? "#d9890c" : "#9b9992";
+  const sevBg = (s: string) => s === "high" ? "#fef2f2" : s === "medium" ? "#fffaf2" : "#faf9f5";
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(38,40,31,0.45)", backdropFilter: "blur(3px)", zIndex: 9500, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "6vh 16px 16px", overflowY: "auto" }}>
       <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 620, boxShadow: "0 20px 60px rgba(38,40,31,0.3)", overflow: "hidden" }}>
         {/* Header */}
-        <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid #f1eadc", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid #efeee9", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 600, color: "#26281f" }}>Confirm import details</div>
-            <div style={{ fontSize: 12.5, color: "#8b8578", marginTop: 4, lineHeight: 1.5 }}>
+            <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 19, fontWeight: 600, color: "#232422" }}>Confirm import details</div>
+            <div style={{ fontSize: 12.5, color: "#7a7973", marginTop: 4, lineHeight: 1.5 }}>
               {open.length > 0
                 ? `${open.length} item${open.length === 1 ? "" : "s"} I wasn't fully sure I captured correctly from this document. Confirm it, or hit "Fix it" — type the value, or just describe the change in plain English and I'll set it for you.`
                 : "Everything checks out — no open data-integrity questions for this deal."}
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", fontSize: 22, color: "#a89f8f", cursor: "pointer", lineHeight: 1, flexShrink: 0 }}>×</button>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", fontSize: 22, color: "#9b9992", cursor: "pointer", lineHeight: 1, flexShrink: 0 }}>×</button>
         </div>
 
         {/* Open questions */}
@@ -536,16 +536,16 @@ USER CORRECTION: ${instruction}`;
             <div key={q.id} style={{ background: sevBg(q.severity), border: `1px solid ${sevColor(q.severity)}33`, borderRadius: 10, padding: "12px 14px", marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
                 <span style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: sevColor(q.severity), background: "#fff", border: `1px solid ${sevColor(q.severity)}44`, borderRadius: 4, padding: "1px 6px" }}>{q.severity}</span>
-                {q.field && <span style={{ fontSize: 10.5, color: "#a89f8f", fontFamily: "monospace" }}>{q.field}</span>}
-                <span style={{ fontSize: 8.5, color: "#bcae97", marginLeft: "auto" }}>{q.source === "ai" ? "AI flag" : "auto-check"}</span>
+                {q.field && <span style={{ fontSize: 10.5, color: "#9b9992", fontFamily: "monospace" }}>{q.field}</span>}
+                <span style={{ fontSize: 8.5, color: "#b8b5ad", marginLeft: "auto" }}>{q.source === "ai" ? "AI flag" : "auto-check"}</span>
               </div>
               <div style={{ fontSize: 13.5, color: "#383a37", fontWeight: 500, lineHeight: 1.5 }}>{q.question}</div>
-              {q.detail && <div style={{ fontSize: 12, color: "#8b8578", marginTop: 4, lineHeight: 1.5 }}>{q.detail}</div>}
+              {q.detail && <div style={{ fontSize: 12, color: "#7a7973", marginTop: 4, lineHeight: 1.5 }}>{q.detail}</div>}
               {q.suggestedValue && editingId !== q.id && (
-                <div style={{ fontSize: 12, color: "#5c5047", marginTop: 6 }}>
-                  Captured as: <span style={{ fontWeight: 600, background: "#fff", border: "1px solid #e7e0d2", borderRadius: 4, padding: "1px 6px" }}>{q.suggestedValue}</span>
+                <div style={{ fontSize: 12, color: "#4f4d48", marginTop: 6 }}>
+                  Captured as: <span style={{ fontWeight: 600, background: "#fff", border: "1px solid #e6e4de", borderRadius: 4, padding: "1px 6px" }}>{q.suggestedValue}</span>
                   {q.target?.kind === "deal" && q.target.fieldKey && (deal.fieldCitations || {})[q.target.fieldKey] && (
-                    <span style={{ marginLeft: 8, color: "#a89f8f" }}>OM source: {(deal.fieldCitations || {})[q.target.fieldKey!]}</span>
+                    <span style={{ marginLeft: 8, color: "#9b9992" }}>OM source: {(deal.fieldCitations || {})[q.target.fieldKey!]}</span>
                   )}
                 </div>
               )}
@@ -554,16 +554,16 @@ USER CORRECTION: ${instruction}`;
                 proposal && proposal.questionId === q.id ? (
                   /* AI proposal — confirm before writing */
                   <div style={{ marginTop: 10, background: "#f4f8ef", border: "1px solid #cfe3b8", borderRadius: 8, padding: "10px 12px" }}>
-                    <div style={{ fontSize: 11.5, color: "#3f7a1f", fontWeight: 700, marginBottom: 6 }}>I'll make {proposal.edits.length === 1 ? "this change" : "these changes"}:</div>
+                    <div style={{ fontSize: 11.5, color: "#3e8a2f", fontWeight: 700, marginBottom: 6 }}>I'll make {proposal.edits.length === 1 ? "this change" : "these changes"}:</div>
                     {proposal.edits.map((e, i) => (
                       <div key={i} style={{ fontSize: 12.5, color: "#2f3a24", padding: "3px 0", display: "flex", gap: 6 }}>
                         <span style={{ color: "#6f9c47" }}>•</span><span>{e.label}</span>
                       </div>
                     ))}
                     <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-                      <button onClick={() => commitEdits(q, proposal.edits, proposal.summary)} style={{ background: "#3f7a1f", border: "none", color: "#fff", padding: "7px 16px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>Apply</button>
-                      <button onClick={() => setProposal(null)} style={{ background: "#fff", border: "1px solid #c8b89a", color: "#7d766a", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>Edit my wording</button>
-                      <button onClick={cancelFix} style={{ background: "transparent", border: "1px solid #d9d2c4", color: "#7d766a", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>Cancel</button>
+                      <button onClick={() => commitEdits(q, proposal.edits, proposal.summary)} style={{ background: "#3e8a2f", border: "none", color: "#fff", padding: "7px 16px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}>Apply</button>
+                      <button onClick={() => setProposal(null)} style={{ background: "#fff", border: "1px solid #c4c1b8", color: "#6b6a65", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Roboto',sans-serif" }}>Edit my wording</button>
+                      <button onClick={cancelFix} style={{ background: "transparent", border: "1px solid #d7d5ce", color: "#6b6a65", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Roboto',sans-serif" }}>Cancel</button>
                     </div>
                   </div>
                 ) : (
@@ -582,14 +582,14 @@ USER CORRECTION: ${instruction}`;
                         onChange={e => setDraft(e.target.value)}
                         onKeyDown={e => { if (e.key === "Enter" && !aiBusy) onSave(q); if (e.key === "Escape") cancelFix(); }}
                         placeholder={!q.target ? "e.g. “Suite 14 is 5,000 SF, not 3,000”" : q.target.valueType === "text" ? "Value, or e.g. “mark this tenant dark”" : "Number, or e.g. “NOI is about 1.2M”"}
-                        style={{ flex: 1, border: "1px solid #c8b89a", borderRadius: 7, padding: "7px 10px", fontSize: 13, color: "#383a37", fontFamily: "'Inter',sans-serif", outline: "none", background: aiBusy ? "#f6f3ec" : "#fff" }}
+                        style={{ flex: 1, border: "1px solid #c4c1b8", borderRadius: 7, padding: "7px 10px", fontSize: 13, color: "#383a37", fontFamily: "'Roboto',sans-serif", outline: "none", background: aiBusy ? "#f6f3ec" : "#fff" }}
                       />
-                      <button onClick={() => onSave(q)} disabled={aiBusy} style={{ background: aiBusy ? "#9bbf7e" : "#3f7a1f", border: "none", color: "#fff", padding: "7px 14px", borderRadius: 7, cursor: aiBusy ? "default" : "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{aiBusy ? "Reading…" : "Save"}</button>
-                      <button onClick={cancelFix} disabled={aiBusy} style={{ background: "transparent", border: "1px solid #d9d2c4", color: "#7d766a", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>Cancel</button>
+                      <button onClick={() => onSave(q)} disabled={aiBusy} style={{ background: aiBusy ? "#9bbf7e" : "#3e8a2f", border: "none", color: "#fff", padding: "7px 14px", borderRadius: 7, cursor: aiBusy ? "default" : "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}>{aiBusy ? "Reading…" : "Save"}</button>
+                      <button onClick={cancelFix} disabled={aiBusy} style={{ background: "transparent", border: "1px solid #d7d5ce", color: "#6b6a65", padding: "7px 12px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Roboto',sans-serif" }}>Cancel</button>
                     </div>
                     {aiErr && <div style={{ fontSize: 11, color: "#c0392b", marginTop: 5 }}>{aiErr}</div>}
                     {!aiErr && (
-                      <div style={{ fontSize: 10.5, color: "#bcae97", marginTop: 5 }}>
+                      <div style={{ fontSize: 10.5, color: "#b8b5ad", marginTop: 5 }}>
                         {q.target?.kind === "tenant" && (q.target.fieldKey === "sf" || q.target.fieldKey === "remainingTermYears")
                           ? "Occupancy / WALT will recompute automatically. "
                           : ""}
@@ -603,9 +603,9 @@ USER CORRECTION: ${instruction}`;
               ) : (
                 <>
                 <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
-                  <button onClick={() => resolve(q, "confirmed")} style={{ background: "#26281f", border: "none", color: "#e8e0cf", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>✓ Looks right</button>
-                  <button onClick={() => startFix(q)} style={{ background: "#fff", border: "1px solid #8cbf63", color: "#3f7a1f", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>✎ Fix it</button>
-                  <button onClick={() => resolve(q, "dismissed")} style={{ background: "#fff", border: "1px solid #d9d2c4", color: "#7d766a", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>Dismiss</button>
+                  <button onClick={() => resolve(q, "confirmed")} style={{ background: "#232422", border: "none", color: "#e8e0cf", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}>✓ Looks right</button>
+                  <button onClick={() => startFix(q)} style={{ background: "#fff", border: "1px solid #8cbf63", color: "#3e8a2f", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}>✎ Fix it</button>
+                  <button onClick={() => resolve(q, "dismissed")} style={{ background: "#fff", border: "1px solid #d7d5ce", color: "#6b6a65", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Roboto',sans-serif" }}>Dismiss</button>
                   <span style={{ marginLeft: "auto" }}>{teachTrigger(q)}</span>
                 </div>
                 {teachBox(q)}
@@ -615,7 +615,7 @@ USER CORRECTION: ${instruction}`;
           ))}
 
           {open.length === 0 && (
-            <div style={{ padding: "26px 22px", textAlign: "center", color: "#9a917f", fontSize: 13 }}>
+            <div style={{ padding: "26px 22px", textAlign: "center", color: "#8f8d86", fontSize: 13 }}>
               ✓ No open questions.
             </div>
           )}
@@ -623,17 +623,17 @@ USER CORRECTION: ${instruction}`;
 
         {/* Resolved (collapsed) */}
         {resolved.length > 0 && (
-          <div style={{ borderTop: "1px solid #f1eadc", padding: "10px 22px 16px" }}>
-            <button onClick={() => setShowResolved(s => !s)} style={{ background: "transparent", border: "none", color: "#a89f8f", cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: 0 }}>
+          <div style={{ borderTop: "1px solid #efeee9", padding: "10px 22px 16px" }}>
+            <button onClick={() => setShowResolved(s => !s)} style={{ background: "transparent", border: "none", color: "#9b9992", cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Roboto',sans-serif", padding: 0 }}>
               {showResolved ? "▾" : "▸"} {resolved.length} resolved
             </button>
             {showResolved && resolved.map(q => (
               <div key={q.id} style={{ borderTop: "1px solid #f6f1e7" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", fontSize: 12 }}>
-                  <span style={{ color: q.resolution === "confirmed" ? "#0f9d63" : q.resolution === "fixed" ? "#3f7a1f" : "#a89f8f", flexShrink: 0 }}>{q.resolution === "confirmed" ? "✓" : q.resolution === "fixed" ? "✎" : "—"}</span>
-                  <span style={{ color: "#8b8578", flex: 1, textDecoration: "line-through", textDecorationColor: "#d9d2c4" }}>{q.question}{q.resolution === "fixed" && q.suggestedValue ? ` → ${q.suggestedValue}` : ""}</span>
+                  <span style={{ color: q.resolution === "confirmed" ? "#0f9d63" : q.resolution === "fixed" ? "#3e8a2f" : "#9b9992", flexShrink: 0 }}>{q.resolution === "confirmed" ? "✓" : q.resolution === "fixed" ? "✎" : "—"}</span>
+                  <span style={{ color: "#7a7973", flex: 1, textDecoration: "line-through", textDecorationColor: "#d7d5ce" }}>{q.question}{q.resolution === "fixed" && q.suggestedValue ? ` → ${q.suggestedValue}` : ""}</span>
                   {teachTrigger(q)}
-                  <button onClick={() => reopen(q)} style={{ background: "transparent", border: "none", color: "#bcae97", cursor: "pointer", fontSize: 11, flexShrink: 0 }}>reopen</button>
+                  <button onClick={() => reopen(q)} style={{ background: "transparent", border: "none", color: "#b8b5ad", cursor: "pointer", fontSize: 11, flexShrink: 0 }}>reopen</button>
                 </div>
                 {teachBox(q)}
               </div>

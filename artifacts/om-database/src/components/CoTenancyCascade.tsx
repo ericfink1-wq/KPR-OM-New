@@ -139,40 +139,40 @@ export default function CoTenancyCascade({ deals, onOpenDeal }: Props) {
     const key = row.anchor.toLowerCase().trim();
     const open = forceOpen || expanded.has(key);
     return (
-      <div key={key} style={{ background: "#fff", border: "1px solid #e7e0d2", borderRadius: 12, marginBottom: 12, overflow: "hidden" }}>
+      <div key={key} style={{ background: "#fff", border: "1px solid #e6e4de", borderRadius: 12, marginBottom: 12, overflow: "hidden" }}>
         <button onClick={() => toggle(key)}
           style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: "13px 16px", display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 13, color: "#a89f8f", width: 12 }}>{open ? "▾" : "▸"}</span>
+          <span style={{ fontSize: 13, color: "#9b9992", width: 12 }}>{open ? "▾" : "▸"}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: 16, fontWeight: 700, color: "#26281f" }}>
+            <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 16, fontWeight: 700, color: "#232422" }}>
               If {row.anchor} goes dark
             </div>
-            <div style={{ fontSize: 11.5, color: "#7d766a", marginTop: 2 }}>
+            <div style={{ fontSize: 11.5, color: "#6b6a65", marginTop: 2 }}>
               {row.dealCount} center{row.dealCount === 1 ? "" : "s"} · {row.tenantCount} dependent lease{row.tenantCount === 1 ? "" : "s"}
             </div>
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 17, fontWeight: 700, color: row.tier1Rent > 0 ? "#b3403f" : "#9a6a12", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1.1 }}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: row.tier1Rent > 0 ? "#b3403f" : "#9a6a12", fontFamily: "'Lora',Georgia,serif", lineHeight: 1.1 }}>
               {fmtMoney(row.tier1Rent)}/yr
             </div>
-            <div style={{ fontSize: 10, color: "#a89f8f" }}>single-anchor · {fmtMoney(row.tier3Rent)} any-linkage</div>
+            <div style={{ fontSize: 10, color: "#9b9992" }}>single-anchor · {fmtMoney(row.tier3Rent)} any-linkage</div>
           </div>
         </button>
 
         {open && (
-          <div style={{ borderTop: "1px solid #f1eadc", padding: "4px 16px 12px" }}>
+          <div style={{ borderTop: "1px solid #efeee9", padding: "4px 16px 12px" }}>
             {row.hits.length === 0 ? (
-              <div style={{ fontSize: 12, color: "#7d766a", padding: "10px 0", lineHeight: 1.55 }}>
+              <div style={{ fontSize: 12, color: "#6b6a65", padding: "10px 0", lineHeight: 1.55 }}>
                 No co-tenancy clause across your {scope === "owned" ? "owned " : ""}centers names <strong>{row.anchor}</strong> — <strong>$0</strong> inline rent is exposed if it goes dark. (Dependencies come from disclosed OM co-tenancy clauses + lease abstracts; if you expected exposure here, the clause may not be captured yet.)
               </div>
             ) : row.hits.map((h, hi) => (
               <div key={hi} style={{ padding: "10px 0", borderBottom: hi < row.hits.length - 1 ? "1px solid #f4efe4" : "none" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
                   <button onClick={() => onOpenDeal(h.dealId)}
-                    style={{ background: "none", border: "none", padding: 0, color: "#3f7a1f", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>
+                    style={{ background: "none", border: "none", padding: 0, color: "#3e8a2f", cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: "inherit" }}>
                     {h.dealName}
                   </button>
-                  <span style={{ fontSize: 11.5, color: "#7d766a" }}>
+                  <span style={{ fontSize: 11.5, color: "#6b6a65" }}>
                     {h.exposure.tier1Rent > 0 ? `${fmtMoney(h.exposure.tier1Rent)}/yr trips alone` : `${fmtMoney(h.exposure.tier3Rent)}/yr linked`}
                   </span>
                 </div>
@@ -182,9 +182,9 @@ export default function CoTenancyCascade({ deals, onOpenDeal }: Props) {
                       <span style={{ fontSize: 8.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: c.tier === 1 ? "#b3403f" : "#9a6a12", background: c.tier === 1 ? "#fdecec" : "#fff3df", border: `1px solid ${c.tier === 1 ? "#f0bcbc" : "#f2d4a0"}`, borderRadius: 3, padding: "1px 5px", flexShrink: 0 }}>
                         T{c.tier}
                       </span>
-                      <span style={{ fontWeight: 600, color: "#2a2c28" }}>{c.tenant}</span>
+                      <span style={{ fontWeight: 600, color: "#232422" }}>{c.tenant}</span>
                       <span>{c.baseRentAnnual != null ? `${fmtMoney(c.baseRentAnnual)}/yr` : "rent n/a"}</span>
-                      <span style={{ color: "#8b8578" }}>· {TIER_LABEL[c.tier]}</span>
+                      <span style={{ color: "#7a7973" }}>· {TIER_LABEL[c.tier]}</span>
                       {!c.verified && <span style={{ color: "#b08", fontStyle: "italic" }}>· unverified (OM-disclosed)</span>}
                     </div>
                   ))}
@@ -198,9 +198,9 @@ export default function CoTenancyCascade({ deals, onOpenDeal }: Props) {
   };
 
   return (
-    <div style={{ padding: "20px 18px 80px", maxWidth: 980, margin: "0 auto", width: "100%", boxSizing: "border-box", fontFamily: "'Inter',sans-serif" }}>
-      <h2 style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: 22, fontWeight: 600, color: "#26281f", margin: "0 0 4px" }}>Co-Tenancy Cascade</h2>
-      <p style={{ fontSize: 12.5, color: "#7d766a", margin: "0 0 16px", lineHeight: 1.5 }}>
+    <div style={{ padding: "20px 18px 80px", maxWidth: 980, margin: "0 auto", width: "100%", boxSizing: "border-box", fontFamily: "'Roboto',sans-serif" }}>
+      <h2 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 600, color: "#232422", margin: "0 0 4px" }}>Co-Tenancy Cascade</h2>
+      <p style={{ fontSize: 12.5, color: "#6b6a65", margin: "0 0 16px", lineHeight: 1.5 }}>
         If an anchor goes dark, which co-tenancy clauses trip and how much inline rent is exposed — across every center at once.
         The headline number is rent that trips on <strong>that anchor alone</strong> (a single-anchor dependency); "any linkage" also
         counts clauses that need additional events (e.g. an X-of-N occupancy test), so it's an upper bound, not a single-anchor figure.
@@ -217,25 +217,25 @@ export default function CoTenancyCascade({ deals, onOpenDeal }: Props) {
           onChange={e => setQuery(e.target.value)}
           list="cascade-tenant-list"
           placeholder="Model ANY tenant going dark — type or pick a name…"
-          style={{ width: "100%", boxSizing: "border-box", fontSize: 13, padding: "9px 12px", border: "1px solid #e3dccd", borderRadius: 9, color: "#26281f", background: "#fff", fontFamily: "'Inter',sans-serif" }}
+          style={{ width: "100%", boxSizing: "border-box", fontSize: 13, padding: "9px 12px", border: "1px solid #dfddd6", borderRadius: 9, color: "#232422", background: "#fff", fontFamily: "'Roboto',sans-serif" }}
         />
         <datalist id="cascade-tenant-list">
           {allTenantNames.map(n => <option key={n} value={n} />)}
         </datalist>
         {query.trim() && (
           <button onClick={() => setQuery("")}
-            style={{ marginTop: 7, background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 11.5, fontWeight: 700, padding: 0 }}>
+            style={{ marginTop: 7, background: "none", border: "none", color: "#3e8a2f", cursor: "pointer", fontSize: 11.5, fontWeight: 700, padding: 0 }}>
             ← Back to all detected anchors
           </button>
         )}
       </div>
 
       {abstracts == null ? (
-        <p style={{ fontSize: 13, color: "#a89f8f", fontStyle: "italic" }}>Loading lease-risk data…</p>
+        <p style={{ fontSize: 13, color: "#9b9992", fontStyle: "italic" }}>Loading lease-risk data…</p>
       ) : query.trim() ? (
         renderRow(customRow!, true)
       ) : rows.length === 0 ? (
-        <p style={{ fontSize: 13, color: "#a89f8f", fontStyle: "italic" }}>
+        <p style={{ fontSize: 13, color: "#9b9992", fontStyle: "italic" }}>
           No co-tenancy dependencies found yet. These come from each deal's disclosed co-tenancy clauses and lease abstracts —
           add them on the deal pages and they'll roll up here. (You can also type a tenant above to check a specific anchor.)
         </p>

@@ -122,9 +122,9 @@ export default function TenantLink({ deals }: Props) {
   const fmtRent = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : n > 0 ? `$${Math.round(n).toLocaleString()}` : "—";
 
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: "18px 18px 40px", width: "100%", boxSizing: "border-box", fontFamily: "'Inter',sans-serif" }}>
-      <div style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em", marginBottom: 4 }}>Link Tenants</div>
-      <div style={{ fontSize: 12.5, color: "#7d766a", lineHeight: 1.5, marginBottom: 12 }}>
+    <div style={{ maxWidth: 760, margin: "0 auto", padding: "18px 18px 40px", width: "100%", boxSizing: "border-box", fontFamily: "'Roboto',sans-serif" }}>
+      <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 24, fontWeight: 500, color: "#232422", letterSpacing: "-0.02em", marginBottom: 4 }}>Link Tenants</div>
+      <div style={{ fontSize: 12.5, color: "#6b6a65", lineHeight: 1.5, marginBottom: 12 }}>
         {linkMode === "merge"
           ? <>Combine the <b>same brand</b> spelled different ways (e.g. <i>Walmart</i> and <i>Wal-Mart</i>) so they group as one across analytics. Tick the rows that are the same tenant, choose the name to keep, then Link.</>
           : <>Group <b>different brands</b> under their <b>parent company</b> (e.g. <i>TJ Maxx</i>, <i>Marshalls</i>, <i>HomeGoods</i> → <i>TJX</i>). The brands stay separate everywhere — this only lets you roll them up by owner. Tick the brands, type the parent, then Link.</>}
@@ -134,8 +134,8 @@ export default function TenantLink({ deals }: Props) {
       <div style={{ display: "flex", background: "#ede8df", borderRadius: 8, padding: 3, gap: 2, marginBottom: 14, width: "fit-content" }}>
         {([["merge", "Same brand"], ["parent", "Parent company"]] as const).map(([m, label]) => (
           <button key={m} onClick={() => { setLinkMode(m); setSel(new Set()); setCanonKey(null); setParentName(""); }}
-            style={{ padding: "6px 16px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif",
-              background: linkMode === m ? "#383a37" : "transparent", color: linkMode === m ? "#fff" : "#7d766a", whiteSpace: "nowrap" }}>
+            style={{ padding: "6px 16px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Roboto',sans-serif",
+              background: linkMode === m ? "#383a37" : "transparent", color: linkMode === m ? "#fff" : "#6b6a65", whiteSpace: "nowrap" }}>
             {label}
           </button>
         ))}
@@ -150,51 +150,51 @@ export default function TenantLink({ deals }: Props) {
         autoComplete="off"
         autoCorrect="off"
         spellCheck={false}
-        style={{ width: "100%", boxSizing: "border-box", fontSize: 14, padding: "10px 12px", border: "1px solid #e3dccd", borderRadius: 9, color: "#383a37", background: "#fff", marginBottom: 12, fontFamily: "'Inter',sans-serif" }}
+        style={{ width: "100%", boxSizing: "border-box", fontSize: 14, padding: "10px 12px", border: "1px solid #dfddd6", borderRadius: 9, color: "#383a37", background: "#fff", marginBottom: 12, fontFamily: "'Roboto',sans-serif" }}
       />
 
       {/* Selection / link bar */}
       <div style={{ background: "#f4f8ef", border: "1px solid #d6e7c4", borderRadius: 10, padding: "11px 13px", marginBottom: 12 }}>
         {linkMode === "merge" ? (
           selectedRows.length < 2 ? (
-            <div style={{ fontSize: 12.5, color: "#5c5047", lineHeight: 1.5 }}>
+            <div style={{ fontSize: 12.5, color: "#4f4d48", lineHeight: 1.5 }}>
               Tick <b>two or more</b> rows that are the same tenant.
-              {selectedRows.length === 1 && <span style={{ color: "#3f7a1f" }}> 1 selected — pick at least one more.</span>}
+              {selectedRows.length === 1 && <span style={{ color: "#3e8a2f" }}> 1 selected — pick at least one more.</span>}
             </div>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 12.5, color: "#5c5047", fontWeight: 600 }}>Link {selectedRows.length} into:</span>
+              <span style={{ fontSize: 12.5, color: "#4f4d48", fontWeight: 600 }}>Link {selectedRows.length} into:</span>
               <select value={effectiveCanonKey ?? ""} onChange={e => setCanonKey(e.target.value)}
-                style={{ fontSize: 13, padding: "6px 9px", border: "1px solid #c8b89a", borderRadius: 7, background: "#fff", fontFamily: "'Inter',sans-serif", maxWidth: 260 }}>
+                style={{ fontSize: 13, padding: "6px 9px", border: "1px solid #c4c1b8", borderRadius: 7, background: "#fff", fontFamily: "'Roboto',sans-serif", maxWidth: 260 }}>
                 {selectedRows.map(r => <option key={r.key} value={r.key}>{tenantLabel(r.displayName)}</option>)}
               </select>
               <button onClick={doLink}
-                style={{ background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 7, padding: "7px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                style={{ background: "#3e8a2f", color: "#fff", border: "none", borderRadius: 7, padding: "7px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
                 Link tenants
               </button>
               <button onClick={() => { setSel(new Set()); setCanonKey(null); }}
-                style={{ background: "transparent", color: "#a89f8f", border: "none", padding: "7px 8px", fontSize: 12.5, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                style={{ background: "transparent", color: "#9b9992", border: "none", padding: "7px 8px", fontSize: 12.5, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
                 Clear
               </button>
             </div>
           )
         ) : (
           selectedRows.length < 1 ? (
-            <div style={{ fontSize: 12.5, color: "#5c5047", lineHeight: 1.5 }}>
+            <div style={{ fontSize: 12.5, color: "#4f4d48", lineHeight: 1.5 }}>
               Tick <b>one or more</b> brands, then name the parent company they belong to.
             </div>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 12.5, color: "#5c5047", fontWeight: 600 }}>Put {selectedRows.length} brand{selectedRows.length !== 1 ? "s" : ""} under:</span>
+              <span style={{ fontSize: 12.5, color: "#4f4d48", fontWeight: 600 }}>Put {selectedRows.length} brand{selectedRows.length !== 1 ? "s" : ""} under:</span>
               <input value={parentName} onChange={e => setParentName(e.target.value)} placeholder="Parent company (e.g. TJX)"
                 onKeyDown={e => { if (e.key === "Enter") doLinkParent(); }}
-                style={{ fontSize: 13, padding: "6px 9px", border: "1px solid #c8b89a", borderRadius: 7, background: "#fff", fontFamily: "'Inter',sans-serif", width: 200 }} />
+                style={{ fontSize: 13, padding: "6px 9px", border: "1px solid #c4c1b8", borderRadius: 7, background: "#fff", fontFamily: "'Roboto',sans-serif", width: 200 }} />
               <button onClick={doLinkParent} disabled={!parentName.trim()}
-                style={{ background: parentName.trim() ? "#3f7a1f" : "#b9c7ab", color: "#fff", border: "none", borderRadius: 7, padding: "7px 16px", fontSize: 13, fontWeight: 600, cursor: parentName.trim() ? "pointer" : "not-allowed", fontFamily: "'Inter',sans-serif" }}>
+                style={{ background: parentName.trim() ? "#3e8a2f" : "#b9c7ab", color: "#fff", border: "none", borderRadius: 7, padding: "7px 16px", fontSize: 13, fontWeight: 600, cursor: parentName.trim() ? "pointer" : "not-allowed", fontFamily: "'Roboto',sans-serif" }}>
                 Link to parent
               </button>
               <button onClick={() => { setSel(new Set()); setParentName(""); }}
-                style={{ background: "transparent", color: "#a89f8f", border: "none", padding: "7px 8px", fontSize: 12.5, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                style={{ background: "transparent", color: "#9b9992", border: "none", padding: "7px 8px", fontSize: 12.5, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
                 Clear
               </button>
             </div>
@@ -203,17 +203,17 @@ export default function TenantLink({ deals }: Props) {
       </div>
 
       {/* Tenant list */}
-      <div style={{ border: "1px solid #ece5d7", borderRadius: 10, overflow: "hidden", marginBottom: 22 }}>
+      <div style={{ border: "1px solid #ebeae5", borderRadius: 10, overflow: "hidden", marginBottom: 22 }}>
         {/* Sortable header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "8px 12px", background: "#f4f1ea", borderBottom: "1px solid #ece5d7" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "8px 12px", background: "#f4f1ea", borderBottom: "1px solid #ebeae5" }}>
           <span style={{ width: 15, flexShrink: 0 }} />
-          <button onClick={() => toggleSort("name")} style={{ flex: 1, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", padding: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: sortKey === "name" ? "#3f7a1f" : "#a69e91", fontFamily: "'Inter',sans-serif" }}>Tenant{arrow("name")}</button>
-          <button onClick={() => toggleSort("locs")} style={{ width: 64, flexShrink: 0, textAlign: "right", background: "transparent", border: "none", cursor: "pointer", padding: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: sortKey === "locs" ? "#3f7a1f" : "#a69e91", fontFamily: "'Inter',sans-serif" }}>Locs{arrow("locs")}</button>
-          <button onClick={() => toggleSort("rent")} style={{ width: 90, flexShrink: 0, textAlign: "right", background: "transparent", border: "none", cursor: "pointer", padding: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: sortKey === "rent" ? "#3f7a1f" : "#a69e91", fontFamily: "'Inter',sans-serif" }}>Rent{arrow("rent")}</button>
+          <button onClick={() => toggleSort("name")} style={{ flex: 1, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", padding: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: sortKey === "name" ? "#3e8a2f" : "#94928b", fontFamily: "'Roboto',sans-serif" }}>Tenant{arrow("name")}</button>
+          <button onClick={() => toggleSort("locs")} style={{ width: 64, flexShrink: 0, textAlign: "right", background: "transparent", border: "none", cursor: "pointer", padding: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: sortKey === "locs" ? "#3e8a2f" : "#94928b", fontFamily: "'Roboto',sans-serif" }}>Locs{arrow("locs")}</button>
+          <button onClick={() => toggleSort("rent")} style={{ width: 90, flexShrink: 0, textAlign: "right", background: "transparent", border: "none", cursor: "pointer", padding: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: sortKey === "rent" ? "#3e8a2f" : "#94928b", fontFamily: "'Roboto',sans-serif" }}>Rent{arrow("rent")}</button>
         </div>
         <div style={{ maxHeight: 460, overflowY: "auto" }}>
           {sorted.length === 0 ? (
-            <div style={{ padding: "26px 0", textAlign: "center", color: "#a89f8f", fontSize: 13 }}>No tenants match &ldquo;{search}&rdquo;</div>
+            <div style={{ padding: "26px 0", textAlign: "center", color: "#9b9992", fontSize: 13 }}>No tenants match &ldquo;{search}&rdquo;</div>
           ) : (
             sorted.map((r, i) => {
               const checked = sel.has(r.key);
@@ -223,16 +223,16 @@ export default function TenantLink({ deals }: Props) {
                   onClick={() => toggle(r.key)}
                   style={{
                     display: "flex", alignItems: "center", gap: 11, padding: "9px 12px", cursor: "pointer",
-                    borderTop: i ? "1px solid #f5f1ea" : "none",
+                    borderTop: i ? "1px solid #f6f5f1" : "none",
                     background: checked ? "#eef6e4" : i % 2 ? "#faf8f4" : "#fff",
                   }}
                 >
-                  <input type="checkbox" checked={checked} readOnly style={{ width: 15, height: 15, flexShrink: 0, accentColor: "#3f7a1f" }} />
+                  <input type="checkbox" checked={checked} readOnly style={{ width: 15, height: 15, flexShrink: 0, accentColor: "#3e8a2f" }} />
                   <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13.5, color: "#383a37", fontWeight: checked ? 600 : 400 }}>
                     {tenantLabel(r.displayName)}
                   </span>
-                  <span style={{ width: 64, flexShrink: 0, textAlign: "right", fontSize: 11.5, color: "#a89f8f", whiteSpace: "nowrap" }}>{r.locationCount}</span>
-                  <span style={{ width: 90, flexShrink: 0, textAlign: "right", fontSize: 11.5, color: "#6f6a5f", whiteSpace: "nowrap" }}>{fmtRent(r.totalAnnualRent)}</span>
+                  <span style={{ width: 64, flexShrink: 0, textAlign: "right", fontSize: 11.5, color: "#9b9992", whiteSpace: "nowrap" }}>{r.locationCount}</span>
+                  <span style={{ width: 90, flexShrink: 0, textAlign: "right", fontSize: 11.5, color: "#676767", whiteSpace: "nowrap" }}>{fmtRent(r.totalAnnualRent)}</span>
                 </div>
               );
             })
@@ -247,17 +247,17 @@ export default function TenantLink({ deals }: Props) {
             Linked tenants ({userMerges.length})
           </div>
           {userMerges.length === 0 ? (
-            <div style={{ fontSize: 12.5, color: "#a89f8f" }}>No manual links yet.</div>
+            <div style={{ fontSize: 12.5, color: "#9b9992" }}>No manual links yet.</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {userMerges.map(m => (
-                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #ece5d7", borderRadius: 8, padding: "9px 12px" }}>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#5c5047", lineHeight: 1.5 }}>
-                    <b style={{ color: "#26281f" }}>{m.canonical}</b>
-                    <span style={{ color: "#a89f8f" }}> ← {m.variants.filter(v => tenantLabel(v) !== m.canonical).map(v => tenantLabel(v)).join(", ") || "(variants)"}</span>
+                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #ebeae5", borderRadius: 8, padding: "9px 12px" }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#4f4d48", lineHeight: 1.5 }}>
+                    <b style={{ color: "#232422" }}>{m.canonical}</b>
+                    <span style={{ color: "#9b9992" }}> ← {m.variants.filter(v => tenantLabel(v) !== m.canonical).map(v => tenantLabel(v)).join(", ") || "(variants)"}</span>
                   </span>
                   <button onClick={() => unlink(m.id)} title="Unlink — split these names back apart"
-                    style={{ background: "transparent", border: "1px solid #e7c9bf", color: "#c0392b", cursor: "pointer", fontSize: 11.5, fontWeight: 600, borderRadius: 7, padding: "5px 11px", flexShrink: 0, fontFamily: "'Inter',sans-serif" }}>
+                    style={{ background: "transparent", border: "1px solid #e7c9bf", color: "#c0392b", cursor: "pointer", fontSize: 11.5, fontWeight: 600, borderRadius: 7, padding: "5px 11px", flexShrink: 0, fontFamily: "'Roboto',sans-serif" }}>
                     Unlink
                   </button>
                 </div>
@@ -271,17 +271,17 @@ export default function TenantLink({ deals }: Props) {
             Parent-company links ({parentLinks.length})
           </div>
           {parentLinks.length === 0 ? (
-            <div style={{ fontSize: 12.5, color: "#a89f8f" }}>No parent-company links yet.</div>
+            <div style={{ fontSize: 12.5, color: "#9b9992" }}>No parent-company links yet.</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {parentLinks.map(l => (
-                <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #ece5d7", borderRadius: 8, padding: "9px 12px" }}>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#5c5047", lineHeight: 1.5 }}>
-                    <b style={{ color: "#26281f" }}>{l.parent}</b>
-                    <span style={{ color: "#a89f8f" }}> ← {l.brands.map(b => tenantLabel(b)).join(", ") || "(brands)"}</span>
+                <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #ebeae5", borderRadius: 8, padding: "9px 12px" }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#4f4d48", lineHeight: 1.5 }}>
+                    <b style={{ color: "#232422" }}>{l.parent}</b>
+                    <span style={{ color: "#9b9992" }}> ← {l.brands.map(b => tenantLabel(b)).join(", ") || "(brands)"}</span>
                   </span>
                   <button onClick={() => unlinkParent(l.id)} title="Unlink — remove this parent-company grouping"
-                    style={{ background: "transparent", border: "1px solid #e7c9bf", color: "#c0392b", cursor: "pointer", fontSize: 11.5, fontWeight: 600, borderRadius: 7, padding: "5px 11px", flexShrink: 0, fontFamily: "'Inter',sans-serif" }}>
+                    style={{ background: "transparent", border: "1px solid #e7c9bf", color: "#c0392b", cursor: "pointer", fontSize: 11.5, fontWeight: 600, borderRadius: 7, padding: "5px 11px", flexShrink: 0, fontFamily: "'Roboto',sans-serif" }}>
                     Unlink
                   </button>
                 </div>

@@ -246,7 +246,7 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
 
   const card: React.CSSProperties = {
     background: "#fff",
-    border: "1px solid #efe8da",
+    border: "1px solid #ecebe6",
     borderRadius: 12,
     padding: "16px 20px",
     marginBottom: 14,
@@ -255,10 +255,10 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: 900, margin: "0 auto" }}>
-      <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: 26, fontWeight: 600, color: "#26281f", margin: "0 0 4px 0" }}>
+      <h1 className="kpr-page-title">
         Tenant Name Audit
       </h1>
-      <p style={{ fontSize: 12, color: "#9a917f", margin: "0 0 18px 0", lineHeight: 1.5 }}>
+      <p style={{ fontSize: 12, color: "#8f8d86", margin: "0 0 18px 0", lineHeight: 1.5 }}>
         How tenant names group across your portfolio. "Possible splits" are name variants that may be the same brand
         but aren't grouping together when clicked — review these.
       </p>
@@ -271,9 +271,9 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
           ["Total placements", stats.totalPlacements],
           ["Possible splits", activeSplitCount],
         ].map(([label, val]) => (
-          <div key={label as string} style={{ flex: "1 1 130px", background: "#fff", border: "1px solid #efe8da", borderRadius: 12, padding: "13px 16px" }}>
-            <div style={{ fontSize: 10, letterSpacing: "0.06em", color: "#a69e91", marginBottom: 6, fontWeight: 500, textTransform: "uppercase" }}>{label}</div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 600, color: label === "Possible splits" && (val as number) > 0 ? "#b45309" : "#383a37", lineHeight: 1 }}>{val as number}</div>
+          <div key={label as string} style={{ flex: "1 1 130px", background: "#fff", border: "1px solid #ecebe6", borderRadius: 12, padding: "13px 16px" }}>
+            <div style={{ fontSize: 10, letterSpacing: "0.06em", color: "#94928b", marginBottom: 6, fontWeight: 500, textTransform: "uppercase" }}>{label}</div>
+            <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 600, color: label === "Possible splits" && (val as number) > 0 ? "#b45309" : "#383a37", lineHeight: 1 }}>{val as number}</div>
           </div>
         ))}
       </div>
@@ -286,7 +286,7 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
           </div>
 
           {visibleSplits.length === 0 && (
-            <div style={{ fontSize: 12, color: "#a69e91", padding: "4px 0 8px" }}>
+            <div style={{ fontSize: 12, color: "#94928b", padding: "4px 0 8px" }}>
               All flagged pairs have been reviewed.
             </div>
           )}
@@ -294,19 +294,19 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
           {visibleSplits.map((s, i) => (
             <div key={getPairId(s)} style={{ padding: "10px 0", borderBottom: i < visibleSplits.length - 1 ? "1px solid #f5efe2" : "none" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
-                <div style={{ fontSize: 10, color: "#a69e91" }}>Likely same tenant — {s.reason}:</div>
+                <div style={{ fontSize: 10, color: "#94928b" }}>Likely same tenant — {s.reason}:</div>
                 <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                   <button
                     onClick={() => merge(s)}
                     style={{
                       background: "transparent",
-                      border: "1px solid #3f7a1f",
-                      color: "#3f7a1f",
+                      border: "1px solid #3e8a2f",
+                      color: "#3e8a2f",
                       padding: "2px 9px",
                       borderRadius: 5,
                       cursor: "pointer",
                       fontSize: 10.5,
-                      fontFamily: "'Inter',sans-serif",
+                      fontFamily: "'Roboto',sans-serif",
                       whiteSpace: "nowrap",
                     }}
                   >
@@ -316,13 +316,13 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
                     onClick={() => dismiss(s)}
                     style={{
                       background: "transparent",
-                      border: "1px solid #ddd4c2",
-                      color: "#a69e91",
+                      border: "1px solid #dad8d1",
+                      color: "#94928b",
                       padding: "2px 9px",
                       borderRadius: 5,
                       cursor: "pointer",
                       fontSize: 10.5,
-                      fontFamily: "'Inter',sans-serif",
+                      fontFamily: "'Roboto',sans-serif",
                       whiteSpace: "nowrap",
                     }}
                   >
@@ -332,11 +332,11 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {[s.a, s.b].map((g) => (
-                  <div key={g.key} style={{ flex: "1 1 240px", background: "#faf7f0", borderRadius: 8, padding: "8px 12px", border: "1px solid #f0e8d6" }}>
+                  <div key={g.key} style={{ flex: "1 1 240px", background: "#faf9f5", borderRadius: 8, padding: "8px 12px", border: "1px solid #f0e8d6" }}>
                     {Array.from(g.rawNames.entries()).map(([raw, dealLabels]) => (
                       <div key={raw} style={{ marginBottom: 2 }}>
                         <span style={{ fontSize: 12.5, color: "#383a37", fontWeight: 600 }}>{raw}</span>
-                        <span style={{ fontSize: 11, color: "#9a917f" }}> — {dealLabels.join(", ")}</span>
+                        <span style={{ fontSize: 11, color: "#8f8d86" }}> — {dealLabels.join(", ")}</span>
                       </div>
                     ))}
                   </div>
@@ -346,7 +346,7 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
           ))}
 
           {visibleSplits.length > 0 && (
-            <div style={{ fontSize: 10.5, color: "#7d766a", marginTop: 10, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 10.5, color: "#6b6a65", marginTop: 10, lineHeight: 1.5 }}>
               To merge: click "✓ Correct — merge them" and the two names will group as one across the whole app. To separate a pair that shouldn't merge, click "✕ Incorrect — keep separate".
             </div>
           )}
@@ -355,12 +355,12 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
           {userMerges.length > 0 && (
             <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #f5efe2" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 10.5, color: "#3f7a1f", fontWeight: 600 }}>
+                <span style={{ fontSize: 10.5, color: "#3e8a2f", fontWeight: 600 }}>
                   {userMerges.length} merged
                 </span>
                 <button
                   onClick={() => setShowMergeRestored(v => !v)}
-                  style={{ background: "transparent", border: "none", color: "#a69e91", padding: 0, cursor: "pointer", fontSize: 10.5, fontFamily: "'Inter',sans-serif", textDecoration: "underline" }}
+                  style={{ background: "transparent", border: "none", color: "#94928b", padding: 0, cursor: "pointer", fontSize: 10.5, fontFamily: "'Roboto',sans-serif", textDecoration: "underline" }}
                 >
                   {showMergeRestored ? "hide" : "show / restore"}
                 </button>
@@ -368,11 +368,11 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
               {showMergeRestored && (
                 <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 5 }}>
                   {userMerges.map(m => (
-                    <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, color: "#9a917f" }}>
+                    <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, color: "#8f8d86" }}>
                       <span>{m.variants.join(" + ")} → <strong style={{ color: "#383a37" }}>{m.canonical}</strong></span>
                       <button
                         onClick={() => restoreMerge(m.id)}
-                        style={{ background: "transparent", border: "none", color: "#b45309", padding: 0, cursor: "pointer", fontSize: 10.5, fontFamily: "'Inter',sans-serif", textDecoration: "underline", flexShrink: 0 }}
+                        style={{ background: "transparent", border: "none", color: "#b45309", padding: 0, cursor: "pointer", fontSize: 10.5, fontFamily: "'Roboto',sans-serif", textDecoration: "underline", flexShrink: 0 }}
                       >
                         Restore
                       </button>
@@ -392,7 +392,7 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
                 </span>
                 <button
                   onClick={() => setShowRestored(v => !v)}
-                  style={{ background: "transparent", border: "none", color: "#a69e91", padding: 0, cursor: "pointer", fontSize: 10.5, fontFamily: "'Inter',sans-serif", textDecoration: "underline" }}
+                  style={{ background: "transparent", border: "none", color: "#94928b", padding: 0, cursor: "pointer", fontSize: 10.5, fontFamily: "'Roboto',sans-serif", textDecoration: "underline" }}
                 >
                   {showRestored ? "hide" : "show / restore"}
                 </button>
@@ -403,11 +403,11 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
                     const aName = Array.from(s.a.rawNames.keys())[0] ?? s.a.key;
                     const bName = Array.from(s.b.rawNames.keys())[0] ?? s.b.key;
                     return (
-                      <div key={getPairId(s)} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, color: "#9a917f" }}>
+                      <div key={getPairId(s)} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, color: "#8f8d86" }}>
                         <span>{aName} &amp; {bName}</span>
                         <button
                           onClick={() => restoreDismissed(s)}
-                          style={{ background: "transparent", border: "none", color: "#b45309", padding: 0, cursor: "pointer", fontSize: 10.5, fontFamily: "'Inter',sans-serif", textDecoration: "underline" }}
+                          style={{ background: "transparent", border: "none", color: "#b45309", padding: 0, cursor: "pointer", fontSize: 10.5, fontFamily: "'Roboto',sans-serif", textDecoration: "underline" }}
                         >
                           Restore
                         </button>
@@ -424,12 +424,12 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
       {/* Tenant groups */}
       <div style={card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "#a69e91", fontWeight: 700, textTransform: "uppercase" }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "#94928b", fontWeight: 700, textTransform: "uppercase" }}>
             {showAll ? "All Tenants" : "Multi-Location Tenants"}
           </div>
           <button
             onClick={() => setShowAll((x) => !x)}
-            style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 10.5, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}
+            style={{ background: "transparent", border: "1px solid #dad8d1", color: "#52554e", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontSize: 10.5, fontFamily: "'Roboto',sans-serif", fontWeight: 600 }}
           >
             {showAll ? "Show multi-location only" : `Show all ${stats.uniqueTenants}`}
           </button>
@@ -457,12 +457,12 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
                   )}
                 </div>
                 {hasVariants && (
-                  <div style={{ fontSize: 10.5, color: "#9a917f", marginTop: 2 }}>
+                  <div style={{ fontSize: 10.5, color: "#8f8d86", marginTop: 2 }}>
                     Variants: {variants.join(" · ")}
                   </div>
                 )}
               </div>
-              <div style={{ fontSize: 12, color: "#6f6a5f", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: 12, color: "#676767", whiteSpace: "nowrap" }}>
                 {g.locationCount} location{g.locationCount !== 1 ? "s" : ""}
               </div>
             </div>
@@ -470,7 +470,7 @@ export default function TenantAudit({ deals, onTenantClick, onDealsChanged }: Pr
         })}
 
         {displayedGroups.length === 0 && (
-          <div style={{ fontSize: 12, color: "#a69e91", padding: "8px 0" }}>No tenants found.</div>
+          <div style={{ fontSize: 12, color: "#94928b", padding: "8px 0" }}>No tenants found.</div>
         )}
       </div>
     </div>

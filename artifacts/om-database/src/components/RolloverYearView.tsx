@@ -44,7 +44,7 @@ function fmtDate(d: string | null): string {
 }
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-  Owned:            { bg: "#e6f4d5", color: "#3f7a1f" },
+  Owned:            { bg: "#e6f4d5", color: "#3e8a2f" },
   Sold:             { bg: "#fef3c7", color: "#92400e" },
   "Under Contract": { bg: "#dbeafe", color: "#1d4ed8" },
   Prospect:         { bg: "#f3f4f6", color: "#6b7280" },
@@ -52,7 +52,7 @@ const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
 };
 
 function StatusBadge({ status }: { status: string | null }) {
-  if (!status) return <span style={{ color: "#c9c2b8", fontSize: 10 }}>—</span>;
+  if (!status) return <span style={{ color: "#c6c4bd", fontSize: 10 }}>—</span>;
   const style = STATUS_BADGE[status] ?? { bg: "#f3f4f6", color: "#6b7280" };
   return (
     <span style={{
@@ -64,7 +64,7 @@ function StatusBadge({ status }: { status: string | null }) {
       background: style.bg,
       color: style.color,
       whiteSpace: "nowrap",
-      fontFamily: "'Inter',sans-serif",
+      fontFamily: "'Roboto',sans-serif",
     }}>
       {status}
     </span>
@@ -159,16 +159,16 @@ export default function RolloverYearView({ year, filterDealIds, initialScope = "
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 22, flexWrap: "wrap" }}>
         <button
           onClick={onBack}
-          style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", flexShrink: 0, marginTop: 4 }}
+          style={{ background: "transparent", border: "1px solid #e6e4de", color: "#6b6a65", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Roboto',sans-serif", flexShrink: 0, marginTop: 4 }}
         >
           ← Back
         </button>
         <div>
-          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em", lineHeight: 1.15 }}>
+          <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 500, color: "#232422", letterSpacing: "-0.02em", lineHeight: 1.15 }}>
             {year === "Unknown" ? "Unknown Expiry" : `${year} Lease Rollovers`}
           </div>
           {data && (
-            <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>
+            <div style={{ fontSize: 12, color: "#9b9992", marginTop: 3 }}>
               {data.tenants.length} tenant{data.tenants.length !== 1 ? "s" : ""}
               {totalRent > 0 && <> · {fmtRent(totalRent)} total annual rent</>}
               {totalSF > 0 && <> · {fmtSF(totalSF)} SF</>}
@@ -178,10 +178,10 @@ export default function RolloverYearView({ year, filterDealIds, initialScope = "
         </div>
 
         {/* All / Owned scope toggle (carried from the analytics page) */}
-        <div style={{ marginLeft: "auto", display: "flex", border: "1px solid #e7e0d2", borderRadius: 7, overflow: "hidden", fontFamily: "'Inter',sans-serif", fontSize: 12, flexShrink: 0, marginTop: 4 }}>
+        <div style={{ marginLeft: "auto", display: "flex", border: "1px solid #e6e4de", borderRadius: 7, overflow: "hidden", fontFamily: "'Roboto',sans-serif", fontSize: 12, flexShrink: 0, marginTop: 4 }}>
           {(["all", "owned"] as const).map(s => (
             <button key={s} onClick={() => setScope(s)}
-              style={{ padding: "5px 13px", background: scope === s ? "#383a37" : "#faf7f0", color: scope === s ? "#f6f2ea" : "#7d766a", border: "none", cursor: "pointer", fontWeight: scope === s ? 600 : 400, fontFamily: "inherit", fontSize: "inherit" }}>
+              style={{ padding: "5px 13px", background: scope === s ? "#383a37" : "#faf9f5", color: scope === s ? "#faf9f5" : "#6b6a65", border: "none", cursor: "pointer", fontWeight: scope === s ? 600 : 400, fontFamily: "inherit", fontSize: "inherit" }}>
               {s === "all" ? "All" : "Owned"}
             </button>
           ))}
@@ -190,7 +190,7 @@ export default function RolloverYearView({ year, filterDealIds, initialScope = "
 
       {/* States */}
       {loading && (
-        <div style={{ textAlign: "center", padding: "60px 0", color: "#a89f8f", fontSize: 13 }}>Loading…</div>
+        <div style={{ textAlign: "center", padding: "60px 0", color: "#9b9992", fontSize: 13 }}>Loading…</div>
       )}
       {error && (
         <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "14px 18px", color: "#b91c1c", fontSize: 13 }}>
@@ -198,13 +198,13 @@ export default function RolloverYearView({ year, filterDealIds, initialScope = "
         </div>
       )}
       {!loading && !error && data && data.tenants.length === 0 && (
-        <div style={{ textAlign: "center", padding: "60px 0", color: "#a89f8f", fontSize: 13 }}>
+        <div style={{ textAlign: "center", padding: "60px 0", color: "#9b9992", fontSize: 13 }}>
           No tenants with lease expiry in {year === "Unknown" ? "unknown year" : year}.
         </div>
       )}
 
       {!loading && !error && data && data.tenants.length > 0 && (
-        <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ background: "#fff", border: "1px solid #ebeae5", borderRadius: 12, overflow: "hidden" }}>
           <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 580 }}>
               <colgroup>
@@ -217,18 +217,18 @@ export default function RolloverYearView({ year, filterDealIds, initialScope = "
                 <col style={{ width: 110 }} />
               </colgroup>
               <thead>
-                <tr style={{ background: "#faf7f0", borderBottom: "1px solid #ece5d7" }}>
+                <tr style={{ background: "#faf9f5", borderBottom: "1px solid #ebeae5" }}>
                   {(() => {
                     const arrow = (k: SortKey) => sortKey === k ? (sortDir === "asc" ? " ▲" : " ▼") : "";
                     const Hd = ({ k, label, align }: { k: SortKey; label: string; align: "left" | "right" | "center" }) => (
                       <th onClick={() => toggleSort(k)}
-                        style={{ padding: "10px 14px", textAlign: align, fontSize: 10, color: sortKey === k ? "#383a37" : "#a89f8f", fontWeight: 700, letterSpacing: "0.05em", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                        style={{ padding: "10px 14px", textAlign: align, fontSize: 10, color: sortKey === k ? "#383a37" : "#9b9992", fontWeight: 700, letterSpacing: "0.05em", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
                         {label}{arrow(k)}
                       </th>
                     );
                     return (
                       <>
-                        <th style={{ padding: "10px 14px", textAlign: "right", fontSize: 10, color: "#a89f8f", fontWeight: 700, letterSpacing: "0.05em" }}>#</th>
+                        <th style={{ padding: "10px 14px", textAlign: "right", fontSize: 10, color: "#9b9992", fontWeight: 700, letterSpacing: "0.05em" }}>#</th>
                         <Hd k="name" label="TENANT" align="left" />
                         <Hd k="dealName" label="PROPERTY" align="left" />
                         <Hd k="annualRent" label="ANNUAL RENT" align="right" />
@@ -242,34 +242,34 @@ export default function RolloverYearView({ year, filterDealIds, initialScope = "
               </thead>
               <tbody>
                 {sortedTenants.map((t, i) => (
-                  <tr key={i} style={{ borderBottom: "1px solid #f5f1ea" }}>
-                    <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 10.5, color: "#c9c2b8" }}>{i + 1}</td>
-                    <td style={{ padding: "10px 14px", fontWeight: 600, fontSize: 12, color: onTenantClick ? "#3f7a1f" : "#26281f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onTenantClick ? "pointer" : "default", textDecoration: onTenantClick ? "underline" : "none", textDecorationColor: "#cfe0bd", textUnderlineOffset: 2 }}
+                  <tr key={i} style={{ borderBottom: "1px solid #f6f5f1" }}>
+                    <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 10.5, color: "#c6c4bd" }}>{i + 1}</td>
+                    <td style={{ padding: "10px 14px", fontWeight: 600, fontSize: 12, color: onTenantClick ? "#3e8a2f" : "#232422", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onTenantClick ? "pointer" : "default", textDecoration: onTenantClick ? "underline" : "none", textDecorationColor: "#cfe0bd", textUnderlineOffset: 2 }}
                       onClick={onTenantClick ? () => onTenantClick(t.name) : undefined}
                       title={onTenantClick ? `View ${t.name} across the portfolio` : undefined}>
                       {t.name}
                     </td>
-                    <td style={{ padding: "10px 14px", fontSize: 11, color: (onOpenDeal && t.dealId) ? "#4f7aac" : "#6f6a5f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: (onOpenDeal && t.dealId) ? "pointer" : "default", textDecoration: (onOpenDeal && t.dealId) ? "underline" : "none", textDecorationColor: "#cdd9e8", textUnderlineOffset: 2 }}
+                    <td style={{ padding: "10px 14px", fontSize: 11, color: (onOpenDeal && t.dealId) ? "#4f7aac" : "#676767", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: (onOpenDeal && t.dealId) ? "pointer" : "default", textDecoration: (onOpenDeal && t.dealId) ? "underline" : "none", textDecorationColor: "#cdd9e8", textUnderlineOffset: 2 }}
                       onClick={(onOpenDeal && t.dealId) ? () => onOpenDeal(t.dealId!) : undefined}
                       title={(onOpenDeal && t.dealId) ? `Open ${t.dealName}` : undefined}>
                       {t.dealName || "—"}
                     </td>
                     <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 12, color: "#383a37", fontWeight: 600 }}>{fmtRent(t.annualRent)}</td>
-                    <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 11, color: "#6f6a5f" }}>{fmtSF(t.sf)}</td>
-                    <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 11, color: "#6f6a5f" }}>{fmtDate(t.expiryDate)}</td>
+                    <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 11, color: "#676767" }}>{fmtSF(t.sf)}</td>
+                    <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 11, color: "#676767" }}>{fmtDate(t.expiryDate)}</td>
                     <td style={{ padding: "10px 14px", textAlign: "center" }}><StatusBadge status={t.dealStatus} /></td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr style={{ borderTop: "2px solid #ece5d7", background: "#faf7f0" }}>
+                <tr style={{ borderTop: "2px solid #ebeae5", background: "#faf9f5" }}>
                   <td />
-                  <td style={{ padding: "10px 14px", fontSize: 11, color: "#a89f8f", fontWeight: 600 }}>
+                  <td style={{ padding: "10px 14px", fontSize: 11, color: "#9b9992", fontWeight: 600 }}>
                     {data.tenants.length} tenant{data.tenants.length !== 1 ? "s" : ""}
                   </td>
                   <td />
                   <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 12, color: "#383a37", fontWeight: 600 }}>{fmtRent(totalRent)}</td>
-                  <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 11, color: "#6f6a5f" }}>{totalSF > 0 ? fmtSF(totalSF) : "—"}</td>
+                  <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 11, color: "#676767" }}>{totalSF > 0 ? fmtSF(totalSF) : "—"}</td>
                   <td /><td />
                 </tr>
               </tfoot>

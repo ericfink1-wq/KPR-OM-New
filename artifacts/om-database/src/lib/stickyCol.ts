@@ -18,7 +18,7 @@ export function stickyFirstCol(bg: string, isHeader = false): CSSProperties {
     left: 0,
     zIndex: isHeader ? 3 : 2,
     background: bg,
-    borderRight: "1px solid #efe8da",
+    borderRight: "1px solid #ecebe6",
     boxShadow: "6px 0 6px -6px rgba(0,0,0,0.12)",
   };
 }

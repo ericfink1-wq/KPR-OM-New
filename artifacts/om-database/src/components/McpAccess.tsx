@@ -50,21 +50,21 @@ function CopyBox({ value, label }: { value: string; label?: string }) {
   };
   return (
     <div>
-      {label && <div style={{ fontSize: 10.5, fontWeight: 700, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{label}</div>}
+      {label && <div style={{ fontSize: 10.5, fontWeight: 700, color: "#94928b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{label}</div>}
       <div style={{ display: "flex", gap: 6, alignItems: "stretch" }}>
         <code style={{
-          flex: "1 1 auto", minWidth: 0, background: "#fff", border: "1px solid #e3dccd", borderRadius: 7,
-          padding: "8px 10px", fontSize: 11.5, color: "#26281f", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+          flex: "1 1 auto", minWidth: 0, background: "#fff", border: "1px solid #dfddd6", borderRadius: 7,
+          padding: "8px 10px", fontSize: 11.5, color: "#232422", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
           overflowWrap: "anywhere", lineHeight: 1.45,
           // pre-wrap so multi-line config JSON keeps its indentation instead of
           // collapsing into one unreadable run of text.
           whiteSpace: "pre-wrap",
         }}>{value}</code>
         <button onClick={copy} style={{
-          flexShrink: 0, background: copied ? "#eef7ee" : "#fff", border: `1px solid ${copied ? "#cfe9c4" : "#ddd4c2"}`,
+          flexShrink: 0, background: copied ? "#eef7ee" : "#fff", border: `1px solid ${copied ? "#cfe9c4" : "#dad8d1"}`,
           color: copied ? "#0f7a3d" : "#52554e", borderRadius: 7, padding: "0 12px", height: 38,
           alignSelf: "flex-start", cursor: "pointer", fontSize: 11.5, fontWeight: 700,
-          fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap",
+          fontFamily: "'Roboto',sans-serif", whiteSpace: "nowrap",
         }}>{copied ? "✓ Copied" : "Copy"}</button>
       </div>
     </div>
@@ -77,9 +77,9 @@ function CopyBox({ value, label }: { value: string; label?: string }) {
 import skillMarkdown from "../../../../.claude/skills/kpr-retail-analysis/SKILL.md?raw";
 import teamInstructionsMd from "../../../../.claude/skills/kpr-retail-analysis/team-instructions.md?raw";
 
-const OLIVE = "#26281f";
+const OLIVE = "#232422";
 const GREEN = "#0f7a3d";
-const MUTED = "#6f6a5f";
+const MUTED = "#676767";
 const HILITE = "#e8590c";   // the "click here" ring on the mock screens
 
 const TEST_QUESTION = "Using the KPR deal library, what's the typical rent per SF for Dollar Tree, and how many leases is that based on?";
@@ -117,7 +117,7 @@ function BigCopy({ value, label, onCopied }: { value: string; label: string; onC
   return (
     <button onClick={async () => { await copyText(value); setCopied(true); onCopied?.(); setTimeout(() => setCopied(false), 2500); }}
       style={{
-        width: "100%", minHeight: 52, borderRadius: 10, cursor: "pointer", fontFamily: "'Inter',sans-serif",
+        width: "100%", minHeight: 52, borderRadius: 10, cursor: "pointer", fontFamily: "'Roboto',sans-serif",
         background: copied ? "#eef7ee" : GREEN, color: copied ? GREEN : "#fff",
         border: `2px solid ${GREEN}`, fontSize: 15, fontWeight: 700,
       }}>{copied ? "✓ Copied! Now go to the next step" : `📋 ${label}`}</button>
@@ -138,7 +138,7 @@ function MockFrame({ children, caption }: { children: ReactNode; caption?: strin
       <div style={{ border: "1px solid #d9d4c8", borderRadius: 10, background: "#fbfbf9", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif" }}>
         {children}
       </div>
-      <div style={{ fontSize: 10.5, color: "#a69e91", marginTop: 4, textAlign: "center" }}>{caption ?? "What it looks like in Claude (may differ slightly)"}</div>
+      <div style={{ fontSize: 10.5, color: "#94928b", marginTop: 4, textAlign: "center" }}>{caption ?? "What it looks like in Claude (may differ slightly)"}</div>
     </div>
   );
 }
@@ -422,20 +422,20 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
     : "";
 
   const sectionTitle = (t: string) => (
-    <div style={{ fontSize: 11, fontWeight: 700, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>{t}</div>
+    <div style={{ fontSize: 11, fontWeight: 700, color: "#94928b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>{t}</div>
   );
 
   const P = ({ children }: { children: ReactNode }) => (
     <p style={{ margin: "0 0 8px", fontSize: 14, lineHeight: 1.6, color: "#2f3229" }}>{children}</p>
   );
   const H = ({ children }: { children: ReactNode }) => (
-    <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 700, color: OLIVE, marginBottom: 10, fontFamily: "'Fraunces',serif" }}>{children}</div>
+    <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 700, color: OLIVE, marginBottom: 10, fontFamily: "'Lora',Georgia,serif" }}>{children}</div>
   );
 
   const planBtn = (id: Plan, title: string, sub: string) => (
     <button key={id} onClick={() => { setPlan(id); setUnsurePlan(false); }} style={{
-      flex: "1 1 200px", textAlign: "left", cursor: "pointer", fontFamily: "'Inter',sans-serif",
-      background: plan === id ? "#f4f8f2" : "#fff", border: `2px solid ${plan === id ? GREEN : "#e3dccd"}`,
+      flex: "1 1 200px", textAlign: "left", cursor: "pointer", fontFamily: "'Roboto',sans-serif",
+      background: plan === id ? "#f4f8f2" : "#fff", border: `2px solid ${plan === id ? GREEN : "#dfddd6"}`,
       borderRadius: 10, padding: "12px 14px", minHeight: 64,
     }}>
       <div style={{ fontSize: 14.5, fontWeight: 700, color: OLIVE }}>{plan === id ? "● " : "○ "}{title}</div>
@@ -479,8 +479,8 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
         <P>This makes a private link that lets <strong>your</strong> Claude read the deal library. It's tied to your KPR login.</P>
         <P>Don't share it with anyone — colleagues make their own here.</P>
         <button onClick={create} disabled={busy || !!minted} style={{
-          width: "100%", minHeight: 54, marginTop: 6, borderRadius: 10, border: "none", fontFamily: "'Inter',sans-serif",
-          background: minted ? "#eef7ee" : busy ? "#e3dccd" : GREEN, color: minted ? GREEN : busy ? "#a89f8f" : "#fff",
+          width: "100%", minHeight: 54, marginTop: 6, borderRadius: 10, border: "none", fontFamily: "'Roboto',sans-serif",
+          background: minted ? "#eef7ee" : busy ? "#dfddd6" : GREEN, color: minted ? GREEN : busy ? "#9b9992" : "#fff",
           fontSize: 15.5, fontWeight: 700, cursor: busy || minted ? "default" : "pointer",
         }}>{minted ? "✓ Key created" : busy ? "Creating…" : "Create my key"}</button>
       </>);
@@ -595,7 +595,7 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
           <strong>On a Mac using Safari?</strong> Safari sometimes unzips the file by itself, so you get a <em>folder</em> instead of a .zip and the upload won't take it.
           If that happens, open Downloads, right-click the <strong>kpr-retail-analysis</strong> folder → <strong>Compress</strong>, and upload the new .zip.
         </Note>
-        <details open={plan === "free"} style={{ marginTop: 12, border: "1px solid #e3dccd", borderRadius: 10, background: "#fff", padding: "4px 12px 10px" }}>
+        <details open={plan === "free"} style={{ marginTop: 12, border: "1px solid #dfddd6", borderRadius: 10, background: "#fff", padding: "4px 12px 10px" }}>
           <summary style={{ cursor: "pointer", padding: "8px 0", fontSize: 14, fontWeight: 700, color: OLIVE }}>No "Skills" in your Claude? (common on Free) Do this instead</summary>
           <ol style={{ margin: "4px 0 0", paddingLeft: 20, fontSize: 13.5, lineHeight: 1.75, color: "#2f3229" }}>
             <li>Copy the instructions:
@@ -608,7 +608,7 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
           </ol>
           <details style={{ marginTop: 8, fontSize: 12, color: MUTED }}>
             <summary style={{ cursor: "pointer", padding: "4px 0" }}>Read the instructions</summary>
-            <div style={{ marginTop: 6, maxHeight: 220, overflowY: "auto", whiteSpace: "pre-wrap", background: "#faf7f0", border: "1px solid #e3dccd", borderRadius: 7, padding: "8px 10px", fontSize: 11.5, lineHeight: 1.5, color: "#3a3d33" }}>{KPR_CLAUDE_INSTRUCTIONS}</div>
+            <div style={{ marginTop: 6, maxHeight: 220, overflowY: "auto", whiteSpace: "pre-wrap", background: "#faf9f5", border: "1px solid #dfddd6", borderRadius: 7, padding: "8px 10px", fontSize: 11.5, lineHeight: 1.5, color: "#3a3d33" }}>{KPR_CLAUDE_INSTRUCTIONS}</div>
           </details>
         </details>
       </>);
@@ -643,17 +643,17 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
       <div onClick={tryClose} style={{ position: "fixed", inset: 0, zIndex: 9700, background: "rgba(38,40,31,0.42)", backdropFilter: "blur(2px)" }} />
       <div role="dialog" aria-label="Claude access" style={{
         position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 9701,
-        width: "min(640px, 96vw)", maxHeight: "92vh", background: "#faf7f0", border: "1px solid #e0d8c8",
+        width: "min(640px, 96vw)", maxHeight: "92vh", background: "#faf9f5", border: "1px solid #dcdad3",
         borderRadius: 14, boxShadow: "0 18px 56px rgba(38,40,31,0.28)", display: "flex", flexDirection: "column",
-        overflow: "hidden", fontFamily: "'Inter',sans-serif",
+        overflow: "hidden", fontFamily: "'Roboto',sans-serif",
       }}>
         {/* Header + progress */}
-        <div style={{ padding: "12px 16px 10px", borderBottom: "1px solid #ece5d7", background: "#fff", flexShrink: 0 }}>
+        <div style={{ padding: "12px 16px 10px", borderBottom: "1px solid #ebeae5", background: "#fff", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: MUTED }}>
               Connect Claude to the deal library{!done && <> · <span style={{ color: OLIVE }}>Step {stepIdx + 1} of {steps.length}</span></>}
             </div>
-            <button onClick={tryClose} aria-label="Close" style={{ flexShrink: 0, background: "transparent", border: "1px solid #e3dccd", color: "#7d766a", width: 36, height: 36, borderRadius: 8, cursor: "pointer", fontSize: 15 }}>✕</button>
+            <button onClick={tryClose} aria-label="Close" style={{ flexShrink: 0, background: "transparent", border: "1px solid #dfddd6", color: "#6b6a65", width: 36, height: 36, borderRadius: 8, cursor: "pointer", fontSize: 15 }}>✕</button>
           </div>
           {!done && (
             <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
@@ -679,7 +679,7 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
 
           {/* Help — always one tap away */}
           {!done && (
-            <div style={{ marginTop: 18, border: "1px solid #e3dccd", borderRadius: 10, background: "#fff" }}>
+            <div style={{ marginTop: 18, border: "1px solid #dfddd6", borderRadius: 10, background: "#fff" }}>
               <button onClick={() => setShowHelp(v => !v)} style={{ width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "11px 14px", cursor: "pointer", fontSize: 13.5, fontWeight: 700, color: OLIVE, minHeight: 44 }}>
                 {showHelp ? "▾" : "▸"} Stuck? Common problems
               </button>
@@ -709,21 +709,21 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
           {/* Small, out-of-the-way links: the terminal path and key management */}
           <div style={{ marginTop: 14, display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12 }}>
             {!done && step === "plan" && !codePath && (
-              <button onClick={() => { setCodePath(true); setStepIdx(0); }} style={{ background: "transparent", border: "none", padding: "6px 0", color: "#8b8578", cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
+              <button onClick={() => { setCodePath(true); setStepIdx(0); }} style={{ background: "transparent", border: "none", padding: "6px 0", color: "#7a7973", cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
                 I use Claude Code in a terminal (advanced)
               </button>
             )}
             {codePath && !minted && (
-              <button onClick={() => { setCodePath(false); setStepIdx(0); }} style={{ background: "transparent", border: "none", padding: "6px 0", color: "#8b8578", cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
+              <button onClick={() => { setCodePath(false); setStepIdx(0); }} style={{ background: "transparent", border: "none", padding: "6px 0", color: "#7a7973", cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
                 ← Back to the normal setup
               </button>
             )}
-            <button onClick={() => setShowManage(v => !v)} style={{ background: "transparent", border: "none", padding: "6px 0", color: "#8b8578", cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
+            <button onClick={() => setShowManage(v => !v)} style={{ background: "transparent", border: "none", padding: "6px 0", color: "#7a7973", cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
               {showManage ? "Hide my keys" : `Manage my keys${keys ? ` (${active.length} active)` : ""}`}
             </button>
           </div>
 
-          {showManage && (<div style={{ marginTop: 12, borderTop: "1px solid #ece5d7", paddingTop: 12 }}>
+          {showManage && (<div style={{ marginTop: 12, borderTop: "1px solid #ebeae5", paddingTop: 12 }}>
           {/* The environment-held key. Shown ABOVE the list because it is not in the
               list: it lives in deploy secrets, so it survives the database being
               rebuilt — which is exactly when someone will be looking here, wondering
@@ -774,23 +774,23 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
               {sectionTitle(showAll ? `Active keys — everyone · ${active.length}` : `Your active keys · ${active.length}`)}
               {isAdmin && (
                 <button onClick={() => setShowAll(v => !v)}
-                  style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", borderRadius: 6, padding: "3px 9px", fontSize: 11, fontWeight: 600, cursor: "pointer", marginBottom: 8 }}>
+                  style={{ background: "transparent", border: "1px solid #dad8d1", color: "#52554e", borderRadius: 6, padding: "3px 9px", fontSize: 11, fontWeight: 600, cursor: "pointer", marginBottom: 8 }}>
                   {showAll ? "Show only mine" : "Show everyone's"}
                 </button>
               )}
             </div>
-            {!keys && <div style={{ color: "#a69e91", fontSize: 12.5 }}>Loading…</div>}
+            {!keys && <div style={{ color: "#94928b", fontSize: 12.5 }}>Loading…</div>}
             {keys && active.length === 0 && (
-              <div style={{ color: "#a69e91", fontSize: 12.5 }}>
+              <div style={{ color: "#94928b", fontSize: 12.5 }}>
                 {showAll ? "Nobody has an active key yet." : "You don't have a key yet — create one above to connect Claude."}
               </div>
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {active.map(k => (
-                <div key={k.id} style={{ border: "1px solid #ece5d7", borderRadius: 9, background: "#fff", padding: "10px 12px", display: "flex", gap: 10, alignItems: isMobile ? "flex-start" : "center", flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
+                <div key={k.id} style={{ border: "1px solid #ebeae5", borderRadius: 9, background: "#fff", padding: "10px 12px", display: "flex", gap: 10, alignItems: isMobile ? "flex-start" : "center", flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
                   <div style={{ minWidth: 0, flex: "1 1 200px" }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#26281f", overflowWrap: "anywhere" }}>{k.name}</div>
-                    <div style={{ fontSize: 11, color: "#8b8578", marginTop: 2, overflowWrap: "anywhere" }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#232422", overflowWrap: "anywhere" }}>{k.name}</div>
+                    <div style={{ fontSize: 11, color: "#7a7973", marginTop: 2, overflowWrap: "anywhere" }}>
                       <code style={{ fontFamily: "ui-monospace, Menlo, monospace" }}>{k.keyPrefix}…</code>
                       {" · "}
                       {k.lastUsedAt ? `used ${relTime(k.lastUsedAt)} (${k.useCount})` : "never used"}
@@ -800,7 +800,7 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
                   <button onClick={() => revoke(k)} disabled={busy} style={{
                     background: "transparent", border: "1px solid #c0392b44", color: "#c0392b", borderRadius: 6,
                     padding: "6px 11px", fontSize: 11.5, fontWeight: 600, cursor: busy ? "default" : "pointer",
-                    whiteSpace: "nowrap", fontFamily: "'Inter',sans-serif", minHeight: 34, alignSelf: isMobile ? "flex-start" : "auto",
+                    whiteSpace: "nowrap", fontFamily: "'Roboto',sans-serif", minHeight: 34, alignSelf: isMobile ? "flex-start" : "auto",
                   }}>Turn off</button>
                 </div>
               ))}
@@ -809,18 +809,18 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
 
           {/* Revoked / expired */}
           {dead.length > 0 && (
-            <div style={{ borderTop: "1px solid #ece5d7", paddingTop: 12 }}>
-              <button onClick={() => setShowRevoked(s => !s)} style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <div style={{ borderTop: "1px solid #ebeae5", paddingTop: 12 }}>
+              <button onClick={() => setShowRevoked(s => !s)} style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#94928b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 {showRevoked ? "▾" : "▸"} Switched off · {dead.length}
               </button>
               {showRevoked && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
                   {dead.map(k => (
-                    <div key={k.id} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 11.5, color: "#8b8578", padding: "5px 2px", borderBottom: "1px solid #f4efe6", flexWrap: "wrap" }}>
+                    <div key={k.id} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 11.5, color: "#7a7973", padding: "5px 2px", borderBottom: "1px solid #f4efe6", flexWrap: "wrap" }}>
                       <span style={{ color: "#52554e", fontWeight: 600, overflowWrap: "anywhere" }}>{k.name}</span>
                       <span><code style={{ fontFamily: "ui-monospace, Menlo, monospace" }}>{k.keyPrefix}…</code></span>
                       <span>{k.revokedAt ? `off ${relTime(k.revokedAt)}` : "expired"}</span>
-                      <button onClick={() => remove(k)} style={{ marginLeft: "auto", background: "transparent", border: "1px solid #e3dccd", color: "#a69e91", borderRadius: 6, padding: "3px 8px", fontSize: 10.5, cursor: "pointer" }}>Delete</button>
+                      <button onClick={() => remove(k)} style={{ marginLeft: "auto", background: "transparent", border: "1px solid #dfddd6", color: "#94928b", borderRadius: 6, padding: "3px 8px", fontSize: 10.5, cursor: "pointer" }}>Delete</button>
                     </div>
                   ))}
                 </div>
@@ -829,9 +829,9 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
           )}
 
           {info && (
-            <div style={{ borderTop: "1px solid #ece5d7", marginTop: 16, paddingTop: 12 }}>
+            <div style={{ borderTop: "1px solid #ebeae5", marginTop: 16, paddingTop: 12 }}>
               {sectionTitle("What Claude can do with a key")}
-              <div style={{ fontSize: 12, color: "#6f6a5f", lineHeight: 1.6 }}>
+              <div style={{ fontSize: 12, color: "#676767", lineHeight: 1.6 }}>
                 Read-only access to {info.tools.length} tools: {info.tools.map(t => t.title).join(", ")}.
                 It also reads your underwriting playbook and house view, so its answers follow
                 KPR's rules rather than generic commercial-real-estate advice.
@@ -846,14 +846,14 @@ export default function McpAccess({ onClose, isAdmin = false }: { onClose: () =>
 
         {/* Back / Next — big, always in the same place */}
         {!done && (
-          <div style={{ display: "flex", gap: 10, padding: "12px 16px", borderTop: "1px solid #ece5d7", background: "#fff", flexShrink: 0 }}>
+          <div style={{ display: "flex", gap: 10, padding: "12px 16px", borderTop: "1px solid #ebeae5", background: "#fff", flexShrink: 0 }}>
             <button onClick={() => setStepIdx(i => Math.max(0, i - 1))} disabled={stepIdx === 0} style={{
-              minHeight: 50, padding: "0 18px", borderRadius: 10, border: "1px solid #ddd4c2", background: "#fff",
+              minHeight: 50, padding: "0 18px", borderRadius: 10, border: "1px solid #dad8d1", background: "#fff",
               color: stepIdx === 0 ? "#cfc7b8" : "#52554e", fontSize: 14.5, fontWeight: 600, cursor: stepIdx === 0 ? "default" : "pointer",
             }}>← Back</button>
             <button onClick={() => { if (!canNext) return; if (isLast) setDone(true); else setStepIdx(i => i + 1); }} disabled={!canNext} style={{
               flex: 1, minHeight: 50, borderRadius: 10, border: "none", fontSize: 15.5, fontWeight: 700,
-              background: canNext ? GREEN : "#e3dccd", color: canNext ? "#fff" : "#a89f8f", cursor: canNext ? "pointer" : "default",
+              background: canNext ? GREEN : "#dfddd6", color: canNext ? "#fff" : "#9b9992", cursor: canNext ? "pointer" : "default",
             }}>{isLast ? "✓ It works — finish" : step === "key" && !minted ? "Create your key first" : step === "plan" && !plan ? "Pick one above" : "Next →"}</button>
           </div>
         )}

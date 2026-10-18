@@ -40,7 +40,7 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; bo
   liquidating: { label: "Liquidating", color: "#fff",    bg: "#b3261e", border: "#b3261e", rank: 4 },
   bankruptcy:  { label: "Bankruptcy",  color: "#fff",    bg: "#d9534f", border: "#d9534f", rank: 3 },
   distressed:  { label: "Distressed",  color: "#7a4a00", bg: "#fbe6cf", border: "#e8c49a", rank: 2 },
-  watch:       { label: "Watch",       color: "#5a5340", bg: "#f1eadc", border: "#ddd4c2", rank: 1 },
+  watch:       { label: "Watch",       color: "#5a5340", bg: "#efeee9", border: "#dad8d1", rank: 1 },
 };
 function meta(status: string) {
   return STATUS_META[status] || STATUS_META.watch;
@@ -209,7 +209,7 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
 
   const toggle = (id: string) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  const inp: React.CSSProperties = { border: "1px solid #d9d2c4", borderRadius: 6, padding: "7px 9px", fontSize: 12.5, fontFamily: "'Inter',sans-serif", width: "100%", boxSizing: "border-box" };
+  const inp: React.CSSProperties = { border: "1px solid #d7d5ce", borderRadius: 6, padding: "7px 9px", fontSize: 12.5, fontFamily: "'Roboto',sans-serif", width: "100%", boxSizing: "border-box" };
 
   const scopeWord = scope === "owned" ? "owned portfolio" : "dataset";
 
@@ -218,7 +218,7 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
     const exposed = w.exp.centers.length > 0;
     const isOpen = expanded.has(w.id);
     return (
-      <div key={w.id} style={{ background: "#fff", border: `1px solid ${exposed ? "#ecd9c0" : "#efe8da"}`, borderLeft: `3px solid ${exposed ? m.bg : "#efe8da"}`, borderRadius: 10, overflow: "hidden" }}>
+      <div key={w.id} style={{ background: "#fff", border: `1px solid ${exposed ? "#ecd9c0" : "#ecebe6"}`, borderLeft: `3px solid ${exposed ? m.bg : "#ecebe6"}`, borderRadius: 10, overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", flexWrap: "wrap" }}>
           <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.05em", color: m.color, background: m.bg, border: `1px solid ${m.border}`, borderRadius: 4, padding: "2px 7px", textTransform: "uppercase", whiteSpace: "nowrap" }}>{m.label}</span>
           {w.newsSuggestedStatus && (
@@ -229,8 +229,8 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
           )}
           {onTenantClick
             ? <button onClick={e => { e.stopPropagation(); onTenantClick(w.brand); }} title={`View ${w.brand} across the portfolio`}
-                style={{ fontSize: 14, fontWeight: 600, color: "#26281f", fontFamily: "'Fraunces',serif", background: "transparent", border: "none", padding: 0, cursor: "pointer", textDecoration: "underline", textDecorationColor: "#d8cfbd", textUnderlineOffset: "2px" }}>{w.brand}</button>
-            : <span style={{ fontSize: 14, fontWeight: 600, color: "#26281f", fontFamily: "'Fraunces',serif" }}>{w.brand}</span>}
+                style={{ fontSize: 14, fontWeight: 600, color: "#232422", fontFamily: "'Lora',Georgia,serif", background: "transparent", border: "none", padding: 0, cursor: "pointer", textDecoration: "underline", textDecorationColor: "#d4d2ca", textUnderlineOffset: "2px" }}>{w.brand}</button>
+            : <span style={{ fontSize: 14, fontWeight: 600, color: "#232422", fontFamily: "'Lora',Georgia,serif" }}>{w.brand}</span>}
           {exposed ? (
             <span style={{ fontSize: 11.5, color: "#b3261e", fontWeight: 600 }}>
               {w.exp.centers.length} center{w.exp.centers.length !== 1 ? "s" : ""} · {fmtSF(w.exp.totalSF)} · {fmtMoney(w.exp.totalRent)} rent
@@ -241,7 +241,7 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
           )}
           <div style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
             {w.sourceUrl && <a href={w.sourceUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: "#4f7aac" }}>source ↗</a>}
-            <button onClick={e => { e.stopPropagation(); startEdit(w); }} style={{ background: "transparent", border: "none", color: "#a69e91", cursor: "pointer", fontSize: 11 }}>edit</button>
+            <button onClick={e => { e.stopPropagation(); startEdit(w); }} style={{ background: "transparent", border: "none", color: "#94928b", cursor: "pointer", fontSize: 11 }}>edit</button>
             <button onClick={e => { e.stopPropagation(); remove(w.id, w.brand); }} style={{ background: "transparent", border: "none", color: "#c98", cursor: "pointer", fontSize: 11 }}>remove</button>
           </div>
         </div>
@@ -252,20 +252,20 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
           const differs = names.some(n => n.toLowerCase() !== brandLc);
           if (names.length <= 1 && !differs) return null;
           return (
-            <div style={{ fontSize: 11, color: "#8b8578", padding: "0 14px 8px", marginTop: -2 }}>
-              Counting {names.length} name{names.length !== 1 ? "s" : ""} as this brand: <span style={{ color: "#5c5047" }}>{names.join(", ")}</span>
+            <div style={{ fontSize: 11, color: "#7a7973", padding: "0 14px 8px", marginTop: -2 }}>
+              Counting {names.length} name{names.length !== 1 ? "s" : ""} as this brand: <span style={{ color: "#4f4d48" }}>{names.join(", ")}</span>
             </div>
           );
         })()}
         {exposed && (
           <div style={{ display: "flex", justifyContent: "center", padding: "2px 0 8px" }}>
             <button onClick={() => toggle(w.id)}
-              style={{ background: "transparent", border: "1px solid #e0d8c8", color: "#5c5047", borderRadius: 7, padding: "4px 16px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif", letterSpacing: "0.02em" }}>
+              style={{ background: "transparent", border: "1px solid #dcdad3", color: "#4f4d48", borderRadius: 7, padding: "4px 16px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Roboto',sans-serif", letterSpacing: "0.02em" }}>
               {isOpen ? "Collapse" : `Expand ${w.exp.centers.length} center${w.exp.centers.length !== 1 ? "s" : ""}`}
             </button>
           </div>
         )}
-        {w.note && <div style={{ fontSize: 11.5, color: "#8b8578", padding: "0 14px 10px", marginTop: -4 }}>{w.note}</div>}
+        {w.note && <div style={{ fontSize: 11.5, color: "#7a7973", padding: "0 14px 10px", marginTop: -4 }}>{w.note}</div>}
         {w.newsSuggestedStatus && w.newsHeadline && (
           <div style={{ fontSize: 11, color: "#9a3412", padding: "0 14px 10px", marginTop: -4 }}>
             📰 Recent news suggests review:{" "}
@@ -276,16 +276,16 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
           </div>
         )}
         {isOpen && exposed && (
-          <div style={{ borderTop: "1px solid #f1ece1", padding: "4px 0" }}>
+          <div style={{ borderTop: "1px solid #f3f2ee", padding: "4px 0" }}>
             {w.exp.centers.slice().sort((a, b) => b.annualRent - a.annualRent).map((c, i) => (
               <div key={c.dealId + i} onClick={() => onOpenDeal?.(c.dealId)}
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: onOpenDeal ? "pointer" : "default", borderTop: i === 0 ? "none" : "1px solid #f6f2ea", flexWrap: "wrap" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "#faf7f0")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: "#383a37", textDecoration: onOpenDeal ? "underline" : "none", textDecorationColor: "#d8cfbd" }}>{c.propertyName}</span>
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: onOpenDeal ? "pointer" : "default", borderTop: i === 0 ? "none" : "1px solid #faf9f5", flexWrap: "wrap" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "#faf9f5")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: "#383a37", textDecoration: onOpenDeal ? "underline" : "none", textDecorationColor: "#d4d2ca" }}>{c.propertyName}</span>
                 {c.tenantName && c.tenantName.toLowerCase() !== w.brand.trim().toLowerCase() && <span style={{ fontSize: 11, color: "#9a9384", fontStyle: "italic" }}>as “{c.tenantName}”</span>}
                 {c.isDark && <span style={{ fontSize: 9, fontWeight: 700, color: "#fff", background: "#3a342b", borderRadius: 10, padding: "1px 6px" }}>DARK</span>}
-                {c.status && <span style={{ fontSize: 10, color: "#a69e91", textTransform: "capitalize" }}>{c.status}</span>}
-                <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#6f6a5f" }}>{fmtSF(c.sf)} · {fmtMoney(c.annualRent)} rent</span>
+                {c.status && <span style={{ fontSize: 10, color: "#94928b", textTransform: "capitalize" }}>{c.status}</span>}
+                <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#676767" }}>{fmtSF(c.sf)} · {fmtMoney(c.annualRent)} rent</span>
               </div>
             ))}
           </div>
@@ -298,12 +298,12 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         <div>
-          <h3 style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#26281f", margin: 0 }}>Retailer Health Watchlist</h3>
-          <p style={{ fontSize: 11.5, color: "#8b8578", margin: "3px 0 0", maxWidth: 560 }}>
+          <h3 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, fontWeight: 600, color: "#232422", margin: 0 }}>Retailer Health Watchlist</h3>
+          <p style={{ fontSize: 11.5, color: "#7a7973", margin: "3px 0 0", maxWidth: 560 }}>
             Track distressed chains and instantly see every center exposed. Matching uses the same brand grouping as the rest of the app, so "Party City #042" still counts.
           </p>
           {freshness && (
-            <p style={{ fontSize: 10.5, color: freshness.stale ? "#9a3412" : "#a89f8f", margin: "5px 0 0", fontWeight: freshness.stale ? 600 : 400 }}>
+            <p style={{ fontSize: 10.5, color: freshness.stale ? "#9a3412" : "#9b9992", margin: "5px 0 0", fontWeight: freshness.stale ? 600 : 400 }}>
               {freshness.stale ? "⚠ " : ""}Distress data curated as of {new Date(freshness.asOf + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
               {freshness.stale
                 ? ` (${freshness.ageDays} days old — ask Claude to refresh it).`
@@ -312,7 +312,7 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
           )}
         </div>
         <button onClick={() => { setNews(null); setEditId(null); setForm({ brand: "", status: "watch", note: "", sourceUrl: "" }); setAdding(true); }}
-          style={{ background: "#2a2c27", color: "#fff", border: "none", borderRadius: 7, padding: "7px 13px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+          style={{ background: "#232422", color: "#fff", border: "none", borderRadius: 7, padding: "7px 13px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Roboto',sans-serif", whiteSpace: "nowrap" }}>
           + Add retailer
         </button>
       </div>
@@ -322,8 +322,8 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
         <div style={{ display: "flex", background: "#ede8df", borderRadius: 7, padding: 2, flexShrink: 0 }}>
           {(["all", "owned"] as const).map(opt => (
             <button key={opt} onClick={() => setScope(opt)}
-              style={{ padding: "5px 14px", borderRadius: 5, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif",
-                background: scope === opt ? "#383a37" : "transparent", color: scope === opt ? "#fff" : "#7d766a", transition: "background 0.15s, color 0.15s", whiteSpace: "nowrap" }}>
+              style={{ padding: "5px 14px", borderRadius: 5, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Roboto',sans-serif",
+                background: scope === opt ? "#383a37" : "transparent", color: scope === opt ? "#fff" : "#6b6a65", transition: "background 0.15s, color 0.15s", whiteSpace: "nowrap" }}>
               {opt === "all" ? "All" : "Owned"}
             </button>
           ))}
@@ -340,9 +340,9 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
             { label: "Rent at risk", val: fmtMoney(totals.rent) },
             { label: "Dark already", val: totals.dark.toString() },
           ].map(s => (
-            <div key={s.label} style={{ flex: "1 1 110px", minWidth: 110, background: "#fff", border: "1px solid #efe8da", borderRadius: 10, padding: "11px 13px" }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: "#26281f", fontFamily: "'Fraunces',serif" }}>{s.val}</div>
-              <div style={{ fontSize: 10, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>{s.label}</div>
+            <div key={s.label} style={{ flex: "1 1 110px", minWidth: 110, background: "#fff", border: "1px solid #ecebe6", borderRadius: 10, padding: "11px 13px" }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "#232422", fontFamily: "'Lora',Georgia,serif" }}>{s.val}</div>
+              <div style={{ fontSize: 10, color: "#94928b", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -354,20 +354,20 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
         <>
           <div onClick={closeForm} style={{ position: "fixed", inset: 0, zIndex: 9600, background: "rgba(38,40,31,0.42)", backdropFilter: "blur(2px)" }} />
           <div role="dialog" aria-label={editId ? "Edit watchlist retailer" : "Add watchlist retailer"}
-            style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 9601, width: "min(540px, 94vw)", maxHeight: "88vh", background: "#faf7f0", border: "1px solid #e0d8c8", borderRadius: 14, boxShadow: "0 18px 56px rgba(38,40,31,0.28)", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "'Inter',sans-serif" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid #ece5d7", background: "#fff", flexShrink: 0 }}>
-              <span style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 600, color: "#26281f" }}>{editId ? "Edit retailer" : "Add retailer to watchlist"}</span>
-              <button onClick={closeForm} aria-label="Close" style={{ background: "transparent", border: "1px solid #e3dccd", color: "#7d766a", width: 30, height: 30, borderRadius: 7, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 9601, width: "min(540px, 94vw)", maxHeight: "88vh", background: "#faf9f5", border: "1px solid #dcdad3", borderRadius: 14, boxShadow: "0 18px 56px rgba(38,40,31,0.28)", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "'Roboto',sans-serif" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid #ebeae5", background: "#fff", flexShrink: 0 }}>
+              <span style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, fontWeight: 600, color: "#232422" }}>{editId ? "Edit retailer" : "Add retailer to watchlist"}</span>
+              <button onClick={closeForm} aria-label="Close" style={{ background: "transparent", border: "1px solid #dfddd6", color: "#6b6a65", width: 30, height: 30, borderRadius: 7, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
             </div>
 
             <div style={{ padding: "16px 18px", overflowY: "auto" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
                 <div>
-                  <label style={{ fontSize: 10.5, color: "#8b8578", fontWeight: 600 }}>Brand</label>
+                  <label style={{ fontSize: 10.5, color: "#7a7973", fontWeight: 600 }}>Brand</label>
                   <input style={inp} value={form.brand} onChange={e => setForm(f => ({ ...f, brand: e.target.value }))} placeholder="e.g. Party City" autoFocus />
                 </div>
                 <div>
-                  <label style={{ fontSize: 10.5, color: "#8b8578", fontWeight: 600 }}>Status</label>
+                  <label style={{ fontSize: 10.5, color: "#7a7973", fontWeight: 600 }}>Status</label>
                   <select style={inp} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
                     <option value="watch">Watch</option>
                     <option value="distressed">Distressed</option>
@@ -377,33 +377,33 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
                 </div>
               </div>
               <div style={{ marginBottom: 10 }}>
-                <label style={{ fontSize: 10.5, color: "#8b8578", fontWeight: 600 }}>Note (optional)</label>
+                <label style={{ fontSize: 10.5, color: "#7a7973", fontWeight: 600 }}>Note (optional)</label>
                 <input style={inp} value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="What's going on with this retailer" />
               </div>
               <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 10.5, color: "#8b8578", fontWeight: 600 }}>Source link (optional)</label>
+                <label style={{ fontSize: 10.5, color: "#7a7973", fontWeight: 600 }}>Source link (optional)</label>
                 <input style={inp} value={form.sourceUrl} onChange={e => setForm(f => ({ ...f, sourceUrl: e.target.value }))} placeholder="https://…" />
               </div>
 
               {/* Related news */}
-              <div style={{ borderTop: "1px solid #ece5d7", paddingTop: 12 }}>
+              <div style={{ borderTop: "1px solid #ebeae5", paddingTop: 12 }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 7 }}>
-                  <label style={{ fontSize: 10.5, color: "#8b8578", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>Related news</label>
-                  {newsLoading && <span style={{ fontSize: 10, color: "#a89f8f" }}>searching…</span>}
+                  <label style={{ fontSize: 10.5, color: "#7a7973", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>Related news</label>
+                  {newsLoading && <span style={{ fontSize: 10, color: "#9b9992" }}>searching…</span>}
                 </div>
                 {form.brand.trim().length < 2 ? (
-                  <div style={{ fontSize: 11.5, color: "#a89f8f" }}>Type a brand name to pull recent headlines.</div>
+                  <div style={{ fontSize: 11.5, color: "#9b9992" }}>Type a brand name to pull recent headlines.</div>
                 ) : news && news.length === 0 && !newsLoading ? (
-                  <div style={{ fontSize: 11.5, color: "#a89f8f" }}>No recent headlines found for “{form.brand.trim()}”.</div>
+                  <div style={{ fontSize: 11.5, color: "#9b9992" }}>No recent headlines found for “{form.brand.trim()}”.</div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {(news || []).map((a, i) => (
-                      <div key={i} style={{ border: "1px solid #ece5d7", borderRadius: 8, padding: "8px 10px", background: "#fff" }}>
-                        <a href={a.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "#26281f", fontWeight: 600, textDecoration: "none", lineHeight: 1.35, display: "block" }}>{a.title}</a>
+                      <div key={i} style={{ border: "1px solid #ebeae5", borderRadius: 8, padding: "8px 10px", background: "#fff" }}>
+                        <a href={a.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "#232422", fontWeight: 600, textDecoration: "none", lineHeight: 1.35, display: "block" }}>{a.title}</a>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 5 }}>
-                          <span style={{ fontSize: 10, color: "#a89f8f" }}>{a.source}{a.publishedAt ? ` · ${fmtNewsDate(a.publishedAt)}` : ""}</span>
+                          <span style={{ fontSize: 10, color: "#9b9992" }}>{a.source}{a.publishedAt ? ` · ${fmtNewsDate(a.publishedAt)}` : ""}</span>
                           <button onClick={() => setForm(f => ({ ...f, sourceUrl: a.link }))} title="Use this link as the source"
-                            style={{ background: form.sourceUrl === a.link ? "#eef3e7" : "transparent", border: "1px solid #ddd4c2", color: "#5c5047", borderRadius: 6, padding: "2px 8px", fontSize: 10, cursor: "pointer", whiteSpace: "nowrap" }}>
+                            style={{ background: form.sourceUrl === a.link ? "#eef3e7" : "transparent", border: "1px solid #dad8d1", color: "#4f4d48", borderRadius: 6, padding: "2px 8px", fontSize: 10, cursor: "pointer", whiteSpace: "nowrap" }}>
                             {form.sourceUrl === a.link ? "✓ source" : "use as source"}
                           </button>
                         </div>
@@ -411,15 +411,15 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
                     ))}
                   </div>
                 )}
-                <div style={{ fontSize: 9.5, color: "#bcae97", marginTop: 6 }}>Headlines via Google News (free) — quick context, not vetted.</div>
+                <div style={{ fontSize: 9.5, color: "#b8b5ad", marginTop: 6 }}>Headlines via Google News (free) — quick context, not vetted.</div>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 8, padding: "12px 18px", borderTop: "1px solid #ece5d7", background: "#fff", flexShrink: 0 }}>
-              <button onClick={submit} disabled={busy || !form.brand.trim()} style={{ background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 7, padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: busy ? "default" : "pointer", opacity: busy || !form.brand.trim() ? 0.6 : 1 }}>
+            <div style={{ display: "flex", gap: 8, padding: "12px 18px", borderTop: "1px solid #ebeae5", background: "#fff", flexShrink: 0 }}>
+              <button onClick={submit} disabled={busy || !form.brand.trim()} style={{ background: "#3e8a2f", color: "#fff", border: "none", borderRadius: 7, padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: busy ? "default" : "pointer", opacity: busy || !form.brand.trim() ? 0.6 : 1 }}>
                 {busy ? "Saving…" : editId ? "Save changes" : "Add to watchlist"}
               </button>
-              <button onClick={closeForm} style={{ background: "transparent", color: "#8b8578", border: "1px solid #ddd4c2", borderRadius: 7, padding: "8px 16px", fontSize: 12, cursor: "pointer" }}>Cancel</button>
+              <button onClick={closeForm} style={{ background: "transparent", color: "#7a7973", border: "1px solid #dad8d1", borderRadius: 7, padding: "8px 16px", fontSize: 12, cursor: "pointer" }}>Cancel</button>
             </div>
           </div>
         </>,
@@ -427,19 +427,19 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
       )}
 
       {error && <div style={{ color: "#dc2626", fontSize: 12, marginBottom: 12 }}>⚠ {error}</div>}
-      {!rows && !error && <div style={{ color: "#a69e91", fontSize: 13, padding: "20px 0" }}>Loading…</div>}
+      {!rows && !error && <div style={{ color: "#94928b", fontSize: 13, padding: "20px 0" }}>Loading…</div>}
 
       {/* Watchlist rows */}
-      {rows && watched.length === 0 && <div style={{ color: "#a69e91", fontSize: 13, padding: "20px 0" }}>No retailers on the watchlist yet. Add one above.</div>}
+      {rows && watched.length === 0 && <div style={{ color: "#94928b", fontSize: 13, padding: "20px 0" }}>No retailers on the watchlist yet. Add one above.</div>}
 
       {/* Section 1 — watched retailers WITH locations in the current scope */}
       {exposedRows.length > 0 && (
         <>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "4px 0 10px" }}>
-            <h4 style={{ fontFamily: "'Fraunces',serif", fontSize: 14, fontWeight: 600, color: "#26281f", margin: 0 }}>
+            <h4 style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 14, fontWeight: 600, color: "#232422", margin: 0 }}>
               In your {scope === "owned" ? "owned portfolio" : "dataset"}
             </h4>
-            <span style={{ fontSize: 11, color: "#a69e91" }}>{exposedRows.length} brand{exposedRows.length !== 1 ? "s" : ""} with locations</span>
+            <span style={{ fontSize: 11, color: "#94928b" }}>{exposedRows.length} brand{exposedRows.length !== 1 ? "s" : ""} with locations</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {exposedRows.map(renderRow)}
@@ -452,7 +452,7 @@ export default function RetailerWatchlist({ deals, onOpenDeal, onTenantClick }: 
         <>
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: exposedRows.length > 0 ? "26px 0 10px" : "4px 0 10px" }}>
             <div style={{ height: 1, background: "#e7ddcb", flex: 1 }} />
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#a69e91", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#94928b", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
               Not in {scope === "owned" ? "owned portfolio" : "dataset"} · {noExposureRows.length}
             </span>
             <div style={{ height: 1, background: "#e7ddcb", flex: 1 }} />

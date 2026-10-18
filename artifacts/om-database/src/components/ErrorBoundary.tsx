@@ -44,26 +44,26 @@ export default class ErrorBoundary extends React.Component<
     return (
       <div style={{
         display: "flex", flexDirection: "column", alignItems: "center",
-        justifyContent: "center", minHeight: "100vh", background: "#f6f2ea",
-        fontFamily: "'Inter', sans-serif", padding: 32, boxSizing: "border-box",
+        justifyContent: "center", minHeight: "100vh", background: "#faf9f5",
+        fontFamily: "'Roboto',sans-serif", padding: 32, boxSizing: "border-box",
       }}>
         <div style={{ maxWidth: 480, textAlign: "center" }}>
           <div style={{ fontSize: 42, marginBottom: 14 }}>⚠️</div>
           <h2 style={{
-            fontFamily: "'Fraunces', serif", fontSize: 26, color: "#383a37",
+            fontFamily: "'Lora',Georgia,serif", fontSize: 26, color: "#383a37",
             margin: "0 0 10px", fontWeight: 600,
           }}>
             Something went wrong
           </h2>
-          <p style={{ fontSize: 14, color: "#7d766a", lineHeight: 1.65, margin: "0 0 28px" }}>
+          <p style={{ fontSize: 14, color: "#6b6a65", lineHeight: 1.65, margin: "0 0 28px" }}>
             An unexpected error occurred. It has been logged automatically — the team will look into it.
           </p>
           <button
             onClick={() => window.location.reload()}
             style={{
-              background: "#6dba43", border: "none", color: "#fff",
+              background: "#5bba47", border: "none", color: "#fff",
               padding: "10px 28px", borderRadius: 8, cursor: "pointer",
-              fontSize: 14, fontWeight: 600, fontFamily: "'Inter', sans-serif",
+              fontSize: 14, fontWeight: 600, fontFamily: "'Roboto',sans-serif",
             }}
           >
             Reload the app

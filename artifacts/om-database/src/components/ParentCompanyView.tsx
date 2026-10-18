@@ -174,10 +174,10 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
   const exportBase = `KPR_${safeFileName(parentName)}${scope === "owned" ? "_Owned" : ""}`;
 
   const Stat = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
-    <div style={{ flex:"1 1 130px", background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"13px 16px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-      <div style={{ fontSize:10, letterSpacing:"0.06em", color:"#a69e91", marginBottom:6, fontWeight:500, textTransform:"uppercase" }}>{label}</div>
-      <div style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:600, color:"#383a37", lineHeight:1 }}>{value}</div>
-      {sub && <div style={{ fontSize:9, color:"#b8b0a3", marginTop:3 }}>{sub}</div>}
+    <div style={{ flex:"1 1 130px", background:"#fff", border:"1px solid #ecebe6", borderRadius:12, padding:"13px 16px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+      <div style={{ fontSize:10, letterSpacing:"0.06em", color:"#94928b", marginBottom:6, fontWeight:500, textTransform:"uppercase" }}>{label}</div>
+      <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:22, fontWeight:600, color:"#383a37", lineHeight:1 }}>{value}</div>
+      {sub && <div style={{ fontSize:9, color:"#b3b1aa", marginTop:3 }}>{sub}</div>}
     </div>
   );
 
@@ -200,21 +200,21 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
       <div style={{ maxWidth: DETAIL_MAX_WIDTH, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       {/* Back button */}
       <div style={{ marginBottom:16 }}>
-        <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← BACK</button>
+        <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e6e4de", color:"#6b6a65", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Roboto',sans-serif" }}>← BACK</button>
       </div>
 
       {/* Title row */}
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4, flexWrap:"wrap" }}>
-        <h1 style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:600, color:"#26281f", margin:0 }}>{parentName}</h1>
-        <span style={{ fontSize:10, color:"#6f6a5f", background:"#f3eee3", border:"1px solid #e7e0d2", padding:"2px 9px", borderRadius:12 }}>Parent Company</span>
+        <h1 className="kpr-page-title">{parentName}</h1>
+        <span style={{ fontSize:10, color:"#676767", background:"#f3eee3", border:"1px solid #e6e4de", padding:"2px 9px", borderRadius:12 }}>Parent Company</span>
         {anchorCount > 0 && <span style={{ fontSize:10, color:"#1f2b16", background:"#6dba4322", padding:"2px 9px", borderRadius:12, fontWeight:700 }}>ANCHOR · {anchorCount}</span>}
         {igBrands.size > 0 && (
           <span title={allBrandsIG ? "All brands under this company are investment grade" : `${igBrands.size} of ${distinctBrands.size} brands are investment grade`}
-            style={{ fontSize:10, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"2px 9px", borderRadius:12, fontWeight:700 }}>
+            style={{ fontSize:10, color:"#3e8a2f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"2px 9px", borderRadius:12, fontWeight:700 }}>
             Investment Grade{allBrandsIG ? "" : ` · ${igBrands.size}/${distinctBrands.size}`}
           </span>
         )}
-        {headerCredit && <span style={{ fontSize:11, color:"#5c5f57", background:"#f3eee3", border:"1px solid #e7e0d2", padding:"2px 9px", borderRadius:12 }}>Credit: {headerCredit}</span>}
+        {headerCredit && <span style={{ fontSize:11, color:"#5c5f57", background:"#f3eee3", border:"1px solid #e6e4de", padding:"2px 9px", borderRadius:12 }}>Credit: {headerCredit}</span>}
         {headerWatch && (() => { const m = WATCH_STATUS_META[headerWatch.status] || WATCH_STATUS_META.watch; return (
           <span title={`Retailer watchlist — ${m.label}: ${headerWatch.note || headerWatch.brand}`}
             style={{ fontSize:10, color:m.color, background:m.bg, border:`1px solid ${m.border}`, padding:"2px 9px", borderRadius:12, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.03em" }}>
@@ -236,7 +236,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
 
       {/* Subtitle + scope toggle on same row */}
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:18, justifyContent:"space-between" }}>
-        <div style={{ fontSize:13, color:"#9a917f" }}>{subtitle}</div>
+        <div style={{ fontSize:13, color:"#8f8d86" }}>{subtitle}</div>
         <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", justifyContent:"flex-end" }}>
         <ExportButtons
           disabled={exportRows.length === 0}
@@ -263,10 +263,10 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
             />;
           }}
         />
-        <div style={{ display:"flex", border:"1px solid #e7e0d2", borderRadius:7, overflow:"hidden", fontFamily:"'Inter',sans-serif", fontSize:12, flexShrink:0 }}>
+        <div style={{ display:"flex", border:"1px solid #e6e4de", borderRadius:7, overflow:"hidden", fontFamily:"'Roboto',sans-serif", fontSize:12, flexShrink:0 }}>
           {(["all","owned"] as const).map(s => (
             <button key={s} onClick={() => setScope(s)}
-              style={{ padding:"4px 13px", background: scope===s ? "#383a37" : "#faf7f0", color: scope===s ? "#f6f2ea" : "#7d766a", border:"none", cursor:"pointer", fontWeight: scope===s ? 600 : 400, fontFamily:"inherit", fontSize:"inherit", transition:"background 0.12s, color 0.12s" }}>
+              style={{ padding:"4px 13px", background: scope===s ? "#383a37" : "#faf9f5", color: scope===s ? "#faf9f5" : "#6b6a65", border:"none", cursor:"pointer", fontWeight: scope===s ? 600 : 400, fontFamily:"inherit", fontSize:"inherit", transition:"background 0.12s, color 0.12s" }}>
               {s === "all" ? "All" : "Owned"}
             </button>
           ))}
@@ -275,7 +275,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
       </div>
 
       {scope === "owned" && rows.length === 0 ? (
-        <div style={{ fontSize:14, color:"#a69e91", padding:"24px 0" }}>No owned locations for this parent company.</div>
+        <div style={{ fontSize:14, color:"#94928b", padding:"24px 0" }}>No owned locations for this parent company.</div>
       ) : (
         <>
           {/* Stat cards — same layout as TenantView */}
@@ -292,17 +292,17 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
           </div>
 
           {/* Locations table */}
-          <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-            <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase", marginBottom:13 }}>Locations — click a row to open the property</div>
+          <div style={{ background:"#fff", border:"1px solid #ecebe6", borderRadius:12, padding:"18px 20px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+            <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#94928b", fontWeight:600, textTransform:"uppercase", marginBottom:13 }}>Locations — click a row to open the property</div>
             <SortBar levels={msort.levels} setLevels={msort.setLevels} labels={PC_SORT_LABELS}
               isDefault={msort.isDefault} onReset={msort.reset} dirFor={pcDirFor} />
             <div style={{ overflowX:"auto" }}>
-              <table style={{ borderCollapse:"collapse", fontSize:12.5, minWidth:900, width:"100%" }}>
+              <table className="kpr-table" style={{ borderCollapse:"collapse", fontSize:12.5, minWidth:900, width:"100%" }}>
                 <thead>
                   <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
                     {cols.map(([k, label, right], idx) => (
                       <th key={k} onClick={e => setSort(k, e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker" className={idx === 0 ? "freeze-col" : undefined}
-                        style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:msort.isSorted(k)?"#383a37":"#a69e91", fontWeight:600, ...(idx === 0 ? stickyFirstCol("#fff", true) : null) }}>
+                        style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:msort.isSorted(k)?"#383a37":"#94928b", fontWeight:600, ...(idx === 0 ? stickyFirstCol("#fff", true) : null) }}>
                         {label}{arrow(k)}
                       </th>
                     ))}
@@ -313,8 +313,8 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
                     const owned = r.deal.status === "Owned" || r.deal.status === "Sold";
                     return (
                       <tr key={i} onClick={() => onOpenDeal(r.deal)}
-                        style={{ borderTop:"1px solid #f1eadc", cursor:"pointer", background: owned ? "#f3faef" : "transparent", borderLeft: owned ? "3px solid #6dba43" : "3px solid transparent" }}
-                        onMouseEnter={e => { const bg = owned ? "#eaf5e2" : "#faf7f0"; e.currentTarget.style.background = bg; (e.currentTarget.firstElementChild as HTMLElement).style.background = bg; }}
+                        style={{ borderTop:"1px solid #efeee9", cursor:"pointer", background: owned ? "#f3faef" : "transparent", borderLeft: owned ? "3px solid #5bba47" : "3px solid transparent" }}
+                        onMouseEnter={e => { const bg = owned ? "#eaf5e2" : "#faf9f5"; e.currentTarget.style.background = bg; (e.currentTarget.firstElementChild as HTMLElement).style.background = bg; }}
                         onMouseLeave={e => { e.currentTarget.style.background = owned ? "#f3faef" : "transparent"; (e.currentTarget.firstElementChild as HTMLElement).style.background = owned ? "#f3faef" : "#fff"; }}>
                         <td className="freeze-col" style={{ padding:"9px 10px", color:"#383a37", fontWeight:600, whiteSpace:"nowrap", ...stickyFirstCol(owned ? "#f3faef" : "#fff") }}>
                           {r.deal.propertyName || "Untitled"}
@@ -322,13 +322,13 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
                         </td>
                         <td style={{ padding:"9px 10px", whiteSpace:"nowrap" }}>
                           <button onClick={e => { e.stopPropagation(); onTenantClick?.(r.brandLabel); }}
-                            style={{ background:"transparent", border:"none", padding:0, cursor:onTenantClick?"pointer":"default", fontSize:12.5, fontWeight:600, color:"#2d4ecf", textDecoration:"underline", fontFamily:"'Inter',sans-serif" }}>
+                            style={{ background:"transparent", border:"none", padding:0, cursor:onTenantClick?"pointer":"default", fontSize:12.5, fontWeight:600, color:"#2d4ecf", textDecoration:"underline", fontFamily:"'Roboto',sans-serif" }}>
                             {r.brandLabel}
                           </button>
                           {r.t.isAnchor && <span style={{ fontSize:9, color:"#1f2b16", background:"#6dba4322", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>ANCHOR</span>}
                           {isGroundLease(r) && <span style={{ fontSize:9, color:"#3a5b7c", background:"#e8eff5", border:"1px solid #b8cce0", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>GROUND LEASE</span>}
                           {(isNAPTenant(r.t) || (!isGroundLease(r) && sfOf(r) == null && rentOf(r) == null)) && <span style={{ fontSize:9, color:"#7c6340", background:"#f5ede0", border:"1px solid #e0c9a8", padding:"1px 6px", borderRadius:10, marginLeft:6, fontWeight:600 }}>NAP</span>}
-                          {(r.t.name || "") && isInvestmentGrade(r.t.name || "", r.t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, marginLeft:6, fontWeight:700 }}>Investment Grade</span>}
+                          {(r.t.name || "") && isInvestmentGrade(r.t.name || "", r.t.creditRating) && <span style={{ fontSize:9, color:"#3e8a2f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, marginLeft:6, fontWeight:700 }}>Investment Grade</span>}
                           {(() => { const w = lookupWatch(watchMap, r.t.name); if (!w) return null; const m = WATCH_STATUS_META[w.status] || WATCH_STATUS_META.watch; return (
                             <span title={`Retailer watchlist — ${m.label}: ${w.note || w.brand}`} style={{ fontSize:9, color:m.color, background:m.bg, border:`1px solid ${m.border}`, padding:"1px 6px", borderRadius:4, marginLeft:6, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.03em" }}>⚠ {m.label}</span>
                           ); })()}
@@ -346,7 +346,7 @@ export default function ParentCompanyView({ parentName, deals, onBack, onTenantC
                 </tbody>
               </table>
             </div>
-            {rows.length === 0 && <div style={{ fontSize:13, color:"#a69e91", padding:"10px 0" }}>No locations found.</div>}
+            {rows.length === 0 && <div style={{ fontSize:13, color:"#94928b", padding:"10px 0" }}>No locations found.</div>}
           </div>
         </>
       )}

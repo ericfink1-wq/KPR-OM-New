@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@500;600;700;800&family=Lora:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Roboto:wght@400;500;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -136,7 +136,7 @@
 }
 
 /* ── App shell ── */
-body { background: #f1ece1; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+body { background: #FAF9F5; font-family: 'Roboto', -apple-system, sans-serif; color: #232422; -webkit-font-smoothing: antialiased; }
 /* Global +5% scale. The app uses px-based inline styles throughout, so scaling
    the root with zoom enlarges all text and layout uniformly (incl. fixed bars).
    The app shell is height:100dvh; under zoom that becomes 105% of the viewport and
@@ -144,11 +144,11 @@ body { background: #f1ece1; font-family: 'Inter', -apple-system, sans-serif; -we
    to one *zoomed* viewport — 100dvh ÷ 1.05 — which renders to exactly full height. */
 #root { zoom: 1.05; height: calc(100dvh / 1.05); }
 
-::selection { background: #6dba4338; color: #2a2c27; }
+::selection { background: #5bba4738; color: #232422; }
 ::-webkit-scrollbar { width: 9px; height: 9px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d8cfbd; border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
-::-webkit-scrollbar-thumb:hover { background: #c7bca6; background-clip: padding-box; }
+::-webkit-scrollbar-thumb { background: #d4d2ca; border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: #b8b5ad; background-clip: padding-box; }
 
 @keyframes riseIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 @keyframes slideInRight { from { transform:translateX(100%); } to { transform:translateX(0); } }
@@ -186,7 +186,72 @@ body { background: #f1ece1; font-family: 'Inter', -apple-system, sans-serif; -we
 }
 
 /* Clickable chart rows (lease waterfall): subtle hover instead of link styling. */
-.kpr-row-hover:hover { background: #f7f3ea; }
+.kpr-row-hover:hover { background: #f6f5f1; }
 
 /* Keyboard shortcut hints mean nothing on a touch screen (iPhone / iPad). */
 @media (hover: none) and (pointer: coarse) { .kpr-kbd-hint { display: none !important; } }
+
+
+/* ═══ KPR DESIGN SYSTEM (10/18/26) ═══════════════════════════════════════════════
+   One palette, one type stack, one spacing scale for every page. Components still
+   carry inline styles; these rules give them shared behaviour (focus, motion,
+   numerals) and the opt-in classes below give pages the standard pieces.
+   Type: Montserrat = caps section heads & labels · Lora = display headings ·
+   Roboto = body + tabular numerals. Spacing scale: 4 · 8 · 12 · 16 · 24 · 32. */
+:root {
+  --kpr-green: #5BBA47; --kpr-green-dk: #3e8a2f; --kpr-green-bg: #eef7eb;
+  --kpr-charcoal: #383A37; --kpr-ink: #232422; --kpr-gray: #676767; --kpr-gray-2: #94928b;
+  --kpr-page: #FAF9F5; --kpr-line: #ecebe6; --kpr-line-2: #dfddd6;
+  --kpr-red: #b3403f; --kpr-red-bg: #fdecec; --kpr-amber: #a8640f; --kpr-amber-bg: #fff2e0;
+  --kpr-radius: 12px; --kpr-radius-sm: 8px;
+  --kpr-shadow: 0 1px 2px rgba(35,36,34,.05), 0 10px 26px -20px rgba(35,36,34,.35);
+  --kpr-shadow-lift: 0 2px 4px rgba(35,36,34,.06), 0 18px 34px -18px rgba(35,36,34,.45);
+  --kpr-ease: 150ms cubic-bezier(.4,0,.2,1);
+}
+h1, h2, h3 { color: var(--kpr-ink); }
+table { font-variant-numeric: tabular-nums; }
+button, a, input, select, textarea { transition: background-color var(--kpr-ease), border-color var(--kpr-ease), color var(--kpr-ease), box-shadow var(--kpr-ease), transform var(--kpr-ease), opacity var(--kpr-ease); }
+:focus-visible { outline: 2px solid var(--kpr-green); outline-offset: 2px; border-radius: 4px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(91,186,71,.28); border-color: var(--kpr-green) !important; }
+button:active:not(:disabled) { transform: translateY(0.5px); }
+button:disabled { cursor: default; opacity: .6; }
+
+/* Page header: title + subtitle + actions, the same on every page. */
+.kpr-page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; margin: 0 0 16px; }
+.kpr-page-title { font-family: 'Lora', Georgia, serif; font-weight: 500; font-size: 28px; line-height: 1.15; letter-spacing: -.01em; color: var(--kpr-ink); margin: 0; }
+.kpr-page-sub { font-size: 13.5px; color: var(--kpr-gray); margin-top: 4px; }
+.kpr-page-kicker { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--kpr-green-dk); margin-bottom: 4px; }
+.kpr-section-head { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--kpr-charcoal); margin: 0 0 10px; }
+@media (max-width: 640px) { .kpr-page-title { font-size: 23px; } }
+
+/* Cards */
+.kpr-card { background: #fff; border: 1px solid var(--kpr-line); border-radius: var(--kpr-radius); box-shadow: var(--kpr-shadow); }
+.kpr-card-lift { transition: transform var(--kpr-ease), box-shadow var(--kpr-ease); }
+.kpr-card-lift:hover { transform: translateY(-2px); box-shadow: var(--kpr-shadow-lift); }
+
+/* Tables (opt-in): sticky header, right-aligned tabular numbers, zebra + hover, compact. */
+.kpr-table { border-collapse: collapse; width: 100%; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.kpr-table thead tr:not([style*="background"]) th:not([style*="background"]) { background: #fff; }
+.kpr-table thead th { position: sticky; top: 0; z-index: 2; font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--kpr-gray); white-space: nowrap; }
+.kpr-table tbody td { vertical-align: middle; }
+.kpr-table tbody tr:not([style*="background"]):nth-child(even) > td:not([style*="background"]) { background-color: #fcfcfa; }
+.kpr-table tbody tr:hover > td:not([style*="background"]) { background-color: #f4f7f1; }
+.kpr-table .num, .kpr-table th.num { text-align: right; white-space: nowrap; }
+
+/* Chips / badges — status, IG, anchor, flags. */
+.kpr-chip { display: inline-flex; align-items: center; gap: 4px; font-family: 'Roboto', sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: .02em; line-height: 1; padding: 3px 7px; border-radius: 999px; white-space: nowrap; background: #f1f0ec; color: var(--kpr-gray); }
+.kpr-chip.green { background: var(--kpr-green-bg); color: var(--kpr-green-dk); }
+.kpr-chip.red { background: var(--kpr-red-bg); color: var(--kpr-red); }
+.kpr-chip.amber { background: var(--kpr-amber-bg); color: var(--kpr-amber); }
+.kpr-chip.dark { background: var(--kpr-charcoal); color: #fff; }
+
+/* Buttons */
+.kpr-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 7px 13px; border-radius: var(--kpr-radius-sm); border: 1px solid #d9d8d2; background: #fff; color: var(--kpr-charcoal); font-family: 'Montserrat', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.kpr-btn:hover { border-color: var(--kpr-charcoal); }
+.kpr-btn.primary { background: var(--kpr-charcoal); border-color: var(--kpr-charcoal); color: #fff; }
+.kpr-btn.primary:hover { background: var(--kpr-ink); }
+
+/* Skeleton loaders */
+.kpr-skel { background: linear-gradient(90deg, #efeee9 25%, #f7f6f2 37%, #efeee9 63%); background-size: 400% 100%; animation: kprShimmer 1.3s ease infinite; border-radius: 8px; }
+@keyframes kprShimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .kpr-skel { animation: none; } * { scroll-behavior: auto !important; } }

@@ -7,7 +7,7 @@ interface Props {
 }
 
 export default function StatusTag({ status, onChange, size = "md" }: Props) {
-  const color = STATUS_COLORS[status || ""] || "#a69e91";
+  const color = STATUS_COLORS[status || ""] || "#94928b";
   if (!onChange) {
     return (
       <span style={{
@@ -36,7 +36,7 @@ export default function StatusTag({ status, onChange, size = "md" }: Props) {
         background: `${color}22 url("data:image/svg+xml,${caret}") no-repeat right 7px center`,
         border: `1px solid ${color}`, borderRadius: 20,
         padding: size === "sm" ? "1px 22px 1px 9px" : "3px 24px 3px 11px",
-        cursor: "pointer", fontFamily: "'Inter', sans-serif",
+        cursor: "pointer", fontFamily: "'Roboto',sans-serif",
         letterSpacing: "0.05em", textTransform: "uppercase",
         appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
         boxShadow: `0 1px 2px ${color}33`,

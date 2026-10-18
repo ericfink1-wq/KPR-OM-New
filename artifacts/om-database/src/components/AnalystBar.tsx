@@ -31,7 +31,7 @@ export default function AnalystBar({ onAsk }: Props) {
 
   return (
     <div style={{
-      borderTop: "1px solid #e7e0d2",
+      borderTop: "1px solid #e6e4de",
       background: "rgba(250,247,240,0.95)",
       backdropFilter: "blur(12px)",
       flexShrink: 0,
@@ -41,7 +41,7 @@ export default function AnalystBar({ onAsk }: Props) {
           {showSuggestions && (
             <div style={{
               position: "absolute", bottom: "calc(100% + 6px)", left: 0, right: 54,
-              background: "#fff", border: "1px solid #e3dccd", borderRadius: 12,
+              background: "#fff", border: "1px solid #dfddd6", borderRadius: 12,
               boxShadow: "0 4px 20px rgba(56,58,55,0.13)", overflow: "hidden", zIndex: 200,
             }}>
               {SUGGESTED.slice(0, 5).map((s, i) => (
@@ -49,11 +49,11 @@ export default function AnalystBar({ onAsk }: Props) {
                   onMouseDown={e => { e.preventDefault(); setInput(s); setShowSuggestions(false); }}
                   style={{
                     display: "block", width: "100%", textAlign: "left", background: "transparent",
-                    border: "none", borderBottom: i < 4 ? "1px solid #f1eadc" : "none",
+                    border: "none", borderBottom: i < 4 ? "1px solid #efeee9" : "none",
                     padding: "10px 14px", fontSize: 13, color: "#5c5f57", cursor: "pointer",
-                    fontFamily: "'Inter',sans-serif", lineHeight: 1.4,
+                    fontFamily: "'Roboto',sans-serif", lineHeight: 1.4,
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "#faf7f0")}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#faf9f5")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                 >{s}</button>
               ))}
@@ -73,10 +73,10 @@ export default function AnalystBar({ onAsk }: Props) {
             style={{
               flex: 1,
               resize: "none",
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: "'Roboto',sans-serif",
               fontSize: 13.5,
               padding: "10px 14px",
-              border: "1px solid #e3dccd",
+              border: "1px solid #dfddd6",
               borderRadius: 12,
               color: "#383a37",
               background: "#fff",
@@ -89,9 +89,9 @@ export default function AnalystBar({ onAsk }: Props) {
             onClick={send}
             disabled={!input.trim()}
             style={{
-              background: input.trim() ? "#26281f" : "#e3dccd",
+              background: input.trim() ? "#232422" : "#dfddd6",
               border: "none",
-              color: input.trim() ? "#e8e0cf" : "#a89f8f",
+              color: input.trim() ? "#e8e0cf" : "#9b9992",
               borderRadius: 12,
               width: 44,
               cursor: input.trim() ? "pointer" : "default",
@@ -100,7 +100,7 @@ export default function AnalystBar({ onAsk }: Props) {
             }}
           >↑</button>
         </div>
-        <div style={{ fontSize: 10, color: "#c4bba7", marginTop: 6, fontFamily: "'Inter',sans-serif" }}>
+        <div style={{ fontSize: 10, color: "#c4bba7", marginTop: 6, fontFamily: "'Roboto',sans-serif" }}>
           <span className="kpr-kbd-hint">Enter to send · Shift+Enter for new line · </span>Powered by Claude
         </div>
       </div>

@@ -17,8 +17,8 @@ export default function SaveStatusIndicator() {
   const isSaved = s.status === "saved";
 
   const bg = isError ? "#fdecec" : isSaved ? "#eef7e8" : "#fff";
-  const border = isError ? "#e7b4b4" : isSaved ? "#cfe6bb" : "#e7e0d2";
-  const fg = isError ? "#a33a3a" : isSaved ? "#2f6b1f" : "#6f6a5f";
+  const border = isError ? "#e7b4b4" : isSaved ? "#cfe6bb" : "#e6e4de";
+  const fg = isError ? "#a33a3a" : isSaved ? "#2f6b1f" : "#676767";
 
   const doRetry = async () => {
     setRetrying(true);
@@ -34,7 +34,7 @@ export default function SaveStatusIndicator() {
         display: "flex", alignItems: "center", gap: 10,
         background: bg, border: `1px solid ${border}`, color: fg,
         borderRadius: 999, padding: "8px 14px",
-        fontSize: 12.5, fontFamily: "'Inter',sans-serif", fontWeight: 600,
+        fontSize: 12.5, fontFamily: "'Roboto',sans-serif", fontWeight: 600,
         boxShadow: "0 4px 16px rgba(0,0,0,0.12)", maxWidth: "min(92vw, 360px)",
       }}
     >
@@ -76,7 +76,7 @@ function Spinner() {
       aria-hidden
       style={{
         width: 12, height: 12, borderRadius: "50%",
-        border: "2px solid #d9d2c4", borderTopColor: "#7a7466",
+        border: "2px solid #d7d5ce", borderTopColor: "#7a7466",
         display: "inline-block", animation: "kpr-spin 0.7s linear infinite",
       }}
     >

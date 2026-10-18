@@ -86,9 +86,15 @@ const queryClient = new QueryClient({
 
 // Fallback shown while a lazy-loaded screen's chunk is fetched (usually a blink).
 function ViewLoading() {
+  // Skeleton instead of a bare "Loading…" — the page's shape appears at once (design pass, 10/18/26).
   return (
-    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 240, color: "#a89f8f", fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
-      Loading…
+    <div aria-busy="true" aria-label="Loading" style={{ flex: 1, padding: "28px", maxWidth: 1320, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+      <div className="kpr-skel" style={{ width: 220, height: 28, marginBottom: 10 }} />
+      <div className="kpr-skel" style={{ width: 340, height: 14, marginBottom: 24 }} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12, marginBottom: 18 }}>
+        {[0, 1, 2, 3].map(k => <div key={k} className="kpr-skel" style={{ height: 86, borderRadius: 12 }} />)}
+      </div>
+      <div className="kpr-skel" style={{ height: 260, borderRadius: 12 }} />
     </div>
   );
 }
@@ -538,10 +544,10 @@ function AppInner() {
 
   if (auth === "checking") {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#f1ece1" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#f3f2ee" }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: "#383a37", fontWeight: 400 }}>KPR Deal Intelligence</div>
-          <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 8 }}>Loading…</div>
+          <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, color: "#383a37", fontWeight: 400 }}>KPR Deal Intelligence</div>
+          <div style={{ fontSize: 12, color: "#9b9992", marginTop: 8 }}>Loading…</div>
         </div>
       </div>
     );
@@ -565,10 +571,10 @@ function AppInner() {
 
   if (!loaded) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#f1ece1" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#f3f2ee" }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: "#383a37", fontWeight: 400 }}>KPR Deal Intelligence</div>
-          <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 8 }}>Loading deals…</div>
+          <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, color: "#383a37", fontWeight: 400 }}>KPR Deal Intelligence</div>
+          <div style={{ fontSize: 12, color: "#9b9992", marginTop: 8 }}>Loading deals…</div>
         </div>
       </div>
     );
@@ -605,7 +611,7 @@ function AppInner() {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      style={{ height: "100%", background: "#f6f2ea", display: "flex", flexDirection: "column", overflow: "hidden", paddingTop: 16, fontFamily: "'Inter',-apple-system,sans-serif", color: "#383a37", WebkitFontSmoothing: "antialiased" as any }}>
+      style={{ height: "100%", background: "#faf9f5", display: "flex", flexDirection: "column", overflow: "hidden", paddingTop: 16, fontFamily: "'Roboto',-apple-system,sans-serif", color: "#383a37", WebkitFontSmoothing: "antialiased" as any }}>
 
       <Header
         tab={tab}
@@ -656,9 +662,9 @@ function AppInner() {
       {/* Drag overlay */}
       {dragging && (
         <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(56,58,55,0.55)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-          <div style={{ background: "#ffffff", border: "2px dashed #6dba43", borderRadius: 16, padding: "48px 64px", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+          <div style={{ background: "#ffffff", border: "2px dashed #5bba47", borderRadius: 16, padding: "48px 64px", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
             <div style={{ fontSize: 40, marginBottom: 8 }}>📁</div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 600, color: "#383a37" }}>Drop OMs, rent rolls or sales reports</div>
+            <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 600, color: "#383a37" }}>Drop OMs, rent rolls or sales reports</div>
             <div style={{ fontSize: 13, color: "#8b9aa8", marginTop: 6 }}>PDF or Excel — we'll sort each to the right property</div>
           </div>
         </div>
@@ -704,14 +710,14 @@ function AppInner() {
             ) : view.type === "tenant-audit" ? (
               <div>
                 <div style={{ padding: "14px 24px 0" }}>
-                  <button onClick={goBack} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>← Back</button>
+                  <button onClick={goBack} style={{ background: "transparent", border: "1px solid #e6e4de", color: "#6b6a65", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Roboto',sans-serif" }}>← Back</button>
                 </div>
                 <TenantAudit deals={activeDeals} onTenantClick={handleOpenTenant} onDealsChanged={handleReloadDeals} />
               </div>
             ) : view.type === "tenant-link" ? (
               <div>
                 <div style={{ padding: "14px 24px 0" }}>
-                  <button onClick={goBack} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>← Back</button>
+                  <button onClick={goBack} style={{ background: "transparent", border: "1px solid #e6e4de", color: "#6b6a65", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontFamily: "'Roboto',sans-serif" }}>← Back</button>
                 </div>
                 <TenantLink deals={activeDeals} />
               </div>
@@ -775,22 +781,23 @@ function AppInner() {
           : { flex: 1, overflowY: "auto", paddingBottom: 88 }}>
           {view.type === "list" && (
             <>
-              <div style={{ padding: "28px 28px 4px" }}>
-                <h1 style={{ margin: 0, fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 400, color: "#383a37", letterSpacing: "-0.01em" }}>
+              <div className="kpr-page-head" style={{ padding: "28px 28px 4px", margin: 0 }}><div>
+                <div className="kpr-page-kicker">Portfolio</div>
+                <h1 className="kpr-page-title">
                   Deal Library
                 </h1>
-                <div style={{ fontSize: 13, color: "#a89f8f", marginTop: 4 }}>
+                <div className="kpr-page-sub">
                   {activeDeals.length === 0
                     ? "No deals uploaded yet"
                     : (dealCounts && dealCounts.shown < dealCounts.total)
                       ? `${dealCounts.shown} of ${dealCounts.total} offering memorand${dealCounts.total === 1 ? "um" : "a"} on file`
                       : `${activeDeals.length} offering memorand${activeDeals.length === 1 ? "um" : "a"} on file`}
                 </div>
-              </div>
+              </div></div>
               {activeDeals.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "80px 28px", color: "#a89f8f" }}>
+                <div style={{ textAlign: "center", padding: "80px 28px", color: "#9b9992" }}>
                   <div style={{ fontSize: 36, marginBottom: 16 }}>📄</div>
-                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 400, marginBottom: 8, color: "#383a37" }}>No deals yet</div>
+                  <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 24, fontWeight: 400, marginBottom: 8, color: "#383a37" }}>No deals yet</div>
                   <div style={{ fontSize: 14, lineHeight: 1.6 }}>Upload Offering Memorandum PDFs using the <strong>Upload OMs</strong> button above,<br />or drag and drop PDFs anywhere on this page.</div>
                 </div>
               ) : (
@@ -828,8 +835,8 @@ function AppInner() {
 
           {view.type === "detail" && !currentDeal && (
             <div style={{ padding: 28 }}>
-              <button onClick={goBack} style={{ color: "#7d766a", background: "transparent", border: "1px solid #e7e0d2", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11 }}>← Back</button>
-              <p style={{ color: "#a89f8f", marginTop: 16 }}>Deal not found.</p>
+              <button onClick={goBack} style={{ color: "#6b6a65", background: "transparent", border: "1px solid #e6e4de", padding: "5px 10px", borderRadius: 4, cursor: "pointer", fontSize: 11 }}>← Back</button>
+              <p style={{ color: "#9b9992", marginTop: 16 }}>Deal not found.</p>
             </div>
           )}
 
@@ -888,7 +895,7 @@ function AppInner() {
       )}
       {isPhone && tab !== "analyst" && view.type !== "detail" && !chatOpen && (
         <button onClick={() => setChatOpen(true)} aria-label="Ask the KPR Analyst"
-          style={{ position: "fixed", right: 16, bottom: MOBILE_TAB_BAR_H + 14, zIndex: 160, height: 48, padding: "0 18px", borderRadius: 24, background: "#6dba43", color: "#1f2b16", border: "none", boxShadow: "0 8px 24px -6px rgba(56,58,55,0.5)", fontSize: 14, fontWeight: 700, fontFamily: "'Inter',sans-serif", cursor: "pointer" }}>
+          style={{ position: "fixed", right: 16, bottom: MOBILE_TAB_BAR_H + 14, zIndex: 160, height: 48, padding: "0 18px", borderRadius: 24, background: "#5bba47", color: "#1f2b16", border: "none", boxShadow: "0 8px 24px -6px rgba(56,58,55,0.5)", fontSize: 14, fontWeight: 700, fontFamily: "'Roboto',sans-serif", cursor: "pointer" }}>
           ✦ Ask
         </button>
       )}
@@ -906,11 +913,11 @@ function AppInner() {
           conversation persists across opens. Only rendered once any deals load. */}
       {deals.length > 0 && (
         <div role="dialog" aria-label="KPR Analyst" aria-hidden={!chatOpen}
-          style={{ position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 1101, width: isDesktop ? "clamp(420px, 34vw, 680px)" : "100vw", maxWidth: "100vw", background: "#faf7f0", borderLeft: isDesktop ? "1px solid #d8d2c1" : "none", boxShadow: chatOpen ? "-8px 0 40px rgba(38,40,31,0.18)" : "none", display: "flex", flexDirection: "column", overflow: "hidden", transform: chatOpen ? "translateX(0)" : "translateX(101%)", transition: "transform 0.22s ease", pointerEvents: chatOpen ? "auto" : "none" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid #ece5d7", flexShrink: 0, background: "#fff" }}>
-            <span style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 600, color: "#26281f" }}>KPR Analyst</span>
+          style={{ position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 1101, width: isDesktop ? "clamp(420px, 34vw, 680px)" : "100vw", maxWidth: "100vw", background: "#faf9f5", borderLeft: isDesktop ? "1px solid #d8d2c1" : "none", boxShadow: chatOpen ? "-8px 0 40px rgba(38,40,31,0.18)" : "none", display: "flex", flexDirection: "column", overflow: "hidden", transform: chatOpen ? "translateX(0)" : "translateX(101%)", transition: "transform 0.22s ease", pointerEvents: chatOpen ? "auto" : "none" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid #ebeae5", flexShrink: 0, background: "#fff" }}>
+            <span style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, fontWeight: 600, color: "#232422" }}>KPR Analyst</span>
             <button onClick={() => setChatOpen(false)} aria-label="Close analyst"
-              style={{ background: "transparent", border: "1px solid #e3dccd", color: "#7d766a", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 17, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+              style={{ background: "transparent", border: "1px solid #dfddd6", color: "#6b6a65", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 17, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
           </div>
           <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
             <AnalystChat

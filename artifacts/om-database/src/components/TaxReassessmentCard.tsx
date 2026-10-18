@@ -12,8 +12,8 @@ import { benchmarkEffectiveTaxRate, effectiveTaxRatePct, crossCheckTaxRate } fro
 interface Props { deal: Deal; allDeals?: Deal[]; }
 
 const C = {
-  ink: "#383a37", sub: "#6f6a5f", faint: "#a69e91", line: "#efe8da", panel: "#faf7f0", panelBd: "#e7e0d2",
-  green: "#3f7a1f", greenBg: "#eef3e6", greenBd: "#b8d49a",
+  ink: "#383a37", sub: "#676767", faint: "#94928b", line: "#ecebe6", panel: "#faf9f5", panelBd: "#e6e4de",
+  green: "#3e8a2f", greenBg: "#eef3e6", greenBd: "#b8d49a",
   amber: "#c97a18", amberBg: "#fbf1e4", amberBd: "#e0c9a8",
   red: "#b3261e", redBg: "#fdecec", redBd: "#f3c0c0",
 };
@@ -40,7 +40,7 @@ function NumIn({ label, value, onChange, hint }: { label: string; value: string;
       <div style={{ display: "flex", alignItems: "center", border: `1px solid ${C.panelBd}`, borderRadius: 8, background: "#fff", padding: "0 8px" }}>
         <span style={{ color: C.faint, fontSize: 13 }}>$</span>
         <input value={value} onChange={(e) => onChange(commaFmt(e.target.value))} inputMode="numeric"
-          style={{ border: "none", outline: "none", padding: "8px 6px", fontSize: 13, color: C.ink, width: "100%", background: "transparent", fontFamily: "'Inter',sans-serif" }} />
+          style={{ border: "none", outline: "none", padding: "8px 6px", fontSize: 13, color: C.ink, width: "100%", background: "transparent", fontFamily: "'Roboto',sans-serif" }} />
       </div>
       {hint && <span style={{ fontSize: 9.5, color: C.faint }}>{hint}</span>}
     </label>
@@ -141,7 +141,7 @@ export default function TaxReassessmentCard({ deal, allDeals }: Props) {
     <div id="section-tax-reassessment" data-jump="Tax Reassessment" style={{ background: C.panel, border: `1px solid ${C.panelBd}`, borderRadius: 8, padding: "14px 16px", marginTop: 14, marginBottom: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 8, letterSpacing: "0.1em", color: "#958d80", marginBottom: 2 }}>PROPERTY TAX · REASSESSMENT ON SALE</div>
+          <div style={{ fontSize: 8, letterSpacing: "0.1em", color: "#8a8983", marginBottom: 2 }}>PROPERTY TAX · REASSESSMENT ON SALE</div>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{j ? j.stateName : (deal.state || "Unknown state")}{county ? ` · ${county.replace(/\s+county$/i, "")} County` : j?.countyDriven ? " · county-administered" : ""}</div>
         </div>
         <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.04em", color: cm.fg, background: cm.bg, border: `1px solid ${cm.bd}`, borderRadius: 5, padding: "2px 7px", whiteSpace: "nowrap" }}>{cm.t}</span>
@@ -195,7 +195,7 @@ export default function TaxReassessmentCard({ deal, allDeals }: Props) {
       {/* Forward-looking triggers beyond the sale reset */}
       {triggers.length > 0 && (
         <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.08em", color: "#958d80", marginBottom: 5 }}>OTHER REASSESSMENT TRIGGERS</div>
+          <div style={{ fontSize: 9, letterSpacing: "0.08em", color: "#8a8983", marginBottom: 5 }}>OTHER REASSESSMENT TRIGGERS</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             {triggers.map((t, i) => {
               const tone = t.severity === "high" ? { fg: C.red, bg: C.redBg, bd: C.redBd }
@@ -318,7 +318,7 @@ export default function TaxReassessmentCard({ deal, allDeals }: Props) {
         <div style={{ marginTop: 10, background: crossCheck.verdict === "in_line" ? C.greenBg : crossCheck.verdict === "below" ? C.amberBg : "#fff",
           border: `1px solid ${crossCheck.verdict === "in_line" ? C.greenBd : crossCheck.verdict === "below" ? C.amberBd : C.line}`,
           borderRadius: 8, padding: "9px 11px" }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.08em", color: "#958d80", marginBottom: 3 }}>DATABASE CROSS-CHECK · EFFECTIVE TAX RATE</div>
+          <div style={{ fontSize: 9, letterSpacing: "0.08em", color: "#8a8983", marginBottom: 3 }}>DATABASE CROSS-CHECK · EFFECTIVE TAX RATE</div>
           <div style={{ fontSize: 11.5, color: C.ink, lineHeight: 1.45 }}>{crossCheck.verdict === "in_line" ? "✓ " : "⚠ "}{crossCheck.message}</div>
         </div>
       )}

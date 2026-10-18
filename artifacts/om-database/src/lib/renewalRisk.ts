@@ -35,7 +35,7 @@ export interface TenantRenewalRisk {
 }
 
 export const RISK_BAND_META: Record<RenewalRiskBand, { label: string; color: string }> = {
-  secure: { label: "Secure", color: "#3f7a1f" },
+  secure: { label: "Secure", color: "#3e8a2f" },
   likely: { label: "Likely renews", color: "#8cbf63" },
   uncertain: { label: "Uncertain", color: "#e0a93e" },
   "at-risk": { label: "At risk", color: "#c4432b" },

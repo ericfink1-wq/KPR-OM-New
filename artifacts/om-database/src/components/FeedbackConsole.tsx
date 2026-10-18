@@ -9,8 +9,8 @@ import { apiIssuesSummary, apiAddExtractionLesson, type IssueGroup } from "../li
 // a code-level guardrail. Token-free to load (the summary is computed deterministically).
 
 const C = {
-  ink: "#383a37", sub: "#6f6a5f", faint: "#a69e91", line: "#efe8da", panel: "#faf7f0", panelBd: "#e7e0d2",
-  green: "#3f7a1f", greenBg: "#eef3e6", greenBd: "#b8d49a", gold: "#9a6a1e", goldBg: "#fbf7ee", goldBd: "#e7d9bd",
+  ink: "#383a37", sub: "#676767", faint: "#94928b", line: "#ecebe6", panel: "#faf9f5", panelBd: "#e6e4de",
+  green: "#3e8a2f", greenBg: "#eef3e6", greenBd: "#b8d49a", gold: "#9a6a1e", goldBg: "#fbf7ee", goldBd: "#e7d9bd",
   amber: "#c97a18", amberBg: "#fbf1e4", amberBd: "#e0c9a8", red: "#b3261e", redBg: "#fdecec", redBd: "#f3c0c0",
 };
 const sevTone = (s: string) => s === "high" ? { fg: C.red, bg: C.redBg, bd: C.redBd } : s === "medium" ? { fg: C.amber, bg: C.amberBg, bd: C.amberBd } : { fg: C.sub, bg: "#fff", bd: C.line };
@@ -61,10 +61,10 @@ export default function FeedbackConsole({ onOpenDeal }: { onOpenDeal: (id: strin
   }, [data]);
 
   return (
-    <div style={{ maxWidth: 920, margin: "0 auto", padding: "4px 2px 40px", fontFamily: "'Inter',sans-serif", color: C.ink }}>
+    <div style={{ maxWidth: 920, margin: "0 auto", padding: "4px 2px 40px", fontFamily: "'Roboto',sans-serif", color: C.ink }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 6 }}>
         <div>
-          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 21, fontWeight: 600, color: "#26281f" }}>Feedback &amp; Trends</div>
+          <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 21, fontWeight: 600, color: "#232422" }}>Feedback &amp; Trends</div>
           <div style={{ fontSize: 12.5, color: C.sub, marginTop: 3, lineHeight: 1.5, maxWidth: 640 }}>
             Every open data issue across the portfolio, grouped by type so recurring problems show up as trends. Answer one in plain English and it becomes a guardrail that guides every future OM read.
           </div>
@@ -128,7 +128,7 @@ export default function FeedbackConsole({ onOpenDeal }: { onOpenDeal: (id: strin
               <div style={{ marginTop: 9, background: C.goldBg, border: `1px solid ${C.goldBd}`, borderRadius: 8, padding: "10px 12px" }}>
                 <div style={{ fontSize: 10.5, color: C.gold, fontWeight: 700, marginBottom: 5 }}>📚 Answer in plain English — this becomes a guardrail for EVERY future OM read</div>
                 <textarea value={teachText} onChange={e => setTeachText(e.target.value)} rows={3}
-                  style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${C.goldBd}`, borderRadius: 6, padding: "7px 9px", fontSize: 12, fontFamily: "'Inter',sans-serif", color: C.ink, resize: "vertical", background: "#fff", lineHeight: 1.4 }} />
+                  style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${C.goldBd}`, borderRadius: 6, padding: "7px 9px", fontSize: 12, fontFamily: "'Roboto',sans-serif", color: C.ink, resize: "vertical", background: "#fff", lineHeight: 1.4 }} />
                 <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 7, fontSize: 11.5, color: C.sub, cursor: "pointer" }}>
                   <input type="checkbox" checked={needsCheck} onChange={e => setNeedsCheck(e.target.checked)} />
                   Also flag this for a hard automated check (a code-level guardrail)

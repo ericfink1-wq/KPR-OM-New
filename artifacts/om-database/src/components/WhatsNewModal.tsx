@@ -31,23 +31,23 @@ function fmtDate(iso: string): string {
 function Entry({ e, isNew }: { e: ChangeEntry; isNew: boolean }) {
   const c = CATEGORY_STYLE[e.category];
   return (
-    <li style={{ display:"flex", flexDirection:"column", gap:6, padding:"14px 0", borderTop:"1px solid #f1eadc" }}>
+    <li style={{ display:"flex", flexDirection:"column", gap:6, padding:"14px 0", borderTop:"1px solid #efeee9" }}>
       <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
         <span style={{ fontSize:9, letterSpacing:"0.07em", fontWeight:700, textTransform:"uppercase", color:c.fg, background:c.bg, border:`1px solid ${c.border}`, borderRadius:8, padding:"2px 8px", whiteSpace:"nowrap" }}>
           {CATEGORY_LABEL[e.category]}
         </span>
-        <span style={{ fontSize:11, color:"#a89f8f", whiteSpace:"nowrap" }}>{fmtDate(e.date)}</span>
+        <span style={{ fontSize:11, color:"#9b9992", whiteSpace:"nowrap" }}>{fmtDate(e.date)}</span>
         {isNew && (
-          <span style={{ fontSize:9, letterSpacing:"0.07em", fontWeight:700, textTransform:"uppercase", color:"#fff", background:"#3f7a1f", borderRadius:8, padding:"2px 8px", whiteSpace:"nowrap" }}>
+          <span style={{ fontSize:9, letterSpacing:"0.07em", fontWeight:700, textTransform:"uppercase", color:"#fff", background:"#3e8a2f", borderRadius:8, padding:"2px 8px", whiteSpace:"nowrap" }}>
             New to you
           </span>
         )}
       </div>
-      <div style={{ fontFamily:"'Fraunces',serif", fontSize:16, fontWeight:600, color:"#2a2c28", lineHeight:1.35 }}>{e.title}</div>
+      <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:16, fontWeight:600, color:"#232422", lineHeight:1.35 }}>{e.title}</div>
       <div style={{ fontSize:13.5, color:"#55584f", lineHeight:1.6 }}>{e.detail}</div>
       {e.where && (
         <div style={{ fontSize:12, color:"#8a8579" }}>
-          <span style={{ color:"#a89f8f" }}>Where: </span>{e.where}
+          <span style={{ color:"#9b9992" }}>Where: </span>{e.where}
         </div>
       )}
     </li>
@@ -97,7 +97,7 @@ export default function WhatsNewModal({ open, onClose, cutoff, basis, isAdmin = 
         aria-labelledby="whats-new-title"
         style={{
           position:"fixed", zIndex:1201, background:"#fff",
-          fontFamily:"'Inter',-apple-system,sans-serif",
+          fontFamily:"'Roboto',-apple-system,sans-serif",
           boxShadow:"0 20px 60px rgba(42,44,40,0.22)",
           display:"flex", flexDirection:"column",
           // On a phone the dialog is a bottom sheet pinned to the bottom edge, so the
@@ -107,10 +107,10 @@ export default function WhatsNewModal({ open, onClose, cutoff, basis, isAdmin = 
             : { top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:"min(680px, calc(100vw - 32px))", maxHeight:"85vh", borderRadius:14 }),
         }}
       >
-        <div style={{ padding: isMobile ? "18px 18px 12px" : "24px 26px 14px", borderBottom:"1px solid #f1eadc", flexShrink:0 }}>
+        <div style={{ padding: isMobile ? "18px 18px 12px" : "24px 26px 14px", borderBottom:"1px solid #efeee9", flexShrink:0 }}>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12 }}>
             <div style={{ minWidth:0 }}>
-              <div id="whats-new-title" style={{ fontFamily:"'Fraunces',serif", fontSize: isMobile ? 20 : 23, fontWeight:600, color:"#2a2c28" }}>
+              <div id="whats-new-title" style={{ fontFamily:"'Lora',Georgia,serif", fontSize: isMobile ? 20 : 23, fontWeight:600, color:"#232422" }}>
                 What's new
               </div>
               <div style={{ fontSize:12.5, color:"#8a8579", marginTop:4 }}>{subtitle}</div>
@@ -118,7 +118,7 @@ export default function WhatsNewModal({ open, onClose, cutoff, basis, isAdmin = 
             <button
               onClick={onClose}
               aria-label="Close"
-              style={{ flexShrink:0, width:34, height:34, borderRadius:8, border:"1px solid #e3dccd", background:"#fff", color:"#8a8579", fontSize:17, cursor:"pointer", lineHeight:1 }}
+              style={{ flexShrink:0, width:34, height:34, borderRadius:8, border:"1px solid #dfddd6", background:"#fff", color:"#8a8579", fontSize:17, cursor:"pointer", lineHeight:1 }}
             >×</button>
           </div>
         </div>
@@ -135,18 +135,18 @@ export default function WhatsNewModal({ open, onClose, cutoff, basis, isAdmin = 
           )}
         </div>
 
-        <div style={{ padding: isMobile ? "12px 18px calc(16px + env(safe-area-inset-bottom))" : "14px 26px 20px", borderTop:"1px solid #f1eadc", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap", flexShrink:0 }}>
+        <div style={{ padding: isMobile ? "12px 18px calc(16px + env(safe-area-inset-bottom))" : "14px 26px 20px", borderTop:"1px solid #efeee9", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap", flexShrink:0 }}>
           {cutoff && !showAll && all.length > unseen.length ? (
             <button
               onClick={() => setShowAll(true)}
-              style={{ background:"none", border:"none", padding:0, color:"#3f7a1f", fontSize:12.5, fontWeight:600, cursor:"pointer", textDecoration:"underline", fontFamily:"'Inter',sans-serif" }}
+              style={{ background:"none", border:"none", padding:0, color:"#3e8a2f", fontSize:12.5, fontWeight:600, cursor:"pointer", textDecoration:"underline", fontFamily:"'Roboto',sans-serif" }}
             >
               Show earlier updates
             </button>
           ) : <span />}
           <button
             onClick={onClose}
-            style={{ background:"#3f7a1f", border:"1px solid #3f7a1f", color:"#fff", borderRadius:8, padding:"9px 20px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Inter',sans-serif", minHeight:40 }}
+            style={{ background:"#3e8a2f", border:"1px solid #3e8a2f", color:"#fff", borderRadius:8, padding:"9px 20px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Roboto',sans-serif", minHeight:40 }}
           >
             Got it
           </button>

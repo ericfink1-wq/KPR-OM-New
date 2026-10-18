@@ -15,10 +15,10 @@ interface HelpModalProps {
 
 function ExpandToggle({ open }: { open: boolean }) {
   return (
-    <span style={{ display:"inline-flex", alignItems:"center", gap:5, flexShrink:0, background: open ? "#eef3e6" : "#3f7a1f", color: open ? "#3f7a1f" : "#fff", border: open ? "1px solid #b8d49a" : "1px solid #3f7a1f", borderRadius:6, padding:"4px 10px", fontSize:11.5, fontWeight:700, fontFamily:"'Inter',sans-serif", letterSpacing:"0.01em" }}>
+    <span style={{ display:"inline-flex", alignItems:"center", gap:5, flexShrink:0, background: open ? "#eef3e6" : "#3e8a2f", color: open ? "#3e8a2f" : "#fff", border: open ? "1px solid #b8d49a" : "1px solid #3e8a2f", borderRadius:6, padding:"4px 10px", fontSize:11.5, fontWeight:700, fontFamily:"'Roboto',sans-serif", letterSpacing:"0.01em" }}>
       {open ? "Collapse" : "Expand"}
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition:"transform 0.2s ease" }}>
-        <path d="M4 6l4 4 4-4" stroke={open ? "#3f7a1f" : "#fff"} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M4 6l4 4 4-4" stroke={open ? "#3e8a2f" : "#fff"} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     </span>
   );
@@ -26,7 +26,7 @@ function ExpandToggle({ open }: { open: boolean }) {
 
 function Chip({ n }: { n: number }) {
   return (
-    <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:26, height:26, background:"#3f7a1f", borderRadius:4, color:"#fff", fontWeight:700, fontSize:12, fontFamily:"'Inter',sans-serif", flexShrink:0 }}>
+    <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:26, height:26, background:"#3e8a2f", borderRadius:4, color:"#fff", fontWeight:700, fontSize:12, fontFamily:"'Roboto',sans-serif", flexShrink:0 }}>
       {n}
     </span>
   );
@@ -37,7 +37,7 @@ function DetailList({ items }: { items: React.ReactNode[] }) {
     <ul style={{ margin:"10px 0 0", padding:0, listStyle:"none", display:"flex", flexDirection:"column", gap:7 }}>
       {items.map((item, i) => (
         <li key={i} style={{ display:"flex", gap:8 }}>
-          <span style={{ color:"#6f6a5f", flexShrink:0, marginTop:1 }}>•</span>
+          <span style={{ color:"#676767", flexShrink:0, marginTop:1 }}>•</span>
           <span>{item}</span>
         </li>
       ))}
@@ -46,7 +46,7 @@ function DetailList({ items }: { items: React.ReactNode[] }) {
 }
 
 function B({ children }: { children: React.ReactNode }) {
-  return <strong style={{ fontWeight:600, color:"#2a2c28" }}>{children}</strong>;
+  return <strong style={{ fontWeight:600, color:"#232422" }}>{children}</strong>;
 }
 
 function BriefList({ items }: { items: React.ReactNode[] }) {
@@ -54,7 +54,7 @@ function BriefList({ items }: { items: React.ReactNode[] }) {
     <ul style={{ margin:"7px 0 0", padding:0, listStyle:"none", display:"flex", flexDirection:"column", gap:6 }}>
       {items.map((item, i) => (
         <li key={i} style={{ display:"flex", gap:8 }}>
-          <span style={{ color:"#a89f8f", flexShrink:0, marginTop:1 }}>›</span>
+          <span style={{ color:"#9b9992", flexShrink:0, marginTop:1 }}>›</span>
           <span>{item}</span>
         </li>
       ))}
@@ -65,7 +65,7 @@ function BriefList({ items }: { items: React.ReactNode[] }) {
 function TryAsking({ items }: { items: string[] }) {
   return (
     <div style={{ marginTop:10, background:"#eef3e6", border:"1px solid #b8d49a", borderRadius:8, padding:12 }}>
-      <div style={{ fontSize:10, fontWeight:700, color:"#3f7a1f", letterSpacing:"0.1em", marginBottom:8, fontFamily:"'Inter',sans-serif" }}>TRY ASKING…</div>
+      <div style={{ fontSize:10, fontWeight:700, color:"#3e8a2f", letterSpacing:"0.1em", marginBottom:8, fontFamily:"'Roboto',sans-serif" }}>TRY ASKING…</div>
       <div style={{ display:"flex", flexDirection:"column", gap:5, fontSize:13, color:"#383a37" }}>
         {items.map((q, i) => <span key={i}>— {q}</span>)}
       </div>
@@ -126,7 +126,7 @@ const SECTIONS: { id: number; title: string; brief: React.ReactNode; detail: Rea
       <>
         <p style={{ margin:0 }}>Click any card to open its detail page, organized into tabs. By default you see four everyday tabs — <B>Summary, AI Analysis, Tenants & Sales,</B> and <B>Market & Comps</B>; a <B>"Show underwriting"</B> toggle reveals the deeper tabs (Transaction, Financing, Underwriting) when you need them.</p>
         <p style={{ margin:"9px 0 0", padding:"8px 11px", background:"#eef7ee", border:"1px solid #cfe9c4", borderRadius:7, color:"#2f5d2a", fontSize:12.5 }}>✦ <B>Start on the Summary tab</B> — a stat band of the headline metrics, AI highlights, a side-by-side <B>Upside / Key Risks</B> strip, an <B>anchor comparison</B> (rent, term & sales vs. the chain's average across your book), then key financials and your notes. A <B>◆ DATA</B> badge scores how complete this deal's data is.</p>
-        <p style={{ margin:"9px 0 0", color:"#6f6a5f" }}>Expand below for what lives on each tab and how editing, re-analysis and the calculators work.</p>
+        <p style={{ margin:"9px 0 0", color:"#676767" }}>Expand below for what lives on each tab and how editing, re-analysis and the calculators work.</p>
       </>
     ),
     detail: (
@@ -280,14 +280,14 @@ function PanelContent({ expanded, toggle, onClose, onNavigate, isDesktop, isAdmi
     <>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18 }}>
         <div>
-          <div id="help-modal-title" style={{ fontSize:21, fontWeight:700, color:"#2a2c28", fontFamily:"'Fraunces',Georgia,serif", lineHeight:1.2 }}>KPR Deal Library — how to use it</div>
-          <div style={{ fontSize:13, color:"#6f6a5f", marginTop:5 }}>Read the briefs to get going. Expand any section for the full detail.</div>
+          <div id="help-modal-title" style={{ fontSize:21, fontWeight:700, color:"#232422", fontFamily:"'Lora',Georgia,serif", lineHeight:1.2 }}>KPR Deal Library — how to use it</div>
+          <div style={{ fontSize:13, color:"#676767", marginTop:5 }}>Read the briefs to get going. Expand any section for the full detail.</div>
         </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close help"
-          style={{ background:"transparent", border:"none", cursor:"pointer", color:"#a89f8f", fontSize:18, lineHeight:1, padding:"2px 4px", marginTop:2, borderRadius:4 }}
+          style={{ background:"transparent", border:"none", cursor:"pointer", color:"#9b9992", fontSize:18, lineHeight:1, padding:"2px 4px", marginTop:2, borderRadius:4 }}
         >✕</button>
       </div>
 
@@ -295,27 +295,27 @@ function PanelContent({ expanded, toggle, onClose, onNavigate, isDesktop, isAdmi
         {sections.map(section => {
           const isOpen = expanded.has(section.id);
           return (
-            <div key={section.id} style={{ border: section.admin ? "1px solid #d8c2a0" : "1px solid #e3dccd", borderRadius:10, overflow:"hidden", background:"#fff" }}>
+            <div key={section.id} style={{ border: section.admin ? "1px solid #d8c2a0" : "1px solid #dfddd6", borderRadius:10, overflow:"hidden", background:"#fff" }}>
               {/* Header row: title toggles open/close; the "Go to" action sits on the right. */}
-              <div style={{ display:"flex", alignItems:"center", gap:11, background: section.admin ? "#fbf4e6" : "#faf7f0", padding:"11px 14px", minHeight:48 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:11, background: section.admin ? "#fbf4e6" : "#faf9f5", padding:"11px 14px", minHeight:48 }}>
                 <button
                   type="button"
                   onClick={() => toggle(section.id)}
                   aria-expanded={isOpen}
                   aria-controls={`help-detail-${section.id}`}
-                  style={{ display:"flex", alignItems:"center", gap:11, flex:1, minWidth:0, background:"transparent", border:"none", cursor:"pointer", padding:0, textAlign:"left", fontFamily:"'Inter',-apple-system,sans-serif" }}
+                  style={{ display:"flex", alignItems:"center", gap:11, flex:1, minWidth:0, background:"transparent", border:"none", cursor:"pointer", padding:0, textAlign:"left", fontFamily:"'Roboto',-apple-system,sans-serif" }}
                 >
                   {section.admin
                     ? <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:26, height:26, background:"#9a6a1e", borderRadius:4, color:"#fff", fontSize:13, flexShrink:0 }}>🔒</span>
                     : <Chip n={section.id} />}
-                  <span style={{ flex:1, fontWeight:700, color: section.admin ? "#9a6a1e" : "#3f7a1f", fontSize:14 }}>{section.title}</span>
+                  <span style={{ flex:1, fontWeight:700, color: section.admin ? "#9a6a1e" : "#3e8a2f", fontSize:14 }}>{section.title}</span>
                   {section.admin && <span style={{ flexShrink:0, fontSize:9, fontWeight:700, letterSpacing:"0.08em", color:"#9a6a1e", background:"#fff", border:"1px solid #e0c9a8", borderRadius:4, padding:"2px 6px" }}>ADMIN ONLY</span>}
                 </button>
                 {section.goTo && onNavigate && (
                   <button
                     type="button"
                     onClick={() => { onNavigate(section.goTo!.dest); if (!isDesktop) onClose(); }}
-                    style={{ flexShrink:0, display:"inline-flex", alignItems:"center", gap:6, background:"#3f7a1f", border:"none", color:"#fff", padding:"7px 14px", borderRadius:8, cursor:"pointer", fontSize:12.5, fontWeight:600, fontFamily:"'Inter',sans-serif" }}
+                    style={{ flexShrink:0, display:"inline-flex", alignItems:"center", gap:6, background:"#3e8a2f", border:"none", color:"#fff", padding:"7px 14px", borderRadius:8, cursor:"pointer", fontSize:12.5, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}
                   >
                     {section.goTo.label} <span style={{ fontSize:13, lineHeight:1 }}>→</span>
                   </button>
@@ -349,7 +349,7 @@ function PanelContent({ expanded, toggle, onClose, onNavigate, isDesktop, isAdmi
         })}
       </div>
 
-      <div style={{ marginTop:18, paddingTop:14, borderTop:"1px solid #e3dccd", fontSize:11, color:"#a89f8f", textAlign:"center", lineHeight:1.6 }}>
+      <div style={{ marginTop:18, paddingTop:14, borderTop:"1px solid #dfddd6", fontSize:11, color:"#9b9992", textAlign:"center", lineHeight:1.6 }}>
         Questions or something broken? Use the feedback button (bottom-left life-ring) — it goes straight to the team.&nbsp;&nbsp;·&nbsp;&nbsp;KPR Deal Library
       </div>
 
@@ -357,7 +357,7 @@ function PanelContent({ expanded, toggle, onClose, onNavigate, isDesktop, isAdmi
         <button
           type="button"
           onClick={onClose}
-          style={{ background:"#f6f2ea", border:"1px solid #ddd4c2", color:"#52554e", padding:"8px 24px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Inter',sans-serif" }}
+          style={{ background:"#faf9f5", border:"1px solid #dad8d1", color:"#52554e", padding:"8px 24px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, fontFamily:"'Roboto',sans-serif" }}
         >
           Close
         </button>
@@ -420,7 +420,7 @@ export default function HelpModal({ open, onClose, onNavigate, isAdmin }: HelpMo
           borderLeft: "1px solid #d8d2c1",
           boxShadow: "-4px 0 24px rgba(0,0,0,0.06)",
           overflowY: "auto", padding: "26px 26px 22px",
-          fontFamily: "'Inter',-apple-system,sans-serif",
+          fontFamily: "'Roboto',-apple-system,sans-serif",
           transform: panelIn ? "translateX(0)" : "translateX(100%)",
           transition: "transform 0.2s ease",
         }}
@@ -441,7 +441,7 @@ export default function HelpModal({ open, onClose, onNavigate, isAdmin }: HelpMo
         role="dialog"
         aria-modal="true"
         aria-labelledby="help-modal-title"
-        style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:1001, width:"min(680px, calc(100vw - 32px))", maxHeight:"85vh", overflowY:"auto", background:"#fff", borderRadius:14, boxShadow:"0 20px 60px rgba(42,44,40,0.22)", padding:"26px 26px 22px", fontFamily:"'Inter',-apple-system,sans-serif" }}
+        style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:1001, width:"min(680px, calc(100vw - 32px))", maxHeight:"85vh", overflowY:"auto", background:"#fff", borderRadius:14, boxShadow:"0 20px 60px rgba(42,44,40,0.22)", padding:"26px 26px 22px", fontFamily:"'Roboto',-apple-system,sans-serif" }}
       >
         <PanelContent expanded={expanded} toggle={toggle} onClose={onClose} onNavigate={onNavigate} isDesktop={false} isAdmin={isAdmin} />
       </div>

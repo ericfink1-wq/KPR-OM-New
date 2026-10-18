@@ -7,7 +7,7 @@ import { useIsMobile } from "../hooks/use-mobile";
 // every deal's "Our Review" and applied to all future analyses. This modal lets the
 // team read it, rebuild it from the latest reviews, and hand-edit it.
 
-const C = { ink: "#383a37", sub: "#6f6a5f", faint: "#a69e91", line: "#efe8da", green: "#1f7a43", greenBg: "#f1f8f2", greenBd: "#c2e0c9" };
+const C = { ink: "#383a37", sub: "#676767", faint: "#94928b", line: "#ecebe6", green: "#1f7a43", greenBg: "#f1f8f2", greenBd: "#c2e0c9" };
 
 export default function HouseViewModal({ open, onClose, isAdmin }: { open: boolean; onClose: () => void; isAdmin?: boolean }) {
   const isMobile = useIsMobile();
@@ -47,7 +47,7 @@ export default function HouseViewModal({ open, onClose, isAdmin }: { open: boole
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(42,44,40,0.52)", zIndex: 2000, backdropFilter: "blur(2px)" }} aria-hidden="true" />
       <div role="dialog" aria-modal="true"
-        style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 2001, width: "min(720px, calc(100vw - 24px))", maxHeight: "88vh", display: "flex", flexDirection: "column", background: "#fff", borderRadius: 14, boxShadow: "0 20px 60px rgba(42,44,40,0.22)", fontFamily: "'Inter',-apple-system,sans-serif" }}>
+        style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 2001, width: "min(720px, calc(100vw - 24px))", maxHeight: "88vh", display: "flex", flexDirection: "column", background: "#fff", borderRadius: 14, boxShadow: "0 20px 60px rgba(42,44,40,0.22)", fontFamily: "'Roboto',-apple-system,sans-serif" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: isMobile ? "14px 16px 10px" : "18px 22px 12px", borderBottom: `1px solid ${C.line}` }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: C.ink }}>🧠 House View</div>
@@ -86,7 +86,7 @@ export default function HouseViewModal({ open, onClose, isAdmin }: { open: boole
               {isAdmin ? (
                 <textarea value={text} onChange={(e) => setText(e.target.value)} rows={16}
                   placeholder="Nothing learned yet. Write a take on a few deals (deal page → AI Analysis → Our take), then click “Rebuild from reviews” — or type your own principles here. The standing rules above apply either way."
-                  style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: "'Inter',sans-serif", fontSize: 13, lineHeight: 1.6, padding: "12px 14px", border: `1px solid ${C.greenBd}`, borderRadius: 8, color: C.ink, background: C.greenBg, outline: "none" }} />
+                  style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: "'Roboto',sans-serif", fontSize: 13, lineHeight: 1.6, padding: "12px 14px", border: `1px solid ${C.greenBd}`, borderRadius: 8, color: C.ink, background: C.greenBg, outline: "none" }} />
               ) : (
                 <div style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.6, color: C.ink, background: C.greenBg, border: `1px solid ${C.greenBd}`, borderRadius: 8, padding: "12px 14px", minHeight: 80 }}>
                   {text || <span style={{ color: C.faint }}>Nothing learned yet. It builds as the team writes takes on deals. The standing rules above already apply.</span>}
@@ -96,7 +96,7 @@ export default function HouseViewModal({ open, onClose, isAdmin }: { open: boole
               {isAdmin && (
                 <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
                   <button onClick={save} disabled={!dirty || !!busy}
-                    style={{ background: dirty && !busy ? "#fff" : "#f1eadc", border: `1px solid ${C.greenBd}`, color: dirty && !busy ? C.green : C.faint, padding: "8px 16px", borderRadius: 8, cursor: dirty && !busy ? "pointer" : "default", fontSize: 13, fontWeight: 600 }}>
+                    style={{ background: dirty && !busy ? "#fff" : "#efeee9", border: `1px solid ${C.greenBd}`, color: dirty && !busy ? C.green : C.faint, padding: "8px 16px", borderRadius: 8, cursor: dirty && !busy ? "pointer" : "default", fontSize: 13, fontWeight: 600 }}>
                     {busy === "save" ? "Saving…" : "Save edits"}
                   </button>
                   <button onClick={rebuild} disabled={!!busy}

@@ -25,15 +25,15 @@ export default function MobileTabBar({ tab, onTab, onAnalyticsNav }: Props) {
   };
   const item = (label: string, _icon: string, active: boolean, onClick: () => void) => (
     <button key={label} onClick={onClick} aria-current={active ? "page" : undefined}
-      style={{ flex: 1, minWidth: 0, background: "none", border: "none", padding: "6px 2px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer", color: active ? "#2a2c27" : "#958d80", fontFamily: "'Inter',sans-serif" }}>
+      style={{ flex: 1, minWidth: 0, background: "none", border: "none", padding: "6px 2px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer", color: active ? "#232422" : "#8a8983", fontFamily: "'Roboto',sans-serif" }}>
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON[label]} /></svg>
       <span style={{ fontSize: 10.5, fontWeight: active ? 700 : 500 }}>{label}</span>
-      <span style={{ width: 18, height: 2.5, borderRadius: 2, background: active ? "#6dba43" : "transparent" }} />
+      <span style={{ width: 18, height: 2.5, borderRadius: 2, background: active ? "#5bba47" : "transparent" }} />
     </button>
   );
   return (
     <>
-      <nav aria-label="Main" style={{ flexShrink: 0, height: MOBILE_TAB_BAR_H, paddingBottom: "env(safe-area-inset-bottom)", boxSizing: "content-box", display: "flex", alignItems: "stretch", background: "rgba(252,250,245,0.97)", borderTop: "1px solid #e7e0d2", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", zIndex: 150 }}>
+      <nav aria-label="Main" style={{ flexShrink: 0, height: MOBILE_TAB_BAR_H, paddingBottom: "env(safe-area-inset-bottom)", boxSizing: "content-box", display: "flex", alignItems: "stretch", background: "rgba(252,250,245,0.97)", borderTop: "1px solid #e6e4de", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", zIndex: 150 }}>
         {item("Analyst", "✦", tab === "analyst", () => onTab("analyst"))}
         {item("Deals", "▦", tab === "portfolio", () => onTab("portfolio"))}
         {item("Comps", "⇄", tab === "comps", () => onTab("comps"))}
@@ -47,21 +47,21 @@ export default function MobileTabBar({ tab, onTab, onAnalyticsNav }: Props) {
             <div style={{ width: 40, height: 4, borderRadius: 2, background: "#e1d9c8", margin: "4px auto 8px" }} />
             {(["portfolio", "tenant"] as const).map(g => (
               <div key={g}>
-                <div style={{ padding: "10px 18px 4px", fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", color: "#a69e91", textTransform: "uppercase" }}>
+                <div style={{ padding: "10px 18px 4px", fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", color: "#94928b", textTransform: "uppercase" }}>
                   {g === "portfolio" ? "Portfolio analytics" : "Tenant analytics"}
                 </div>
                 {ANALYTICS_GROUPS[g].map(([label, dest]) => (
                   <button key={dest} onClick={() => { setSheet(false); onAnalyticsNav?.(dest); }}
-                    style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid #f4efe5", padding: "14px 18px", fontSize: 14.5, color: "#383a37", fontFamily: "'Inter',sans-serif", cursor: "pointer" }}>
+                    style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid #f4efe5", padding: "14px 18px", fontSize: 14.5, color: "#383a37", fontFamily: "'Roboto',sans-serif", cursor: "pointer" }}>
                     {label}
                   </button>
                 ))}
               </div>
             ))}
-            <div style={{ padding: "10px 18px 4px", fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", color: "#a69e91", textTransform: "uppercase" }}>Asset management (owned)</div>
+            <div style={{ padding: "10px 18px 4px", fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", color: "#94928b", textTransform: "uppercase" }}>Asset management (owned)</div>
             {([["Debt & swaps", "am:debt"], ["Critical dates", "am:dates"], ["Properties (Datex)", "am:properties"], ["Credit watch", "am:credit"]] as const).map(([label, dest]) => (
               <button key={dest} onClick={() => { setSheet(false); onAnalyticsNav?.(dest); }}
-                style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid #f4efe5", padding: "14px 18px", fontSize: 14.5, color: "#383a37", fontFamily: "'Inter',sans-serif", cursor: "pointer" }}>
+                style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid #f4efe5", padding: "14px 18px", fontSize: 14.5, color: "#383a37", fontFamily: "'Roboto',sans-serif", cursor: "pointer" }}>
                 {label}
               </button>
             ))}

@@ -15,10 +15,10 @@ interface Props {
 // One tone per result tier, so Deal / Tenant / Parent / Location are separable
 // without reading the label.
 const BADGE: Record<Hit["kind"], { color: string; background: string }> = {
-  deal:       { color: "#3f7a1f", background: "#eef5e6" },
+  deal:       { color: "#3e8a2f", background: "#eef5e6" },
   tenantPage: { color: "#9a6a12", background: "#fff3df" },
   parent:     { color: "#6b4fa0", background: "#f2eefa" },
-  location:   { color: "#7d766a", background: "#f3efe7" },
+  location:   { color: "#6b6a65", background: "#f3efe7" },
 };
 
 // WHY a row matched: the field it hit, plus the phrase around the hit with the
@@ -31,10 +31,10 @@ function MatchReason({ match, stacked }: { match: Hit["match"]; stacked: boolean
       textAlign: stacked ? "left" : "right",
       display: "block", marginTop: stacked ? 3 : 0,
     }}>
-      <span style={{ display: "block", fontSize: 9, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#a89f8f" }}>
+      <span style={{ display: "block", fontSize: 9, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#9b9992" }}>
         {match.field}
       </span>
-      <span style={{ display: "block", fontSize: 11, color: "#8b8578", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      <span style={{ display: "block", fontSize: 11, color: "#7a7973", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {match.before}
         <mark style={{ background: "#fdf1c7", color: "#5c4a12", fontWeight: 600, padding: "0 1px", borderRadius: 2 }}>{match.hit}</mark>
         {match.after}
@@ -79,9 +79,9 @@ export default function GlobalSearch({ open, deals, onClose, onOpenDeal, onOpenP
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 5000, background: "rgba(38,40,31,0.34)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "10vh 14px 14px" }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: "min(640px, 100%)", maxHeight: "78vh", background: "#fff", border: "1px solid #e6dfd0", borderRadius: 14, boxShadow: "0 18px 50px rgba(38,40,31,0.3)", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "'Inter',sans-serif" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderBottom: "1px solid #f1eadc" }}>
-          <span style={{ fontSize: 16, color: "#a89f8f" }}>⌕</span>
+      <div onClick={e => e.stopPropagation()} style={{ width: "min(640px, 100%)", maxHeight: "78vh", background: "#fff", border: "1px solid #e3e1db", borderRadius: 14, boxShadow: "0 18px 50px rgba(38,40,31,0.3)", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "'Roboto',sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderBottom: "1px solid #efeee9" }}>
+          <span style={{ fontSize: 16, color: "#9b9992" }}>⌕</span>
           <input
             ref={inputRef}
             aria-label="Search deals and tenants"
@@ -89,28 +89,28 @@ export default function GlobalSearch({ open, deals, onClose, onOpenDeal, onOpenP
             onChange={e => setQ(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder="Search deals, tenants, parent companies, markets…"
-            style={{ flex: 1, border: "none", outline: "none", fontSize: 15, color: "#2a2c28", background: "transparent" }}
+            style={{ flex: 1, border: "none", outline: "none", fontSize: 15, color: "#232422", background: "transparent" }}
           />
-          <button onClick={onClose} style={{ border: "none", background: "transparent", color: "#a89f8f", cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ border: "none", background: "transparent", color: "#9b9992", cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>
         </div>
 
         <div style={{ overflowY: "auto" }}>
           {q.trim().length < MIN_QUERY ? (
-            <div style={{ padding: "22px 16px", fontSize: 12.5, color: "#a89f8f" }}>Type at least two letters. Searches property names, addresses, markets, tenants and their parent companies, and your notes.</div>
+            <div style={{ padding: "22px 16px", fontSize: 12.5, color: "#9b9992" }}>Type at least two letters. Searches property names, addresses, markets, tenants and their parent companies, and your notes.</div>
           ) : hits.length === 0 ? (
-            <div style={{ padding: "22px 16px", fontSize: 13, color: "#a89f8f" }}>No matches for “{q.trim()}”.</div>
+            <div style={{ padding: "22px 16px", fontSize: 13, color: "#9b9992" }}>No matches for “{q.trim()}”.</div>
           ) : (
             hits.map((h, i) => (
               <button key={`${h.kind}-${h.kind === "parent" ? h.parentName : h.kind === "tenantPage" ? h.tenantName : h.dealId}-${i}`} onClick={() => go(h)}
                 ref={i === sel ? selRef : undefined}
                 onMouseEnter={() => setSel(i)}
-                style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", background: i === sel ? "#f4f0e8" : "transparent", border: "none", borderBottom: "1px solid #f6f1e7", borderLeft: `3px solid ${i === sel ? "#3f7a1f" : "transparent"}`, padding: "11px 16px 11px 13px", cursor: "pointer" }}>
+                style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", background: i === sel ? "#f4f0e8" : "transparent", border: "none", borderBottom: "1px solid #f6f1e7", borderLeft: `3px solid ${i === sel ? "#3e8a2f" : "transparent"}`, padding: "11px 16px 11px 13px", cursor: "pointer" }}>
                 <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", ...BADGE[h.kind], borderRadius: 5, padding: "3px 7px", minWidth: 58, textAlign: "center" }}>
                   {h.where}
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: "#26281f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.title}</span>
-                  {h.sub && <span style={{ display: "block", fontSize: 11.5, color: "#8b8578", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.sub}</span>}
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: "#232422", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.title}</span>
+                  {h.sub && <span style={{ display: "block", fontSize: 11.5, color: "#7a7973", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.sub}</span>}
                   {/* On a phone the row is too narrow for a right-hand column, so the
                       reason stacks under the subtitle instead of being squeezed out. */}
                   {isMobile && <MatchReason match={h.match} stacked />}

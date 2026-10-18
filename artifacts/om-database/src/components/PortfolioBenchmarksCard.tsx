@@ -9,8 +9,8 @@ import { buildPortfolioBenchmarks, fmtMetric, type MetricBenchmark } from "../li
 interface Props { deal: Deal; allDeals?: Deal[]; }
 
 const C = {
-  ink: "#383a37", sub: "#6f6a5f", faint: "#a69e91", line: "#efe8da", panel: "#faf7f0", panelBd: "#e7e0d2",
-  green: "#3f7a1f", greenBg: "#eef3e6", amber: "#c97a18", amberBg: "#fbf1e4", track: "#ece5d6",
+  ink: "#383a37", sub: "#676767", faint: "#94928b", line: "#ecebe6", panel: "#faf9f5", panelBd: "#e6e4de",
+  green: "#3e8a2f", greenBg: "#eef3e6", amber: "#c97a18", amberBg: "#fbf1e4", track: "#ece5d6",
 };
 
 // Position the subject on the p25–p75 band (clamped a touch past the ends).
@@ -34,7 +34,7 @@ export default function PortfolioBenchmarksCard({ deal, allDeals }: Props) {
   return (
     <div id="section-portfolio-benchmarks" data-jump="Portfolio Benchmarks"
       style={{ background: C.panel, border: `1px solid ${C.panelBd}`, borderRadius: 8, padding: "14px 16px", marginTop: 14, marginBottom: 14 }}>
-      <div style={{ fontSize: 8, letterSpacing: "0.1em", color: "#958d80", marginBottom: 2 }}>BENCHMARKED AGAINST YOUR PORTFOLIO</div>
+      <div style={{ fontSize: 8, letterSpacing: "0.1em", color: "#8a8983", marginBottom: 2 }}>BENCHMARKED AGAINST YOUR PORTFOLIO</div>
       <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, marginBottom: 10 }}>How this deal compares to your book</div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

@@ -192,10 +192,10 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
   ];
 
   const Stat = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
-    <div style={{ flex:"1 1 130px", background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"13px 16px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
-      <div style={{ fontSize:10, letterSpacing:"0.06em", color:"#a69e91", marginBottom:6, fontWeight:500, textTransform:"uppercase" }}>{label}</div>
-      <div style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:600, color:"#383a37", lineHeight:1 }}>{value}</div>
-      {sub && <div style={{ fontSize:9, color:"#b8b0a3", marginTop:3 }}>{sub}</div>}
+    <div style={{ flex:"1 1 130px", background:"#fff", border:"1px solid #ecebe6", borderRadius:12, padding:"13px 16px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+      <div style={{ fontSize:10, letterSpacing:"0.06em", color:"#94928b", marginBottom:6, fontWeight:500, textTransform:"uppercase" }}>{label}</div>
+      <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:22, fontWeight:600, color:"#383a37", lineHeight:1 }}>{value}</div>
+      {sub && <div style={{ fontSize:9, color:"#b3b1aa", marginTop:3 }}>{sub}</div>}
     </div>
   );
 
@@ -236,7 +236,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
           property's subpages all read at one consistent width on a big monitor. */}
       <div style={{ maxWidth: DETAIL_MAX_WIDTH, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       <div style={{ marginBottom:16 }}>
-        <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← BACK</button>
+        <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e6e4de", color:"#6b6a65", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Roboto',sans-serif" }}>← BACK</button>
       </div>
 
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:4, flexWrap:"wrap" }}>
@@ -252,16 +252,16 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                 if (!img.dataset.fb) { img.dataset.fb = "1"; img.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`; }
                 else img.style.display = "none";
               }}
-              style={{ width:36, height:36, objectFit:"contain", borderRadius:6, border:"1px solid #efe8da", background:"#fff", padding:3, flexShrink:0 }}
+              style={{ width:36, height:36, objectFit:"contain", borderRadius:6, border:"1px solid #ecebe6", background:"#fff", padding:3, flexShrink:0 }}
             />
           );
         })()}
-        <h1 style={{ fontFamily:"'Fraunces',serif", fontSize:30, fontWeight:600, color:"#26281f", margin:0 }}>{tenantLabel(tenantName)}</h1>
+        <h1 className="kpr-page-title">{tenantLabel(tenantName)}</h1>
         {anchors > 0 && <span style={{ fontSize:10, color:"#1f2b16", background:"#6dba4322", padding:"2px 9px", borderRadius:12, fontWeight:700 }}>ANCHOR · {anchors}</span>}
-        {credit && <span style={{ fontSize:11, color:"#5c5f57", background:"#f3eee3", border:"1px solid #e7e0d2", padding:"2px 9px", borderRadius:12 }}>Credit: {credit}</span>}
+        {credit && <span style={{ fontSize:11, color:"#5c5f57", background:"#f3eee3", border:"1px solid #e6e4de", padding:"2px 9px", borderRadius:12 }}>Credit: {credit}</span>}
       </div>
       {(() => { const p = parentCompany(tenantName); return p ? (
-        <button onClick={() => onParentClick?.(p)} style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", fontFamily:"'Inter',sans-serif", fontSize:11, color:"#6f6a5f", marginTop:2, marginBottom:2, display:"block" }}>
+        <button onClick={() => onParentClick?.(p)} style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", fontFamily:"'Roboto',sans-serif", fontSize:11, color:"#676767", marginTop:2, marginBottom:2, display:"block" }}>
           Part of <span style={{ fontWeight:600, color:"#2d4ecf", textDecoration:"underline" }}>{p}</span>
         </button>
       ) : null; })()}
@@ -272,7 +272,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
       <PortfolioStressTest tenantName={tenantName} deals={deals} onOpenDeal={onOpenDeal} />
 
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:18, justifyContent:"space-between" }}>
-        <div style={{ fontSize:13, color:"#9a917f" }}>{subtitle}</div>
+        <div style={{ fontSize:13, color:"#8f8d86" }}>{subtitle}</div>
         <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", justifyContent:"flex-end" }}>
         <ExportButtons
           disabled={exportRows.length === 0}
@@ -300,15 +300,15 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
           }}
         />
         {/* Scope toggle */}
-        <div style={{ display:"flex", border:"1px solid #e7e0d2", borderRadius:7, overflow:"hidden", fontFamily:"'Inter',sans-serif", fontSize:12, flexShrink:0 }}>
+        <div style={{ display:"flex", border:"1px solid #e6e4de", borderRadius:7, overflow:"hidden", fontFamily:"'Roboto',sans-serif", fontSize:12, flexShrink:0 }}>
           {(["all","owned"] as const).map(s => (
             <button
               key={s}
               onClick={() => setScope(s)}
               style={{
                 padding:"4px 13px",
-                background: scope === s ? "#383a37" : "#faf7f0",
-                color: scope === s ? "#f6f2ea" : "#7d766a",
+                background: scope === s ? "#383a37" : "#faf9f5",
+                color: scope === s ? "#faf9f5" : "#6b6a65",
                 border: "none",
                 cursor: "pointer",
                 fontWeight: scope === s ? 600 : 400,
@@ -325,7 +325,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
       </div>
 
       {scope === "owned" && rows.length === 0 ? (
-        <div style={{ fontSize:14, color:"#a69e91", padding:"24px 0" }}>No owned locations for this tenant.</div>
+        <div style={{ fontSize:14, color:"#94928b", padding:"24px 0" }}>No owned locations for this tenant.</div>
       ) : (
         <>
           {/* Stat boxes — recomputed from activeRows (ignoring excluded locations) */}
@@ -345,19 +345,19 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
               sub={avgSales != null && salesVals.length < activeRows.length ? `over ${salesVals.length} of ${activeRows.length}` : undefined} />
           </div>
 
-          <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+          <div style={{ background:"#fff", border:"1px solid #ecebe6", borderRadius:12, padding:"18px 20px", boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
             {/* Locations header with ignored count + reset */}
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:13, flexWrap:"wrap", gap:6 }}>
-              <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>
+              <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#94928b", fontWeight:600, textTransform:"uppercase" }}>
                 Locations — click a row to open the property
               </div>
               {ignoredCount > 0 && (
-                <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:11, color:"#a89f8f" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, fontSize:11, color:"#9b9992" }}>
                   <EyeOff size={11} strokeWidth={1.75} style={{ color:"#d9890c" }} />
                   <span>{ignoredCount} ignored</span>
                   <button
                     onClick={resetIgnored}
-                    style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", fontSize:11, color:"#a89f8f", textDecoration:"underline", fontFamily:"'Inter',sans-serif" }}
+                    style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", fontSize:11, color:"#9b9992", textDecoration:"underline", fontFamily:"'Roboto',sans-serif" }}
                   >
                     Reset
                   </button>
@@ -368,12 +368,12 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
             <SortBar levels={msort.levels} setLevels={msort.setLevels} labels={TV_SORT_LABELS}
               isDefault={msort.isDefault} onReset={msort.reset} dirFor={tvDirFor} />
             <div ref={scrollRef} style={{ overflowX:"auto" }}>
-              <table style={{ borderCollapse:"collapse", fontSize:12.5, minWidth:820, width:"100%" }}>
+              <table className="kpr-table" style={{ borderCollapse:"collapse", fontSize:12.5, minWidth:820, width:"100%" }}>
                 <thead>
                   <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
                     {cols.map(([k, label, right], idx) => (
                       <th key={k} onClick={e => setSort(k, e)} title="Click to sort by this column · Shift-click to add it as a tiebreaker" className={idx === 0 ? "freeze-col" : undefined}
-                        style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:msort.isSorted(k)?"#383a37":"#a69e91", fontWeight:600, ...(idx === 0 ? stickyFirstCol("#fff", true) : null) }}>
+                        style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor:"pointer", whiteSpace:"nowrap", userSelect:"none", color:msort.isSorted(k)?"#383a37":"#94928b", fontWeight:600, ...(idx === 0 ? stickyFirstCol("#fff", true) : null) }}>
                         {label}{arrow(k)}
                       </th>
                     ))}
@@ -382,7 +382,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                       width:76, padding:"6px 6px",
                       position:"sticky", right:0, zIndex:3,
                       background:"#fff",
-                      borderLeft:"1px solid #efe8da",
+                      borderLeft:"1px solid #ecebe6",
                       boxShadow:"-6px 0 6px -6px rgba(0,0,0,0.12)",
                     }} />
                   </tr>
@@ -397,15 +397,15 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                         key={i}
                         onClick={() => onOpenDeal(r.deal)}
                         style={{
-                          borderTop:"1px solid #f1eadc",
+                          borderTop:"1px solid #efeee9",
                           cursor:"pointer",
                           background: owned ? "#f3faef" : "transparent",
-                          borderLeft: owned ? "3px solid #6dba43" : "3px solid transparent",
+                          borderLeft: owned ? "3px solid #5bba47" : "3px solid transparent",
                           opacity: ignored ? 0.35 : 1,
                           transition: "opacity 0.15s",
                         }}
                         onMouseEnter={e => {
-                          const bg = owned ? "#eaf5e2" : "#faf7f0";
+                          const bg = owned ? "#eaf5e2" : "#faf9f5";
                           e.currentTarget.style.background = bg;
                           (e.currentTarget.firstElementChild as HTMLElement).style.background = bg;
                           (e.currentTarget.lastElementChild as HTMLElement).style.background = bg;
@@ -461,7 +461,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                             padding:"4px 4px", width:76, textAlign:"center",
                             position:"sticky", right:0, zIndex:2,
                             background: owned ? "#f3faef" : "#fff",
-                            borderLeft:"1px solid #efe8da",
+                            borderLeft:"1px solid #ecebe6",
                             boxShadow:"-6px 0 6px -6px rgba(0,0,0,0.10)",
                           }}
                           onClick={e => e.stopPropagation()}
@@ -501,7 +501,7 @@ export default function TenantView({ tenantName, deals, onBack, onOpenDeal, onPa
                 </tbody>
               </table>
             </div>
-            {rows.length === 0 && <div style={{ fontSize:13, color:"#a69e91", padding:"10px 0" }}>No locations found for this tenant.</div>}
+            {rows.length === 0 && <div style={{ fontSize:13, color:"#94928b", padding:"10px 0" }}>No locations found for this tenant.</div>}
           </div>
         </>
       )}

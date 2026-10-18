@@ -10,9 +10,9 @@ import type { Deal } from "../lib/idb";
 import { buildICMemoModel } from "../lib/icMemo";
 
 const C = {
-  ink: "#26281f", body: "#383a37", muted: "#6f6a5f", faint: "#a69e91",
-  olive: "#3f7a1f", oliveDk: "#2f5d16", sage: "#eef3e6", border: "#c3dba8",
-  cream: "#f6f2ea", rule: "#d8d2c1", gold: "#9a6a1e", red: "#b23b3b", redBg: "#fbeeee",
+  ink: "#232422", body: "#383a37", muted: "#676767", faint: "#94928b",
+  olive: "#3e8a2f", oliveDk: "#2f5d16", sage: "#eef3e6", border: "#c3dba8",
+  cream: "#faf9f5", rule: "#d8d2c1", gold: "#9a6a1e", red: "#b23b3b", redBg: "#fbeeee",
 };
 
 const s = StyleSheet.create({

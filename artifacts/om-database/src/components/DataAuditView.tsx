@@ -9,8 +9,8 @@ import { apiAuditList, type AuditListDeal } from "../lib/api";
 // collapses/expands so the page isn't one long static scroll.
 
 const C = {
-  ink: "#383a37", sub: "#6f6a5f", faint: "#a69e91", line: "#efe8da", panel: "#faf7f0", panelBd: "#e7e0d2",
-  green: "#3f7a1f", greenBg: "#eef3e6", greenBd: "#b8d49a",
+  ink: "#383a37", sub: "#676767", faint: "#94928b", line: "#ecebe6", panel: "#faf9f5", panelBd: "#e6e4de",
+  green: "#3e8a2f", greenBg: "#eef3e6", greenBd: "#b8d49a",
   amber: "#c97a18", amberBg: "#fbf1e4", amberBd: "#e0c9a8",
   red: "#b3261e", redBg: "#fdecec", redBd: "#f3c0c0",
 };
@@ -239,7 +239,7 @@ export default function DataAuditView({ deals, onOpenDeal, initialFilterKey = nu
                     <div style={{ fontSize: 10.5, color: C.faint, marginTop: 3 }}>{dup.addresses.join("  ·  ")}</div>
                     {onMerge && dup.ids.length > 1 && (
                       <button onClick={(e) => { e.stopPropagation(); onMerge(dup.ids); }}
-                        style={{ marginTop: 8, background: "#26281f", color: "#fff", border: "none", borderRadius: 7, padding: "8px 14px", minHeight: 34, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>
+                        style={{ marginTop: 8, background: "#232422", color: "#fff", border: "none", borderRadius: 7, padding: "8px 14px", minHeight: 34, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>
                         Merge these {dup.ids.length} →
                       </button>
                     )}

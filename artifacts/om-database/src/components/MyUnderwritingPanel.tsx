@@ -29,7 +29,7 @@ function fmtPct(val: number | null, decimals = 2): string {
 }
 
 function deltaColor(delta: number | null): string {
-  if (delta == null) return "#a69e91";
+  if (delta == null) return "#94928b";
   if (delta > 0.005) return "#0f9d63";
   if (delta < -0.005) return "#dc2626";
   return "#383a37";
@@ -47,18 +47,18 @@ function DeltaCell({ delta, fmt }: { delta: number | null; fmt: (v: number) => s
 }
 
 const labelStyle: React.CSSProperties = {
-  fontSize: 11, color: "#6f6a5f", whiteSpace: "nowrap", paddingRight: 8,
+  fontSize: 11, color: "#676767", whiteSpace: "nowrap", paddingRight: 8,
 };
 const inputStyle: React.CSSProperties = {
   fontSize: 12, border: "1px solid #d8d0c4", borderRadius: 5, padding: "5px 8px",
-  fontFamily: "'Inter',sans-serif", color: "#383a37", background: "#fff",
+  fontFamily: "'Roboto',sans-serif", color: "#383a37", background: "#fff",
   width: "100%", boxSizing: "border-box",
 };
 const tdRight: React.CSSProperties = {
   textAlign: "right", padding: "7px 10px", fontSize: 12, color: "#383a37", whiteSpace: "nowrap",
 };
 const tdLabel: React.CSSProperties = {
-  textAlign: "left", padding: "7px 10px", fontSize: 11, color: "#a69e91",
+  textAlign: "left", padding: "7px 10px", fontSize: 11, color: "#94928b",
   fontWeight: 600, letterSpacing: "0.04em", whiteSpace: "nowrap",
 };
 
@@ -76,11 +76,11 @@ function InputRow({
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-      <label style={{ fontSize: 10, color: "#7d766a", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>
+      <label style={{ fontSize: 10, color: "#6b6a65", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>
         {label}
       </label>
       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-        {prefix && <span style={{ fontSize: 12, color: "#6f6a5f", flexShrink: 0 }}>{prefix}</span>}
+        {prefix && <span style={{ fontSize: 12, color: "#676767", flexShrink: 0 }}>{prefix}</span>}
         <input
           value={value}
           onChange={e => onChange(e.target.value)}
@@ -90,9 +90,9 @@ function InputRow({
           onFocus={e => (e.target.style.borderColor = BLUE)}
           onBlurCapture={e => (e.target.style.borderColor = "#d8d0c4")}
         />
-        {suffix && <span style={{ fontSize: 12, color: "#6f6a5f", flexShrink: 0 }}>{suffix}</span>}
+        {suffix && <span style={{ fontSize: 12, color: "#676767", flexShrink: 0 }}>{suffix}</span>}
       </div>
-      {hint && <div style={{ fontSize: 10, color: "#a69e91" }}>{hint}</div>}
+      {hint && <div style={{ fontSize: 10, color: "#94928b" }}>{hint}</div>}
     </div>
   );
 }
@@ -216,7 +216,7 @@ export default function MyUnderwritingPanel({ deal: d, onUpdate }: Props) {
         style={{
           display: "flex", alignItems: "center", gap: 10, width: "100%",
           background: open ? BLUE_BG : "#fff",
-          border: `1px solid ${open ? BLUE_BORDER : "#e7e0d2"}`,
+          border: `1px solid ${open ? BLUE_BORDER : "#e6e4de"}`,
           borderRadius: open ? "12px 12px 0 0" : 12,
           padding: "11px 16px", cursor: "pointer", textAlign: "left",
         }}
@@ -225,12 +225,12 @@ export default function MyUnderwritingPanel({ deal: d, onUpdate }: Props) {
           ✎ My Underwriting
         </span>
         {!open && headerHasData && (
-          <span style={{ fontSize: 10, color: "#7d766a", fontFamily: "'Inter',sans-serif" }}>
+          <span style={{ fontSize: 10, color: "#6b6a65", fontFamily: "'Roboto',sans-serif" }}>
             {finalNoi != null ? `My NOI: ${fmt$(finalNoi)}` : ""}
             {myCapRate != null ? `  ·  My Cap: ${fmtPct(myCapRate)}` : ""}
           </span>
         )}
-        <span style={{ marginLeft: "auto", fontSize: 10, color: "#a69e91", fontFamily: "'Inter',sans-serif" }}>
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "#94928b", fontFamily: "'Roboto',sans-serif" }}>
           {open ? "▴ HIDE" : "▾ EDIT"}
         </span>
       </button>
@@ -321,14 +321,14 @@ export default function MyUnderwritingPanel({ deal: d, onUpdate }: Props) {
                   <tr style={{ background: "#eff6ff", borderBottom: "1px solid #dbeafe" }}>
                     <th style={{ ...tdLabel, color: "#3b82f6", paddingLeft: 12 }}></th>
                     <th style={{ ...tdRight, color: BLUE, fontWeight: 700, fontSize: 10, letterSpacing: "0.06em" }}>MY UW</th>
-                    <th style={{ ...tdRight, color: "#a69e91", fontWeight: 700, fontSize: 10, letterSpacing: "0.06em" }}>OM STATED</th>
-                    <th style={{ ...tdRight, color: "#6f6a5f", fontWeight: 700, fontSize: 10, letterSpacing: "0.06em", paddingRight: 12 }}>DELTA</th>
+                    <th style={{ ...tdRight, color: "#94928b", fontWeight: 700, fontSize: 10, letterSpacing: "0.06em" }}>OM STATED</th>
+                    <th style={{ ...tdRight, color: "#676767", fontWeight: 700, fontSize: 10, letterSpacing: "0.06em", paddingRight: 12 }}>DELTA</th>
                   </tr>
                 </thead>
                 <tbody>
                   {/* NOI row */}
                   {(finalNoi != null || omNoi != null) && (
-                    <tr style={{ borderBottom: "1px solid #f1eadc" }}>
+                    <tr style={{ borderBottom: "1px solid #efeee9" }}>
                       <td style={{ ...tdLabel, paddingLeft: 12 }}>NOI</td>
                       <td style={{ ...tdRight, color: BLUE, fontWeight: 600 }}>{fmt$(finalNoi)}</td>
                       <td style={{ ...tdRight }}>{fmt$(omNoi)}</td>
@@ -341,7 +341,7 @@ export default function MyUnderwritingPanel({ deal: d, onUpdate }: Props) {
 
                   {/* Cap rate at asking price */}
                   {(myCapRate != null || omCap != null) && (
-                    <tr style={{ borderBottom: "1px solid #f1eadc" }}>
+                    <tr style={{ borderBottom: "1px solid #efeee9" }}>
                       <td style={{ ...tdLabel, paddingLeft: 12 }}>
                         Cap Rate
                         {omPrice && <div style={{ fontSize: 9, color: "#c4bba7", fontWeight: 400 }}>at asking price</div>}
@@ -354,7 +354,7 @@ export default function MyUnderwritingPanel({ deal: d, onUpdate }: Props) {
 
                   {/* Implied value at OM cap rate */}
                   {(myValueAtOmCap != null || omPrice != null) && (
-                    <tr style={{ borderBottom: myValueAtTarget != null ? "1px solid #f1eadc" : "none" }}>
+                    <tr style={{ borderBottom: myValueAtTarget != null ? "1px solid #efeee9" : "none" }}>
                       <td style={{ ...tdLabel, paddingLeft: 12 }}>
                         Implied Value
                         {omCap && <div style={{ fontSize: 9, color: "#c4bba7", fontWeight: 400 }}>at OM cap ({omCap}%)</div>}

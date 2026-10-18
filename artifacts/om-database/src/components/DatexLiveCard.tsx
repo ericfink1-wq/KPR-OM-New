@@ -93,17 +93,17 @@ export default function DatexLiveCard({ deal }: { deal: Deal }) {
   const asOf = live.asOf ? String(live.asOf).slice(0, 10) : null;
 
   const card: React.CSSProperties = {
-    background: "#fff", border: "1px solid #e6dfd0", borderRadius: 12,
-    padding: isMobile ? 14 : 18, marginBottom: 16, fontFamily: "'Inter',sans-serif",
+    background: "#fff", border: "1px solid #e3e1db", borderRadius: 12,
+    padding: isMobile ? 14 : 18, marginBottom: 16, fontFamily: "'Roboto',sans-serif",
   };
-  const label: React.CSSProperties = { fontSize: 10, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "#a69e91" };
+  const label: React.CSSProperties = { fontSize: 10, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "#94928b" };
 
   return (
     <div style={card}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
         <span style={{ fontSize: 14.5, fontWeight: 700, color: "#383a37" }}>📡 Live from Datex</span>
         {asOf && <span style={{ fontSize: 11.5, color: "#7d8b78", fontWeight: 600 }}>as of {asOf}</span>}
-        <span style={{ fontSize: 11, color: "#a69e91" }}>
+        <span style={{ fontSize: 11, color: "#94928b" }}>
           Property-management system of record — current. The figures elsewhere on this page are the acquisition-era snapshot.
         </span>
       </div>
@@ -165,7 +165,7 @@ export default function DatexLiveCard({ deal }: { deal: Deal }) {
           <div style={{ border: "1px solid #ece6da", background: "#faf8f4", borderRadius: 9, padding: "9px 11px" }}>
             <div style={{ ...label, marginBottom: 3 }}>{lbl}</div>
             <div style={{ fontSize: 13.5, fontWeight: 700, color: "#383a37" }}>{b.count} lease{b.count === 1 ? "" : "s"} · {fmtInt(b.sf)} SF</div>
-            <div style={{ fontSize: 11.5, color: "#7d766a" }}>${fmtInt(b.rent)}/yr base rent</div>
+            <div style={{ fontSize: 11.5, color: "#6b6a65" }}>${fmtInt(b.rent)}/yr base rent</div>
           </div>
         );
         return (
@@ -176,7 +176,7 @@ export default function DatexLiveCard({ deal }: { deal: Deal }) {
               {line("13–24 months", ro.y2)}
             </div>
             {ro.next.length > 0 && (
-              <div style={{ marginTop: 8, fontSize: 12, color: "#5c5850", lineHeight: 1.6 }}>
+              <div style={{ marginTop: 8, fontSize: 12, color: "#55544f", lineHeight: 1.6 }}>
                 Next up: {ro.next.map(n => `${n.name} (${n.expiry.slice(0, 7)}${n.sf ? `, ${fmtInt(n.sf)} SF` : ""})`).join(" · ")}
               </div>
             )}
@@ -185,7 +185,7 @@ export default function DatexLiveCard({ deal }: { deal: Deal }) {
       })()}
 
       {live.tenants && live.tenants.length > 0 && (
-        <div style={{ marginTop: 12, fontSize: 11.5, color: "#a69e91" }}>
+        <div style={{ marginTop: 12, fontSize: 11.5, color: "#94928b" }}>
           {live.tenants.length} tenant{live.tenants.length === 1 ? "" : "s"} currently billed
           {live.vacantSuites?.length ? ` · ${live.vacantSuites.length} vacant suite${live.vacantSuites.length === 1 ? "" : "s"}` : ""}
         </div>

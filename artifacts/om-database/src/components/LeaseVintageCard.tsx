@@ -9,7 +9,7 @@ const BUCKET_COLORS: Record<VintageBucket["key"], string> = {
   legacy: "#b3541a",      // old paper — the mark-to-market story
   "pre-covid": "#c9a84c",
   covid: "#e0a93e",       // priced when landlords had no leverage
-  recent: "#3f7a1f",      // current market evidence
+  recent: "#3e8a2f",      // current market evidence
 };
 
 function fmtRent(r: number): string {
@@ -25,11 +25,11 @@ export default function LeaseVintageCard({ deal }: { deal: Deal }) {
   if (visible.length === 0) return null;
 
   return (
-    <div style={{ background: "#fff", border: "1px solid #e7e0d2", borderRadius: 12, padding: "16px 18px", marginBottom: 12 }}>
-      <div style={{ fontSize: 9, letterSpacing: "0.12em", color: "#958d80", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>
+    <div style={{ background: "#fff", border: "1px solid #e6e4de", borderRadius: 12, padding: "16px 18px", marginBottom: 12 }}>
+      <div style={{ fontSize: 9, letterSpacing: "0.12em", color: "#8a8983", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>
         Lease Vintage — when the rents were priced
       </div>
-      <div style={{ fontSize: 11, color: "#a89f8f", marginBottom: 12, fontFamily: "'Inter',sans-serif", lineHeight: 1.45 }}>
+      <div style={{ fontSize: 11, color: "#9b9992", marginBottom: 12, fontFamily: "'Roboto',sans-serif", lineHeight: 1.45 }}>
         Share of base rent by lease-signing era. Old and 2020–21 paper usually trails today's market.
       </div>
 
@@ -44,7 +44,7 @@ export default function LeaseVintageCard({ deal }: { deal: Deal }) {
         {visible.map(b => (
           <div key={b.key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <div style={{ width: 10, height: 10, borderRadius: 2, background: BUCKET_COLORS[b.key] }} />
-            <span style={{ fontSize: 10.5, color: "#7d766a", fontFamily: "'Inter',sans-serif" }}>
+            <span style={{ fontSize: 10.5, color: "#6b6a65", fontFamily: "'Roboto',sans-serif" }}>
               {b.label} · <strong style={{ color: "#52554e" }}>{Math.round(b.sharePct)}%</strong>
             </span>
           </div>
@@ -53,8 +53,8 @@ export default function LeaseVintageCard({ deal }: { deal: Deal }) {
 
       {/* The center's own market-rent proof */}
       {v.recentSpread && (
-        <div style={{ marginTop: 10, padding: "8px 11px", background: v.recentSpread.spreadPct >= 10 ? "#f2faf0" : "#faf8f2", border: `1px solid ${v.recentSpread.spreadPct >= 10 ? "#d7e6c6" : "#eee6d8"}`, borderRadius: 7, fontSize: 11.5, color: "#52554e", fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>
-        <strong style={{ color: "#2a2c28" }}>Recent leasing spread:</strong> inline leases signed in the last 24 months run{" "}
+        <div style={{ marginTop: 10, padding: "8px 11px", background: v.recentSpread.spreadPct >= 10 ? "#f2faf0" : "#faf8f2", border: `1px solid ${v.recentSpread.spreadPct >= 10 ? "#d7e6c6" : "#eee6d8"}`, borderRadius: 7, fontSize: 11.5, color: "#52554e", fontFamily: "'Roboto',sans-serif", lineHeight: 1.5 }}>
+        <strong style={{ color: "#232422" }}>Recent leasing spread:</strong> inline leases signed in the last 24 months run{" "}
           <strong>${v.recentSpread.newMedianPSF.toFixed(2)}/SF</strong> vs <strong>${v.recentSpread.oldMedianPSF.toFixed(2)}</strong> on 5+ year-old paper
           {" "}({v.recentSpread.spreadPct >= 0 ? "+" : ""}{Math.round(v.recentSpread.spreadPct)}%, {v.recentSpread.newCount} new / {v.recentSpread.oldCount} old) —
           the center's own evidence of where market rent sits.
@@ -62,7 +62,7 @@ export default function LeaseVintageCard({ deal }: { deal: Deal }) {
       )}
 
       {v.coveragePct < 90 && (
-        <div style={{ fontSize: 10.5, color: "#a89f8f", marginTop: 8, fontFamily: "'Inter',sans-serif" }}>
+        <div style={{ fontSize: 10.5, color: "#9b9992", marginTop: 8, fontFamily: "'Roboto',sans-serif" }}>
           Based on {v.coveragePct}% of base rent (leases with a start date).
         </div>
       )}

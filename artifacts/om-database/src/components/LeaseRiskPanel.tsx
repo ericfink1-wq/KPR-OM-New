@@ -17,8 +17,8 @@ import { useIsMobile } from "../hooks/use-mobile";
 // has de-linked or weakened a clause, the panel shows it as MITIGATED.
 
 const C = {
-  ink: "#383a37", sub: "#6f6a5f", faint: "#a69e91", line: "#efe8da", panel: "#faf7f0", panelBd: "#e7e0d2",
-  green: "#3f7a1f", greenBg: "#eef3e6", greenBd: "#b8d49a",
+  ink: "#383a37", sub: "#676767", faint: "#94928b", line: "#ecebe6", panel: "#faf9f5", panelBd: "#e6e4de",
+  green: "#3e8a2f", greenBg: "#eef3e6", greenBd: "#b8d49a",
   amber: "#c97a18", amberBg: "#fbf1e4", amberBd: "#e0c9a8",
   red: "#b3261e", redBg: "#fdecec", redBd: "#f3c0c0",
   graybg: "#f3efe7",
@@ -142,7 +142,7 @@ export default function LeaseRiskPanel({ deal, abstracts }: { deal: Deal; abstra
   return (
     <div id="section-lease-risk" data-jump="Lease Risk" style={{ background: C.panel, border: `1px solid ${C.panelBd}`, borderRadius: 8, padding: isMobile ? "12px 13px" : "14px 16px", marginTop: 14, marginBottom: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-        <div style={{ fontSize: 8, letterSpacing: "0.1em", color: "#958d80", marginBottom: 2 }}>LEASE RISK · ANCHOR DEPENDENCY</div>
+        <div style={{ fontSize: 8, letterSpacing: "0.1em", color: "#8a8983", marginBottom: 2 }}>LEASE RISK · ANCHOR DEPENDENCY</div>
         {hasMatrix && (
           <button onClick={doExport} disabled={exporting}
             title="Download the anchor × tenant risk matrix (who trips if an anchor goes dark, and how much rent is at stake) as Excel"

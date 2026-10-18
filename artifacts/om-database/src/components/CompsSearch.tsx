@@ -216,7 +216,7 @@ function SortTh({
         fontSize: 9.5,
         fontWeight: 700,
         letterSpacing: "0.08em",
-        color: active ? "#6dba43" : "#a89f8f",
+        color: active ? "#5bba47" : "#9b9992",
         textTransform: "uppercase" as const,
         cursor: "pointer",
         userSelect: "none" as const,
@@ -264,7 +264,7 @@ function compAscending(k: string): ((a: CompRow, b: CompRow) => number) | null {
 // ---------------------------------------------------------------------------
 // Truncating cell with expand toggle
 // ---------------------------------------------------------------------------
-function TruncCell({ text, isExpanded, onToggle, maxWidth = 200, color = "#5c5850", fontSize = 11 }: {
+function TruncCell({ text, isExpanded, onToggle, maxWidth = 200, color = "#55544f", fontSize = 11 }: {
   text: string;
   isExpanded: boolean;
   onToggle: () => void;
@@ -286,7 +286,7 @@ function TruncCell({ text, isExpanded, onToggle, maxWidth = 200, color = "#5c585
       {showChevron && (
         <button
           onClick={e => { e.stopPropagation(); onToggle(); }}
-          style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, color: "#c9c2b8", fontSize: 9, flexShrink: 0, lineHeight: "15px" }}
+          style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, color: "#c6c4bd", fontSize: 9, flexShrink: 0, lineHeight: "15px" }}
           title={isExpanded ? "Collapse" : "Expand"}
         >
           {isExpanded ? "▾" : "▸"}
@@ -408,11 +408,11 @@ function AddCompModal({
 
   const inp: React.CSSProperties = {
     display: "block", width: "100%", fontSize: 13, padding: "7px 10px",
-    border: "1px solid #e3dccd", borderRadius: 6, color: "#383a37",
-    background: "#fafaf8", fontFamily: "'Inter',sans-serif", boxSizing: "border-box",
+    border: "1px solid #dfddd6", borderRadius: 6, color: "#383a37",
+    background: "#fafaf8", fontFamily: "'Roboto',sans-serif", boxSizing: "border-box",
   };
   const label = (text: string, required = false) => (
-    <div style={{ fontSize: 10, color: "#a69e91", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 3 }}>
+    <div style={{ fontSize: 10, color: "#94928b", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 3 }}>
       {text}{required && <span style={{ color: "#dc2626", marginLeft: 2 }}>*</span>}
     </div>
   );
@@ -431,8 +431,8 @@ function AddCompModal({
       }}>
         {/* Header */}
         <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid #f0e9da", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#26281f" }}>{isOm ? "Edit OM-Sourced Comp" : isEdit ? "Edit Comp" : "Add Manual Comp"}</div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 18, color: "#a89f8f", lineHeight: 1, padding: 4 }}>×</button>
+          <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, fontWeight: 600, color: "#232422" }}>{isOm ? "Edit OM-Sourced Comp" : isEdit ? "Edit Comp" : "Add Manual Comp"}</div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 18, color: "#9b9992", lineHeight: 1, padding: 4 }}>×</button>
         </div>
 
         {/* Body */}
@@ -538,11 +538,11 @@ function AddCompModal({
           )}
           <div style={{ display: "flex", gap: 9, justifyContent: "flex-end" }}>
             <button onClick={onClose} disabled={saving}
-              style={{ padding: "8px 16px", borderRadius: 7, border: "1px solid #e3dccd", background: "#fff", color: "#7d766a", fontSize: 12, fontFamily: "'Inter',sans-serif", cursor: "pointer" }}>
+              style={{ padding: "8px 16px", borderRadius: 7, border: "1px solid #dfddd6", background: "#fff", color: "#6b6a65", fontSize: 12, fontFamily: "'Roboto',sans-serif", cursor: "pointer" }}>
               Cancel
             </button>
             <button onClick={handleSave} disabled={saving}
-              style={{ padding: "8px 18px", borderRadius: 7, border: "none", background: saving ? "#a8d98a" : "#6dba43", color: "#fff", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", cursor: saving ? "default" : "pointer" }}>
+              style={{ padding: "8px 18px", borderRadius: 7, border: "none", background: saving ? "#a8d98a" : "#5bba47", color: "#fff", fontSize: 12, fontWeight: 600, fontFamily: "'Roboto',sans-serif", cursor: saving ? "default" : "pointer" }}>
               {saving ? "Saving…" : isEdit ? "Save Changes" : "Save Comp"}
             </button>
           </div>
@@ -876,8 +876,8 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
       value={filters[key]}
       onChange={e => handleFilter({ [key]: e.target.value })}
       style={{
-        height: 32, borderRadius: 7, border: "1px solid #ddd4c2", background: "#fff",
-        padding: "0 10px", fontSize: 12, fontFamily: "'Inter',sans-serif", color: "#383a37",
+        height: 32, borderRadius: 7, border: "1px solid #dad8d1", background: "#fff",
+        padding: "0 10px", fontSize: 12, fontFamily: "'Roboto',sans-serif", color: "#383a37",
         outline: "none", width: "100%",
       }}
       {...extra}
@@ -903,12 +903,12 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
           <div style={{
             background: "#fff", borderRadius: 14, padding: "28px 32px",
             boxShadow: "0 8px 40px rgba(0,0,0,0.18)", maxWidth: 380, width: "90%",
-            fontFamily: "'Inter',sans-serif",
+            fontFamily: "'Roboto',sans-serif",
           }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "#26281f", marginBottom: 8 }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: "#232422", marginBottom: 8 }}>
               Import {pendingImport.length} comp{pendingImport.length !== 1 ? "s" : ""}
             </div>
-            <div style={{ fontSize: 13, color: "#5c5850", marginBottom: 22, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 13, color: "#55544f", marginBottom: 22, lineHeight: 1.5 }}>
               These will be added to your comp database. Any that duplicate a comp already
               in the database (or each other) are skipped automatically — nothing is ever
               replaced or deleted.
@@ -918,8 +918,8 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
                 onClick={() => doImport(pendingImport)}
                 style={{
                   flex: 1, padding: "9px 0", borderRadius: 8, border: "none",
-                  background: "#6dba43", color: "#fff", fontSize: 13, fontWeight: 600,
-                  cursor: "pointer", fontFamily: "'Inter',sans-serif",
+                  background: "#5bba47", color: "#fff", fontSize: 13, fontWeight: 600,
+                  cursor: "pointer", fontFamily: "'Roboto',sans-serif",
                 }}
               >
                 Import {pendingImport.length} comp{pendingImport.length !== 1 ? "s" : ""}
@@ -927,9 +927,9 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
               <button
                 onClick={() => setPendingImport(null)}
                 style={{
-                  padding: "9px 14px", borderRadius: 8, border: "1px solid #e7e0d2",
-                  background: "transparent", color: "#a89f8f", fontSize: 13,
-                  cursor: "pointer", fontFamily: "'Inter',sans-serif",
+                  padding: "9px 14px", borderRadius: 8, border: "1px solid #e6e4de",
+                  background: "transparent", color: "#9b9992", fontSize: 13,
+                  cursor: "pointer", fontFamily: "'Roboto',sans-serif",
                 }}
               >
                 Cancel
@@ -949,14 +949,14 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
         <div>
-          <h1 style={{ margin: 0, fontFamily: "'Fraunces',serif", fontSize: 21, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>
+          <h1 className="kpr-page-title">
             Comp Sales Database
           </h1>
-          <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>
+          <div style={{ fontSize: 12, color: "#9b9992", marginTop: 3 }}>
             {loading ? "Loading…" : `${displayRows.length} comp${displayRows.length !== 1 ? "s" : ""}${hasFilters ? " matching filters" : " in index"}`}
           </div>
           {importMsg && (
-            <div style={{ marginTop: 6, fontSize: 11.5, color: importMsg.ok ? "#6dba43" : "#c0392b", fontFamily: "'Inter',sans-serif" }}>
+            <div style={{ marginTop: 6, fontSize: 11.5, color: importMsg.ok ? "#5bba47" : "#c0392b", fontFamily: "'Roboto',sans-serif" }}>
               {importMsg.ok ? "✓ " : "⚠ "}{importMsg.text}
             </div>
           )}
@@ -969,7 +969,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
                 background: showDupsOnly ? "#fff8ec" : "transparent",
                 border: `1px solid ${showDupsOnly ? "#d9890c" : "#e8d9a0"}`,
                 color: "#d9890c", padding: "6px 12px", borderRadius: 7,
-                cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif",
+                cursor: "pointer", fontSize: 11, fontFamily: "'Roboto',sans-serif",
                 fontWeight: showDupsOnly ? 600 : 400,
               }}
             >
@@ -979,7 +979,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
           {hasFilters && (
             <button
               onClick={() => { setFilters(EMPTY_FILTERS); setSelectedStates([]); fetch_(EMPTY_FILTERS, sort); }}
-              style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#a89f8f", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}
+              style={{ background: "transparent", border: "1px solid #e6e4de", color: "#9b9992", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Roboto',sans-serif" }}
             >
               Clear filters
             </button>
@@ -1010,7 +1010,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
             }}
             render={(busy) => (
               <span title="Export the current (filtered) comp set to PDF"
-                style={{ background: "transparent", border: "1px solid #c8ddb5", color: rows.length === 0 ? "#c9c2b8" : "#5a9c30", padding: "7px 14px", borderRadius: 7, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                style={{ background: "transparent", border: "1px solid #c8ddb5", color: rows.length === 0 ? "#c6c4bd" : "#5a9c30", padding: "7px 14px", borderRadius: 7, fontSize: 12, fontWeight: 600, fontFamily: "'Roboto',sans-serif", display: "inline-flex", alignItems: "center", gap: 4 }}>
                 {busy ? "Preparing…" : "⬇ PDF"}
               </span>
             )}
@@ -1020,9 +1020,9 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
             disabled={rows.length === 0}
             style={{
               background: "transparent", border: "1px solid #c8ddb5",
-              color: rows.length === 0 ? "#c9c2b8" : "#5a9c30",
+              color: rows.length === 0 ? "#c6c4bd" : "#5a9c30",
               padding: "7px 14px", borderRadius: 7, cursor: rows.length === 0 ? "default" : "pointer",
-              fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif",
+              fontSize: 12, fontWeight: 600, fontFamily: "'Roboto',sans-serif",
               letterSpacing: "-0.01em",
             }}
           >
@@ -1031,9 +1031,9 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
           <button
             onClick={() => importRef.current?.click()}
             style={{
-              background: "transparent", border: "1px solid #6dba43", color: "#6dba43",
+              background: "transparent", border: "1px solid #5bba47", color: "#5bba47",
               padding: "7px 14px", borderRadius: 7, cursor: "pointer",
-              fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif",
+              fontSize: 12, fontWeight: 600, fontFamily: "'Roboto',sans-serif",
               letterSpacing: "-0.01em",
             }}
             title="Import comps from JSON, Excel/CSV, or a PDF comps sheet"
@@ -1043,9 +1043,9 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
           <button
             onClick={() => setAddOpen(true)}
             style={{
-              background: "#6dba43", border: "none", color: "#fff",
+              background: "#5bba47", border: "none", color: "#fff",
               padding: "7px 14px", borderRadius: 7, cursor: "pointer",
-              fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif",
+              fontSize: 12, fontWeight: 600, fontFamily: "'Roboto',sans-serif",
               letterSpacing: "-0.01em",
             }}
           >
@@ -1060,7 +1060,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
           {([["sales", `Sales (${rows.length - competitiveCount})`], ["competitive", `Competitive set (${competitiveCount})`]] as const).map(([k, label]) => (
             <button key={k} onClick={() => setCompView(k)}
               title={k === "competitive" ? "Nearby centers the OMs listed with no sale price or date. Kept for reference, never counted in comp stats." : "Actual trades — the rows that count."}
-              style={{ background: compView === k ? "#26281f" : "#fff", color: compView === k ? "#fff" : "#5f5a50", border: "none", padding: "8px 12px", minHeight: 34, fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+              style={{ background: compView === k ? "#232422" : "#fff", color: compView === k ? "#fff" : "#5f5a50", border: "none", padding: "8px 12px", minHeight: 34, fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
               {label}
             </button>
           ))}
@@ -1074,7 +1074,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
         )}
         {isAdmin && (
           <button onClick={runCleanup} disabled={cleanup.busy}
-            style={{ background: "#fff", border: "1px solid #d9d2c4", color: "#4f4a40", padding: "8px 12px", minHeight: 34, borderRadius: 7, fontSize: 11.5, fontWeight: 600, cursor: cleanup.busy ? "wait" : "pointer", fontFamily: "'Inter',sans-serif" }}>
+            style={{ background: "#fff", border: "1px solid #d7d5ce", color: "#4f4a40", padding: "8px 12px", minHeight: 34, borderRadius: 7, fontSize: 11.5, fontWeight: 600, cursor: cleanup.busy ? "wait" : "pointer", fontFamily: "'Roboto',sans-serif" }}>
             🧹 Clean up comp data
           </button>
         )}
@@ -1082,8 +1082,8 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
       </div>
 
       {compView === "sales" && displayRows.filter(r => r.capRate != null && r.saleDate).length >= 3 && (
-        <details open style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, padding: "8px 12px 10px", marginBottom: 14 }}>
-          <summary style={{ cursor: "pointer", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#7d766a", padding: "2px 0 6px" }}>Cap rate by sale date (filtered set)</summary>
+        <details open style={{ background: "#fff", border: "1px solid #ebeae5", borderRadius: 12, padding: "8px 12px 10px", marginBottom: 14 }}>
+          <summary style={{ cursor: "pointer", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#6b6a65", padding: "2px 0 6px" }}>Cap rate by sale date (filtered set)</summary>
           <CompScatter comps={displayRows.filter(r => !ignoredComps.has(r.id))} />
         </details>
       )}
@@ -1098,7 +1098,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
         ];
         return (
           <div style={{
-            background: "#fff", border: "1px solid #efe8da", borderRadius: 10,
+            background: "#fff", border: "1px solid #ecebe6", borderRadius: 10,
             padding: "11px 18px", marginBottom: 14,
             display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", alignItems: "center",
           }}>
@@ -1108,14 +1108,14 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
                 padding: "3px 8px",
                 borderRight: i < items.length - 1 ? "1px solid #f0e9da" : "none",
               }}>
-                <span style={{ fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                <span style={{ fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9b9992", fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}>
                   {item.label}
                 </span>
-                <span style={{ fontFamily: "'Fraunces',serif", fontSize: item.accent ? 22 : 18, fontWeight: 500, color: item.accent ? "#3f7a1f" : "#26281f", lineHeight: 1.1 }}>
+                <span style={{ fontFamily: "'Lora',Georgia,serif", fontSize: item.accent ? 22 : 18, fontWeight: 500, color: item.accent ? "#3e8a2f" : "#232422", lineHeight: 1.1 }}>
                   {item.value}
                 </span>
                 {item.sub && (
-                  <span style={{ fontSize: 10, color: "#a89f8f", fontFamily: "'Inter',sans-serif", marginTop: 1 }}>
+                  <span style={{ fontSize: 10, color: "#9b9992", fontFamily: "'Roboto',sans-serif", marginTop: 1 }}>
                     {item.sub}
                   </span>
                 )}
@@ -1134,9 +1134,9 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
           value={filters.q}
           onChange={e => handleFilter({ q: e.target.value })}
           style={{
-            width: "100%", height: 36, borderRadius: 8, border: "1px solid #ddd4c2",
+            width: "100%", height: 36, borderRadius: 8, border: "1px solid #dad8d1",
             background: "#fff", padding: "0 14px", fontSize: 13,
-            fontFamily: "'Inter',sans-serif", color: "#383a37", outline: "none",
+            fontFamily: "'Roboto',sans-serif", color: "#383a37", outline: "none",
             boxSizing: "border-box",
           }}
         />
@@ -1144,18 +1144,18 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
 
       {/* Filter bar */}
       <div style={{
-        background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "14px 16px",
+        background: "#fff", border: "1px solid #ebeae5", borderRadius: 10, padding: "14px 16px",
         marginBottom: 16, display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
         width: "100%", boxSizing: "border-box",
         gap: 10, alignItems: "end",
       }}>
         <div>
-          <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 5 }}>Market / MSA</div>
+          <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9b9992", fontWeight: 700, marginBottom: 5 }}>Market / MSA</div>
           {In("e.g. Chicago, MSA, Midwest…", "market")}
         </div>
         <div style={{ position: "relative" }}>
-          <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 5 }}>State</div>
+          <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9b9992", fontWeight: 700, marginBottom: 5 }}>State</div>
           <button
             type="button"
             onClick={() => setStateMenuOpen(o => !o)}
@@ -1163,11 +1163,11 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
             style={{
               width: "100%", boxSizing: "border-box", textAlign: "left",
               padding: "8px 10px", fontSize: 13, borderRadius: 8,
-              border: `1px solid ${selectedStates.length ? "#6dba43" : "#e0d8c8"}`,
+              border: `1px solid ${selectedStates.length ? "#5bba47" : "#dcdad3"}`,
               background: selectedStates.length ? "#f0fae8" : "#fff",
-              color: selectedStates.length ? "#3f7a1f" : "#8b8578",
+              color: selectedStates.length ? "#3e8a2f" : "#7a7973",
               fontWeight: selectedStates.length ? 600 : 400, cursor: "pointer",
-              fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6,
+              fontFamily: "'Roboto',sans-serif", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6,
             }}
           >
             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -1176,20 +1176,20 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
             <span style={{ fontSize: 9, flexShrink: 0 }}>▾</span>
           </button>
           {stateMenuOpen && (
-            <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50, background: "#fff", border: "1px solid #e0d8c8", borderRadius: 8, boxShadow: "0 8px 24px rgba(56,58,55,0.15)", maxHeight: 240, overflowY: "auto" }}>
+            <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50, background: "#fff", border: "1px solid #dcdad3", borderRadius: 8, boxShadow: "0 8px 24px rgba(56,58,55,0.15)", maxHeight: 240, overflowY: "auto" }}>
               {selectedStates.length > 0 && (
                 <button type="button" onMouseDown={e => { e.preventDefault(); setSelectedStates([]); }}
-                  style={{ width: "100%", textAlign: "left", padding: "8px 12px", fontSize: 12, color: "#9a6a1e", background: "transparent", border: "none", borderBottom: "1px solid #f1eadc", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                  style={{ width: "100%", textAlign: "left", padding: "8px 12px", fontSize: 12, color: "#9a6a1e", background: "transparent", border: "none", borderBottom: "1px solid #efeee9", cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
                   Clear ({selectedStates.length})
                 </button>
               )}
-              {availableStates.length === 0 && <div style={{ padding: "10px 12px", fontSize: 12, color: "#a89f8f" }}>No states in data</div>}
+              {availableStates.length === 0 && <div style={{ padding: "10px 12px", fontSize: 12, color: "#9b9992" }}>No states in data</div>}
               {availableStates.map(st => {
                 const on = selectedStates.includes(st);
                 return (
                   <button key={st} type="button"
                     onMouseDown={e => { e.preventDefault(); setSelectedStates(prev => on ? prev.filter(s => s !== st) : [...prev, st]); }}
-                    style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", padding: "8px 12px", fontSize: 13, background: on ? "#f0fae8" : "transparent", border: "none", cursor: "pointer", fontFamily: "'Inter',sans-serif", color: "#383a37" }}>
+                    style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", padding: "8px 12px", fontSize: 13, background: on ? "#f0fae8" : "transparent", border: "none", cursor: "pointer", fontFamily: "'Roboto',sans-serif", color: "#383a37" }}>
                     <input type="checkbox" checked={on} readOnly style={{ pointerEvents: "none" }} />
                     {st}
                   </button>
@@ -1199,19 +1199,19 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
           )}
         </div>
         <div>
-          <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 5 }}>Sold After</div>
+          <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9b9992", fontWeight: 700, marginBottom: 5 }}>Sold After</div>
           {In("", "dateFrom", "date")}
         </div>
         <div>
-          <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 5 }}>Sold Before</div>
+          <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9b9992", fontWeight: 700, marginBottom: 5 }}>Sold Before</div>
           {In("", "dateTo", "date")}
         </div>
         <div>
-          <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 5 }}>Cap Rate ≥</div>
+          <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9b9992", fontWeight: 700, marginBottom: 5 }}>Cap Rate ≥</div>
           {In("e.g. 5.5", "capRateMin", "number", { min: 0, max: 30, step: 0.25 })}
         </div>
         <div>
-          <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 5 }}>Cap Rate ≤</div>
+          <div style={{ fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9b9992", fontWeight: 700, marginBottom: 5 }}>Cap Rate ≤</div>
           {In("e.g. 8.0", "capRateMax", "number", { min: 0, max: 30, step: 0.25 })}
         </div>
       </div>
@@ -1230,12 +1230,12 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
 
       {/* Table — swipeable on all screen sizes */}
       {!error && (
-        <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ background: "#fff", border: "1px solid #ebeae5", borderRadius: 12, overflow: "hidden" }}>
           <div ref={scrollRef} style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-            <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900 }}>
+            <table className="kpr-table" style={{ borderCollapse: "collapse", width: "100%", minWidth: 900 }}>
               <thead>
-                <tr style={{ background: "#faf7f0", borderBottom: "1px solid #f1eadc" }}>
-                  <SortTh label="Property" k="name" ms={msort} className="freeze-col" style={{ minWidth: 180, ...stickyFirstCol("#faf7f0", true) }} />
+                <tr style={{ background: "#faf9f5", borderBottom: "1px solid #efeee9" }}>
+                  <SortTh label="Property" k="name" ms={msort} className="freeze-col" style={{ minWidth: 180, ...stickyFirstCol("#faf9f5", true) }} />
                   <SortTh label="City"     k="market" ms={msort} style={{ minWidth: 100 }} />
                   {hasState   && <SortTh label="State"  k="state" ms={msort} style={{ minWidth: 50 }} />}
                   <SortTh label="Sale Date"  k="date" ms={msort} />
@@ -1251,8 +1251,8 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
                   <th className="freeze-col" style={{
                     padding: "9px 6px", width: 72,
                     position: "sticky", right: 0, zIndex: 3,
-                    background: "#faf7f0",
-                    borderLeft: "1px solid #efe8da",
+                    background: "#faf9f5",
+                    borderLeft: "1px solid #ecebe6",
                     boxShadow: "-6px 0 6px -6px rgba(0,0,0,0.12)",
                   }} />
                 </tr>
@@ -1260,7 +1260,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={colCount} style={{ padding: "40px 0", textAlign: "center", color: "#a89f8f", fontSize: 13 }}>
+                    <td colSpan={colCount} style={{ padding: "40px 0", textAlign: "center", color: "#9b9992", fontSize: 13 }}>
                       Loading…
                     </td>
                   </tr>
@@ -1268,7 +1268,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
                 {!loading && displayRows.length === 0 && (
                   <tr>
                     <td colSpan={colCount} style={{ padding: "48px 0", textAlign: "center" }}>
-                      <div style={{ color: "#a89f8f", fontSize: 13 }}>
+                      <div style={{ color: "#9b9992", fontSize: 13 }}>
                         {showDupsOnly ? "No possible duplicates detected." : hasFilters ? "No comps match these filters." : "No comps in the index yet. Comps are extracted automatically from OM PDFs."}
                       </div>
                     </td>
@@ -1281,13 +1281,13 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
                     <tr
                       key={row.id}
                       style={{
-                        borderTop: idx === 0 ? "none" : "1px solid #f5f1ea",
+                        borderTop: idx === 0 ? "none" : "1px solid #f6f5f1",
                         background: row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : undefined,
                         opacity: ignoredComps.has(row.id) ? 0.35 : 1,
                         transition: "background 0.12s, opacity 0.15s",
                       }}
                       onMouseEnter={e => {
-                        const bg = row.isOwnTransaction ? "#e8f5e3" : row.isManual ? "#eef7e8" : "#faf7f0";
+                        const bg = row.isOwnTransaction ? "#e8f5e3" : row.isManual ? "#eef7e8" : "#faf9f5";
                         e.currentTarget.style.background = bg;
                         (e.currentTarget.firstElementChild as HTMLElement).style.background = bg;
                         (e.currentTarget.lastElementChild as HTMLElement).style.background = bg;
@@ -1301,7 +1301,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
                     >
                       <td className="freeze-col" style={{ padding: "9px 10px", maxWidth: 240, ...stickyFirstCol(row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : "#fff") }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap" }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: "#26281f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "#232422", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
                           {row.isOwnTransaction ? (
                             <span title={row.txnKind === "disposition" ? "KPR's own sale of this property (closed)" : "KPR's own purchase of this property"} style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#3a7d44", background: "#d6f0da", border: "1px solid #a8d9b0", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap", flexShrink: 0 }}>
                               {row.txnKind === "disposition" ? "KPR SALE" : "KPR BUY"}
@@ -1326,33 +1326,33 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
                             );
                           })()}
                         </div>
-                        {sub && <div style={{ fontSize: 10.5, color: "#a89f8f", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>{sub}</div>}
+                        {sub && <div style={{ fontSize: 10.5, color: "#9b9992", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>{sub}</div>}
                       </td>
-                      <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#5c5850", whiteSpace: "nowrap" }}>{hasState ? cityOnly(row.market, row.state) : (row.market || "—")}</td>
-                      {hasState  && <td style={{ padding: "9px 10px", fontSize: 11, color: "#7d766a", whiteSpace: "nowrap" }}>{row.state || "—"}</td>}
+                      <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#55544f", whiteSpace: "nowrap" }}>{hasState ? cityOnly(row.market, row.state) : (row.market || "—")}</td>
+                      {hasState  && <td style={{ padding: "9px 10px", fontSize: 11, color: "#6b6a65", whiteSpace: "nowrap" }}>{row.state || "—"}</td>}
                       <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#383a37", fontWeight: 500, whiteSpace: "nowrap" }}>{fmtDate(row.saleDate)}</td>
                       <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#383a37", whiteSpace: "nowrap" }}>{fmtM(row.salePrice)}</td>
-                      <td style={{ padding: "9px 10px", fontSize: 12, color: row.capRate != null ? "#26281f" : "#c9c2b8", fontWeight: row.capRate != null ? 600 : 400, whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "9px 10px", fontSize: 12, color: row.capRate != null ? "#232422" : "#c6c4bd", fontWeight: row.capRate != null ? 600 : 400, whiteSpace: "nowrap" }}>
                         {fmtCapRate(row.capRate)}
                       </td>
-                      {hasBuyer  && <td style={{ padding: "9px 10px", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{row.buyer || "—"}</td>}
-                      {hasSeller && <td style={{ padding: "9px 10px", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{row.seller || "—"}</td>}
-                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{fmtSf(row.sf)}</td>
+                      {hasBuyer  && <td style={{ padding: "9px 10px", fontSize: 11, color: "#55544f", whiteSpace: "nowrap" }}>{row.buyer || "—"}</td>}
+                      {hasSeller && <td style={{ padding: "9px 10px", fontSize: 11, color: "#55544f", whiteSpace: "nowrap" }}>{row.seller || "—"}</td>}
+                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#55544f", whiteSpace: "nowrap" }}>{fmtSf(row.sf)}</td>
                       <td style={{ padding: "9px 10px", fontSize: 11.5, color: "#383a37", whiteSpace: "nowrap" }}>{fmtPsf(row.pricePerSf)}</td>
-                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{fmtPct(row.occupancy)}</td>
+                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#55544f", whiteSpace: "nowrap" }}>{fmtPct(row.occupancy)}</td>
                       {hasAnchor && (
                         <td style={{ padding: "9px 10px", maxWidth: 230 }}>
                           {row.anchor
                             ? <TruncCell text={row.anchor} isExpanded={expandedCells.has(`${row.id}:anchor`)} onToggle={() => toggleCell(row.id, "anchor")} maxWidth={210} />
-                            : <span style={{ fontSize: 11, color: "#c9c2b8" }}>—</span>}
+                            : <span style={{ fontSize: 11, color: "#c6c4bd" }}>—</span>}
                         </td>
                       )}
-                      {hasType   && <td style={{ padding: "9px 10px", fontSize: 11, color: "#5c5850", whiteSpace: "nowrap" }}>{row.propertyType || "—"}</td>}
+                      {hasType   && <td style={{ padding: "9px 10px", fontSize: 11, color: "#55544f", whiteSpace: "nowrap" }}>{row.propertyType || "—"}</td>}
                       <td className="freeze-col" style={{
                         padding: "9px 8px", whiteSpace: "nowrap",
                         position: "sticky", right: 0, zIndex: 2,
                         background: row.isOwnTransaction ? "#f5fbf2" : row.isManual ? "#f8fbf5" : "#fff",
-                        borderLeft: "1px solid #efe8da",
+                        borderLeft: "1px solid #ecebe6",
                         boxShadow: "-6px 0 6px -6px rgba(0,0,0,0.10)",
                       }}>
                         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
@@ -1362,7 +1362,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
                             style={{
                               background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
                               cursor: "pointer", padding: "3px 5px", display: "flex", alignItems: "center",
-                              color: ignoredComps.has(row.id) ? "#d9890c" : "#c9c2b8",
+                              color: ignoredComps.has(row.id) ? "#d9890c" : "#c6c4bd",
                             }}
                           >
                             <EyeOff size={12} strokeWidth={1.75} />
@@ -1376,8 +1376,8 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
                                 title={row.isManual ? "Edit this comp" : "Edit this OM-sourced comp"}
                                 style={{
                                   background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
-                                  cursor: "pointer", color: "#7d766a", fontSize: 10, padding: "2px 6px",
-                                  fontFamily: "'Inter',sans-serif", lineHeight: 1.2,
+                                  cursor: "pointer", color: "#6b6a65", fontSize: 10, padding: "2px 6px",
+                                  fontFamily: "'Roboto',sans-serif", lineHeight: 1.2,
                                 }}
                               >
                                 ✎
@@ -1388,7 +1388,7 @@ export default function CompsSearch({ onOpenDeal, isAdmin }: { onOpenDeal?: (id:
                                 style={{
                                   background: "transparent", border: "1px solid #e7ddd0", borderRadius: 4,
                                   cursor: "pointer", color: "#b05050", fontSize: 11, padding: "2px 6px",
-                                  fontFamily: "'Inter',sans-serif", lineHeight: 1.2,
+                                  fontFamily: "'Roboto',sans-serif", lineHeight: 1.2,
                                 }}
                               >
                                 ×

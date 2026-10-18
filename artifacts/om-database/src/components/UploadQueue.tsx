@@ -1543,11 +1543,11 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       {queueOpen && (
         <div ref={panelRef} style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#ffffff", borderTop: "1px solid #ebe4d6", zIndex: 200, maxHeight: "60vh", display: "flex", flexDirection: "column", boxShadow: "0 -12px 48px rgba(56,58,55,0.12)" }}>
           {/* Header */}
-          <div style={{ padding: "16px 28px 12px", borderBottom: "1px solid #f1eadc" }}>
+          <div style={{ padding: "16px 28px 12px", borderBottom: "1px solid #efeee9" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
-                <span style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 17, color: "#383a37" }}>Importing OMs</span>
-                <span style={{ fontSize: 12, color: "#a69e91" }}>
+                <span style={{ fontFamily: "'Lora',Georgia,serif", fontWeight: 600, fontSize: 17, color: "#383a37" }}>Importing OMs</span>
+                <span style={{ fontSize: 12, color: "#94928b" }}>
                   <span style={{ color: "#0f9d63", fontWeight: 600 }}>{done} done</span>
                   {failed > 0 && <> · <span style={{ color: "#dc2626", fontWeight: 600 }}>{failed} failed</span></>}
                   {waiting > 0 && <> · <span style={{ color: "#d9890c", fontWeight: 600 }}>{waiting} need review</span></>}
@@ -1558,37 +1558,37 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
               <div style={{ display: "flex", gap: 8 }}>
                 {working > 0 && (
                   <button onClick={togglePause}
-                    style={{ background: paused ? "#6dba43" : "#fff", border: paused ? "none" : "1px solid #d9d2c4", color: paused ? "#1f2b16" : "#5c5047", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
+                    style={{ background: paused ? "#5bba47" : "#fff", border: paused ? "none" : "1px solid #d7d5ce", color: paused ? "#1f2b16" : "#4f4d48", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Roboto',sans-serif" }}>
                     {paused ? "▶ Resume" : "❚❚ Pause"}
                   </button>
                 )}
                 {working > 0 && (
                   <button onClick={stopAll}
-                    style={{ background: "#dc2626", border: "none", color: "#fff", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
+                    style={{ background: "#dc2626", border: "none", color: "#fff", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Roboto',sans-serif" }}>
                     Stop
                   </button>
                 )}
                 {failed > 0 && working === 0 && (
                   <button onClick={retryFailed}
-                    style={{ background: "#6dba43", border: "none", color: "#1f2b16", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
+                    style={{ background: "#5bba47", border: "none", color: "#1f2b16", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Roboto',sans-serif" }}>
                     Retry {failed} failed
                   </button>
                 )}
                 {(done > 0 || failed > 0) && (
                   <button onClick={() => setQueue(q => q.filter(x => x.status === "pending" || x.status === "extracting" || x.status === "awaiting_dup" || x.status === "awaiting_confirm"))}
-                    style={{ background: "transparent", border: "1px solid #e3dccd", color: "#837c6e", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
+                    style={{ background: "transparent", border: "1px solid #dfddd6", color: "#837c6e", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Roboto',sans-serif" }}>
                     Clear completed
                   </button>
                 )}
                 <button onClick={() => setQueueOpen(false)}
-                  style={{ background: "transparent", border: "1px solid #e3dccd", color: "#837c6e", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>
+                  style={{ background: "transparent", border: "1px solid #dfddd6", color: "#837c6e", padding: "6px 14px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Roboto',sans-serif" }}>
                   Hide
                 </button>
               </div>
             </div>
             {/* Aggregate progress bar */}
-            <div style={{ height: 6, background: "#efe8da", borderRadius: 4, overflow: "hidden" }}>
-              <div style={{ width: `${pct}%`, height: "100%", background: working > 0 ? "#6dba43" : failed > 0 ? "#dc2626" : "#0f9d63", borderRadius: 4, transition: "width 0.4s ease" }} />
+            <div style={{ height: 6, background: "#ecebe6", borderRadius: 4, overflow: "hidden" }}>
+              <div style={{ width: `${pct}%`, height: "100%", background: working > 0 ? "#5bba47" : failed > 0 ? "#dc2626" : "#0f9d63", borderRadius: 4, transition: "width 0.4s ease" }} />
             </div>
           </div>
 
@@ -1608,15 +1608,15 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                     </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       <button onClick={() => handleDupUpdate(item.id)}
-                        style={{ background: "#26281f", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
+                        style={{ background: "#232422", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Roboto',sans-serif", fontWeight: 600 }}>
                         Update existing deal
                       </button>
                       <button onClick={() => handleDupKeepBoth(item.id)}
-                        style={{ background: "#fff", color: "#383a37", border: "1px solid #d8d0c0", borderRadius: 7, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                        style={{ background: "#fff", color: "#383a37", border: "1px solid #d8d0c0", borderRadius: 7, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
                         Keep both
                       </button>
                       <button onClick={() => handleDupCancel(item.id)}
-                        style={{ background: "transparent", color: "#a89f8f", border: "none", padding: "7px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                        style={{ background: "transparent", color: "#9b9992", border: "none", padding: "7px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
                         Cancel
                       </button>
                     </div>
@@ -1629,18 +1629,18 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                     </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                       <select defaultValue="" onChange={e => { const d = existingDeals.find(x => x.id === e.target.value); if (d) assignMatch(item.id, d); }}
-                        style={{ fontSize: 12, padding: "7px 10px", border: "1px solid #c8b89a", borderRadius: 7, background: "#fff", fontFamily: "'Inter',sans-serif", maxWidth: 240 }}>
+                        style={{ fontSize: 12, padding: "7px 10px", border: "1px solid #c4c1b8", borderRadius: 7, background: "#fff", fontFamily: "'Roboto',sans-serif", maxWidth: 240 }}>
                         <option value="" disabled>Match to existing property…</option>
                         {[...existingDeals].filter(d => !d.trashedAt).sort((a, b) => (a.propertyName || a.fileName || "").localeCompare(b.propertyName || b.fileName || "")).map(d => (
                           <option key={d.id} value={d.id}>{d.propertyName || d.fileName || "Untitled"}</option>
                         ))}
                       </select>
                       <button onClick={() => createNewFromDoc(item.id)}
-                        style={{ background: "#26281f", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                        style={{ background: "#232422", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
                         + Create new property
                       </button>
                       <button onClick={() => setQueue(q => q.filter(x => x.id !== item.id))}
-                        style={{ background: "transparent", color: "#a89f8f", border: "none", padding: "7px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                        style={{ background: "transparent", color: "#9b9992", border: "none", padding: "7px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
                         Dismiss
                       </button>
                     </div>
@@ -1649,20 +1649,20 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                   <div style={{ padding: "11px 28px", borderBottom: "1px solid #f4f6f7", display: "flex", gap: 14, alignItems: "flex-start" }}>
                     <div style={{
                       width: 8, height: 8, borderRadius: "50%", marginTop: 5, flexShrink: 0,
-                      background: item.status === "done" ? "#0f9d63" : item.status === "error" ? "#dc2626" : item.status === "advisory" || item.status === "awaiting_confirm" ? "#e0a52e" : item.status === "extracting" ? "#6dba43" : "#b3bac1",
+                      background: item.status === "done" ? "#0f9d63" : item.status === "error" ? "#dc2626" : item.status === "advisory" || item.status === "awaiting_confirm" ? "#e0a52e" : item.status === "extracting" ? "#5bba47" : "#b3bac1",
                       animation: item.status === "extracting" ? "pulse 1.2s infinite" : "none",
                     }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, color: "#383a37", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-                      <div style={{ fontSize: 12, color: item.status === "done" ? "#0f9d63" : item.status === "error" ? "#dc2626" : item.status === "advisory" || item.status === "awaiting_confirm" ? "#a9700a" : "#a69e91", marginTop: 2, lineHeight: item.status === "advisory" || item.status === "awaiting_confirm" ? 1.5 : undefined }}>{item.status === "advisory" || item.status === "awaiting_confirm" ? "⚠ " : ""}{item.msg}</div>
+                      <div style={{ fontSize: 12, color: item.status === "done" ? "#0f9d63" : item.status === "error" ? "#dc2626" : item.status === "advisory" || item.status === "awaiting_confirm" ? "#a9700a" : "#94928b", marginTop: 2, lineHeight: item.status === "advisory" || item.status === "awaiting_confirm" ? 1.5 : undefined }}>{item.status === "advisory" || item.status === "awaiting_confirm" ? "⚠ " : ""}{item.msg}</div>
                       {(item.status === "extracting" || item.status === "pending") && (
                         <div style={{ marginTop: 7, display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{ flex: 1, height: 5, background: "#efe8da", borderRadius: 3, overflow: "hidden" }}>
-                            <div style={{ width: `${item.progress}%`, height: "100%", background: "#6dba43", borderRadius: 3, transition: "width 0.4s ease" }} />
+                          <div style={{ flex: 1, height: 5, background: "#ecebe6", borderRadius: 3, overflow: "hidden" }}>
+                            <div style={{ width: `${item.progress}%`, height: "100%", background: "#5bba47", borderRadius: 3, transition: "width 0.4s ease" }} />
                           </div>
-                          <span style={{ fontSize: 10, color: "#a69e91", fontWeight: 600, minWidth: 30, textAlign: "right" }}>{item.progress}%</span>
+                          <span style={{ fontSize: 10, color: "#94928b", fontWeight: 600, minWidth: 30, textAlign: "right" }}>{item.progress}%</span>
                           {item.status === "extracting" && item.startedAt && (
-                            <span style={{ fontSize: 10, color: "#a69e91", fontVariantNumeric: "tabular-nums", minWidth: 34, textAlign: "right" }}>
+                            <span style={{ fontSize: 10, color: "#94928b", fontVariantNumeric: "tabular-nums", minWidth: 34, textAlign: "right" }}>
                               {fmtElapsed(nowTick - item.startedAt)}
                             </span>
                           )}
@@ -1671,11 +1671,11 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                       {item.error && <div style={{ fontSize: 11, color: "#c0563b", marginTop: 3, lineHeight: 1.4, wordBreak: "break-word" }}>{item.error}</div>}
                       {item.status === "awaiting_confirm" && (() => {
                         const btn = (primary: boolean): CSSProperties => ({
-                          background: primary ? "#26281f" : "#fff", color: primary ? "#fff" : "#4f4a40",
-                          border: primary ? "none" : "1px solid #d9d2c4", borderRadius: 7, padding: "9px 14px", minHeight: 36,
-                          fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif",
+                          background: primary ? "#232422" : "#fff", color: primary ? "#fff" : "#4f4a40",
+                          border: primary ? "none" : "1px solid #d7d5ce", borderRadius: 7, padding: "9px 14px", minHeight: 36,
+                          fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Roboto',sans-serif",
                         });
-                        const quiet: CSSProperties = { background: "transparent", color: "#a89f8f", border: "none", padding: "9px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" };
+                        const quiet: CSSProperties = { background: "transparent", color: "#9b9992", border: "none", padding: "9px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Roboto',sans-serif" };
                         if (item.confirmMode === "pick") {
                           const pickable = [...existingDeals, ...createdDealsRef.current.filter(c => !existingDeals.some(e => e.id === c.id))]
                             .filter(d => !d.trashedAt)
@@ -1683,7 +1683,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                           return (
                             <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
                               <select defaultValue="" onChange={e => { const d = pickable.find(x => x.id === e.target.value); if (d) answerConfirm(item.id, { kind: "attach", deal: d }); }}
-                                style={{ fontSize: 12, padding: "8px 10px", minHeight: 36, border: "1px solid #c8b89a", borderRadius: 7, background: "#fff", fontFamily: "'Inter',sans-serif", maxWidth: "100%", flex: "1 1 200px" }}>
+                                style={{ fontSize: 12, padding: "8px 10px", minHeight: 36, border: "1px solid #c4c1b8", borderRadius: 7, background: "#fff", fontFamily: "'Roboto',sans-serif", maxWidth: "100%", flex: "1 1 200px" }}>
                                 <option value="" disabled>Add this file to an existing deal…</option>
                                 {pickable.map(d => <option key={d.id} value={d.id}>{d.propertyName || d.fileName || "Untitled"}{d.city || d.state ? ` — ${[d.city, d.state].filter(Boolean).join(", ")}` : ""}</option>)}
                               </select>
@@ -1714,35 +1714,35 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                       })()}
                       {item.status === "done" && !item.undone && item.appliedDealId && (
                         <div style={{ display: "flex", gap: 8, marginTop: 7, flexWrap: "wrap", alignItems: "center" }}>
-                          <span style={{ fontSize: 11, color: "#7d766a" }}>→ <b style={{ color: "#383a37" }}>{item.matchedDealName || "property"}</b>{item.createdNew ? " (new)" : ""}</span>
+                          <span style={{ fontSize: 11, color: "#6b6a65" }}>→ <b style={{ color: "#383a37" }}>{item.matchedDealName || "property"}</b>{item.createdNew ? " (new)" : ""}</span>
                           <button onClick={() => undoItem(item.id)}
-                            style={{ background: "#fff", border: "1px solid #e0c9c0", color: "#b5503a", padding: "3px 10px", borderRadius: 6, cursor: "pointer", fontSize: 10.5, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                            style={{ background: "#fff", border: "1px solid #e0c9c0", color: "#b5503a", padding: "3px 10px", borderRadius: 6, cursor: "pointer", fontSize: 10.5, fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}>
                             Undo
                           </button>
                           {item.routedType && item.routedType !== "om" && (
                             <button onClick={() => reassignItem(item.id)}
-                              style={{ background: "#fff", border: "1px solid #d9d2c4", color: "#6f6a5f", padding: "3px 10px", borderRadius: 6, cursor: "pointer", fontSize: 10.5, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                              style={{ background: "#fff", border: "1px solid #d7d5ce", color: "#676767", padding: "3px 10px", borderRadius: 6, cursor: "pointer", fontSize: 10.5, fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}>
                               Reassign
                             </button>
                           )}
                         </div>
                       )}
                       {item.status === "done" && item.undone && (
-                        <div style={{ fontSize: 11, color: "#a69e91", marginTop: 5 }}>↩ Reverted.</div>
+                        <div style={{ fontSize: 11, color: "#94928b", marginTop: 5 }}>↩ Reverted.</div>
                       )}
                     </div>
                     {(item.status === "extracting" || item.status === "pending") && (
                       <button
                         onClick={() => cancelItem(item.id)}
                         title="Cancel this file"
-                        style={{ background: "#fff", border: "1px solid #e0c9c0", color: "#b5503a", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, flexShrink: 0, fontFamily: "'Inter',sans-serif" }}>
+                        style={{ background: "#fff", border: "1px solid #e0c9c0", color: "#b5503a", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, flexShrink: 0, fontFamily: "'Roboto',sans-serif" }}>
                         ✕ Cancel
                       </button>
                     )}
                     {item.status === "done" && item.deal && !item.undone && (
                       <button
                         onClick={() => { onOpenDeal(item.deal!.id); setQueueOpen(false); }}
-                        style={{ background: "#f3f5f6", border: "none", color: "#52554e", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, flexShrink: 0, fontFamily: "'Inter',sans-serif" }}>
+                        style={{ background: "#f3f5f6", border: "none", color: "#52554e", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, flexShrink: 0, fontFamily: "'Roboto',sans-serif" }}>
                         View
                       </button>
                     )}
@@ -1758,7 +1758,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       {/* Floating pill when queue hidden but active */}
       {!queueOpen && (working > 0 || waiting > 0) && (
         <button onClick={() => setQueueOpen(true)}
-          style={{ position: "fixed", bottom: 20, right: 20, background: "#6dba43", border: "none", color: "#1f2b16", padding: "10px 16px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Inter',sans-serif", zIndex: 200, boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }}>
+          style={{ position: "fixed", bottom: 20, right: 20, background: "#5bba47", border: "none", color: "#1f2b16", padding: "10px 16px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "'Roboto',sans-serif", zIndex: 200, boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }}>
           ⏳ Processing {working + waiting}…
         </button>
       )}

@@ -24,8 +24,8 @@ const fmtAsOf = (iso: string | null | undefined) => {
 };
 
 const label: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 3, fontSize: 10.5, color: "#6b6356", fontWeight: 600 };
-const input: React.CSSProperties = { padding: "7px 8px", border: "1px solid #e3dccd", borderRadius: 6, fontSize: 13, fontFamily: "inherit", minHeight: 34, boxSizing: "border-box" };
-const cap: React.CSSProperties = { fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#5c5047" };
+const input: React.CSSProperties = { padding: "7px 8px", border: "1px solid #dfddd6", borderRadius: 6, fontSize: 13, fontFamily: "inherit", minHeight: 34, boxSizing: "border-box" };
+const cap: React.CSSProperties = { fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#4f4d48" };
 
 function NumField({ name, value, onChange, step, suffix, width = 72 }: { name: string; value: number; onChange: (n: number) => void; step: number; suffix: string; width?: number }) {
   return (
@@ -46,7 +46,7 @@ function Sparkline({ series, title }: { series: Array<{ month: string; value: nu
   return (
     <svg width={W} height={H} role="img" aria-label={title}>
       <title>{`${title}: ${series.map(p => `${p.month} ${p.value.toFixed(2)}%`).join(", ")}`}</title>
-      <polyline points={pts} fill="none" stroke="#3f7a1f" strokeWidth="1.8" />
+      <polyline points={pts} fill="none" stroke="#3e8a2f" strokeWidth="1.8" />
     </svg>
   );
 }
@@ -124,7 +124,7 @@ function LoanSizing({ data, deal }: { data: RatesPayload; deal?: { name: string;
   return (
     <div style={{ marginBottom: 18 }}>
       <div style={{ ...cap, marginBottom: 8 }}>Size a loan{deal?.name ? ` — ${deal.name}` : ""}</div>
-      <div style={{ border: "1px solid #ece5d7", borderRadius: 10, background: "#fff", padding: 12 }}>
+      <div style={{ border: "1px solid #ebeae5", borderRadius: 10, background: "#fff", padding: 12 }}>
         <label style={label}>
           Base rate
           <span style={{ display: "flex", gap: 6, alignItems: "stretch" }}>
@@ -140,7 +140,7 @@ function LoanSizing({ data, deal }: { data: RatesPayload; deal?: { name: string;
           <button type="button" onClick={e => { e.preventDefault(); toggleDefault(); }} aria-pressed={isDefault}
             aria-label={isDefault ? "Your default base rate — tap to clear" : "Set as my default base rate"}
             title={isDefault ? "Your default base rate (tap to clear)" : "Set as my default base rate"}
-            style={{ flexShrink: 0, width: 40, minHeight: 36, border: `1px solid ${isDefault ? "#C9A227" : "#e3dccd"}`, borderRadius: 8, background: isDefault ? "#fbf4dc" : "#fff", color: isDefault ? "#b08a14" : "#8d8577", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            style={{ flexShrink: 0, width: 40, minHeight: 36, border: `1px solid ${isDefault ? "#C9A227" : "#dfddd6"}`, borderRadius: 8, background: isDefault ? "#fbf4dc" : "#fff", color: isDefault ? "#b08a14" : "#8d8577", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Star size={17} strokeWidth={1.9} fill={isDefault ? "currentColor" : "none"} aria-hidden />
           </button>
           </span>
@@ -174,10 +174,10 @@ function LoanSizing({ data, deal }: { data: RatesPayload; deal?: { name: string;
           <NumField name="LTV" value={ltv} onChange={setLtv} step={5} suffix="%" width={64} />
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
-          <div role="radiogroup" aria-label="Amortization" style={{ display: "inline-flex", border: "1px solid #e3dccd", borderRadius: 8, overflow: "hidden" }}>
+          <div role="radiogroup" aria-label="Amortization" style={{ display: "inline-flex", border: "1px solid #dfddd6", borderRadius: 8, overflow: "hidden" }}>
             {[{ v: false, t: "Amortizing" }, { v: true, t: "Interest only" }].map(o => (
               <button key={o.t} role="radio" aria-checked={io === o.v} onClick={() => setIo(o.v)}
-                style={{ padding: "7px 12px", minHeight: 34, border: "none", background: io === o.v ? "#3f7a1f" : "#fff", color: io === o.v ? "#fff" : "#5c5047", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{o.t}</button>
+                style={{ padding: "7px 12px", minHeight: 34, border: "none", background: io === o.v ? "#3e8a2f" : "#fff", color: io === o.v ? "#fff" : "#4f4d48", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{o.t}</button>
             ))}
           </div>
           {!io && <NumField name="Amortization" value={amortYrs} onChange={setAmortYrs} step={5} suffix="yrs" width={60} />}
@@ -188,7 +188,7 @@ function LoanSizing({ data, deal }: { data: RatesPayload; deal?: { name: string;
               const binds = l.by === sizing.binding;
               return (
                 <div key={l.by} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8,
-                  background: binds ? "#eaf3e1" : "#faf7f0", border: `1px solid ${binds ? "#9cc47c" : "#efe8da"}` }}>
+                  background: binds ? "#eaf3e1" : "#faf9f5", border: `1px solid ${binds ? "#9cc47c" : "#ecebe6"}` }}>
                   <span style={{ fontSize: 12.5, color: "#383a37" }}>
                     {l.by === "DSCR" ? `At ${dscr}x DSCR` : l.by === "Debt yield" ? `At ${debtYield}% debt yield` : `At ${ltv}% LTV`}
                     {binds && <b style={{ marginLeft: 6, fontSize: 10.5, color: "#1f5d2b", textTransform: "uppercase", letterSpacing: "0.05em" }}>binds</b>}
@@ -197,13 +197,13 @@ function LoanSizing({ data, deal }: { data: RatesPayload; deal?: { name: string;
                 </div>
               );
             })}
-            <div style={{ fontSize: 11, color: "#7d766a" }}>Loan constant {(sizing.constant * 100).toFixed(2)}% ({io ? "interest only" : `${amortYrs}-yr amortization`}). Max loan ≈ <b style={{ color: "#1f5d2b" }}>{usd(sizing.max!)}</b>.</div>
+            <div style={{ fontSize: 11, color: "#6b6a65" }}>Loan constant {(sizing.constant * 100).toFixed(2)}% ({io ? "interest only" : `${amortYrs}-yr amortization`}). Max loan ≈ <b style={{ color: "#1f5d2b" }}>{usd(sizing.max!)}</b>.</div>
           </div>
         ) : (
-          <div style={{ marginTop: 10, fontSize: 11.5, color: "#a89f8f" }}>{!sizing ? "Needs a base rate." : "Enter an NOI (and a price for LTV) to size the loan."}</div>
+          <div style={{ marginTop: 10, fontSize: 11.5, color: "#9b9992" }}>{!sizing ? "Needs a base rate." : "Enter an NOI (and a price for LTV) to size the loan."}</div>
         )}
       </div>
-      <div style={{ fontSize: 9.5, color: "#bcae97", marginTop: 5 }}>Indicative only — a lender's quote, reserves and their own NOI underwriting will differ.</div>
+      <div style={{ fontSize: 9.5, color: "#b8b5ad", marginTop: 5 }}>Indicative only — a lender's quote, reserves and their own NOI underwriting will differ.</div>
     </div>
   );
 }
@@ -224,11 +224,11 @@ function CapSpread({ data }: { data: RatesPayload }) {
   })();
   const latest = series[series.length - 1];
   return (
-    <div style={{ marginBottom: 18, border: "1px solid #ece5d7", borderRadius: 10, background: "#fff", padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+    <div style={{ marginBottom: 18, border: "1px solid #ebeae5", borderRadius: 10, background: "#fff", padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
       <div>
         <div style={{ fontSize: 10.5, color: "#6b6356", fontWeight: 600 }}>Cap-rate spread (comp median cap − 10-Yr)</div>
-        <div style={{ fontSize: 16, fontWeight: 700, color: "#26281f" }}>{latest ? `${Math.round(latest.value * 100)} bps` : "—"}</div>
-        <div style={{ fontSize: 10.5, color: "#a89f8f" }}>{latest ? `${latest.n} sales in the 12 months to ${latest.month}` : comps == null ? "Loading comps…" : "Not enough recent sales"}</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "#232422" }}>{latest ? `${Math.round(latest.value * 100)} bps` : "—"}</div>
+        <div style={{ fontSize: 10.5, color: "#9b9992" }}>{latest ? `${latest.n} sales in the 12 months to ${latest.month}` : comps == null ? "Loading comps…" : "Not enough recent sales"}</div>
       </div>
       <Sparkline series={series} title="Cap rate spread, last 12 months" />
     </div>
@@ -251,17 +251,17 @@ function Section({ title, rows, asOf, source, info, badge }: { title: string; ro
             </button>
           )}
         </span>
-        <span style={{ fontSize: 10, color: "#a89f8f" }}>as of {fmtAsOf(asOf)}</span>
+        <span style={{ fontSize: 10, color: "#9b9992" }}>as of {fmtAsOf(asOf)}</span>
       </div>
-      {info && showInfo && <div style={{ fontSize: 11.5, color: "#4a4d46", background: "#fff", border: "1px solid #ece5d7", borderRadius: 8, padding: "8px 10px", marginBottom: 8, lineHeight: 1.45 }}>{info}</div>}
-      <div style={{ border: "1px solid #ece5d7", borderRadius: 10, overflow: "hidden" }}>
+      {info && showInfo && <div style={{ fontSize: 11.5, color: "#4a4d46", background: "#fff", border: "1px solid #ebeae5", borderRadius: 8, padding: "8px 10px", marginBottom: 8, lineHeight: 1.45 }}>{info}</div>}
+      <div style={{ border: "1px solid #ebeae5", borderRadius: 10, overflow: "hidden" }}>
         {rows.map((r, i) => (
-          <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: i % 2 ? "#faf7f0" : "#fff", borderTop: i ? "1px solid #f3eee3" : "none" }}>
+          <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: i % 2 ? "#faf9f5" : "#fff", borderTop: i ? "1px solid #f3eee3" : "none" }}>
             <span style={{ fontSize: 12.5, color: "#383a37" }}>{r.label}{r.note && <span style={{ fontSize: 10, color: "#8a7f6d", marginLeft: 6 }}>({r.note})</span>}</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#26281f", fontVariantNumeric: "tabular-nums" }}>{r.value == null ? "—" : `${r.value.toFixed((String(r.value).split(".")[1]?.length ?? 0) > 2 ? 3 : 2)}%`}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#232422", fontVariantNumeric: "tabular-nums" }}>{r.value == null ? "—" : `${r.value.toFixed((String(r.value).split(".")[1]?.length ?? 0) > 2 ? 3 : 2)}%`}</span>
           </div>
         ))}
-        {!rows.length && <div style={{ padding: "10px 12px", fontSize: 12, color: "#a89f8f", background: "#fff" }}>Nothing available right now.</div>}
+        {!rows.length && <div style={{ padding: "10px 12px", fontSize: 12, color: "#9b9992", background: "#fff" }}>Nothing available right now.</div>}
       </div>
       <div style={{ fontSize: 9.5, color: "#8a7f6d", marginTop: 5, lineHeight: 1.45 }}>Source: {source}</div>
     </div>
@@ -286,26 +286,26 @@ function SwapCurveSection({ data, onSaved }: { data: RatesPayload; onSaved: () =
     <div style={{ marginBottom: 18 }}>
       <Section title={c?.kind === "manual" ? "SOFR OIS (annual/annual) — pasted" : "SOFR OIS (annual/annual)"} badge={c?.kind === "chatham" ? "Chatham mark" : undefined} rows={data.swaps.rows} asOf={data.swaps.asOf} source={data.swaps.source} />
       {hist.length >= 2 && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "-8px 0 10px", padding: "8px 12px", border: "1px solid #ece5d7", borderRadius: 10, background: "#fff", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "-8px 0 10px", padding: "8px 12px", border: "1px solid #ebeae5", borderRadius: 10, background: "#fff", flexWrap: "wrap" }}>
           <div>
             <div style={{ fontSize: 10.5, color: "#6b6356", fontWeight: 600 }}>10Y SOFR OIS swap, month-end</div>
-            <div style={{ fontSize: 11, color: "#a89f8f" }}>{hist[0].month} {hist[0].value.toFixed(2)}% → {hist[hist.length - 1].month} {hist[hist.length - 1].value.toFixed(2)}%</div>
+            <div style={{ fontSize: 11, color: "#9b9992" }}>{hist[0].month} {hist[0].value.toFixed(2)}% → {hist[hist.length - 1].month} {hist[hist.length - 1].value.toFixed(2)}%</div>
           </div>
           <Sparkline series={hist} title="10-year SOFR swap, month-end, last 12 months" />
         </div>
       )}
       <button onClick={() => setOpen(o => !o)} aria-expanded={open}
-        style={{ background: "transparent", border: "1px solid #e3dccd", color: "#5c5047", padding: "7px 12px", minHeight: 34, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit" }}>
+        style={{ background: "transparent", border: "1px solid #dfddd6", color: "#4f4d48", padding: "7px 12px", minHeight: 34, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit" }}>
         {open ? "Close" : "Paste today's SOFR OIS curve (e.g. Chatham)"}
       </button>
       {open && (
-        <div style={{ marginTop: 8, padding: 10, border: "1px solid #ece5d7", borderRadius: 10, background: "#fff" }}>
+        <div style={{ marginTop: 8, padding: 10, border: "1px solid #ebeae5", borderRadius: 10, background: "#fff" }}>
           <textarea value={text} onChange={e => setText(e.target.value)} rows={4} placeholder={"1Y 4.495\n2Y 4.620\n5Y 4.628\n10Y 4.708"} aria-label="Pasted swap curve"
             style={{ ...input, width: "100%", resize: "vertical", fontFamily: "ui-monospace, Menlo, monospace" }} />
           <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
             <input value={src} onChange={e => setSrc(e.target.value)} aria-label="Where it's from" placeholder="Source" style={{ ...input, width: 140 }} />
             <button onClick={save} disabled={busy || text.trim().length < 4}
-              style={{ background: "#3f7a1f", color: "#fff", border: "none", padding: "8px 14px", minHeight: 34, borderRadius: 8, cursor: busy ? "default" : "pointer", fontSize: 12, fontWeight: 700, fontFamily: "inherit", opacity: busy || text.trim().length < 4 ? 0.6 : 1 }}>Use this curve</button>
+              style={{ background: "#3e8a2f", color: "#fff", border: "none", padding: "8px 14px", minHeight: 34, borderRadius: 8, cursor: busy ? "default" : "pointer", fontSize: 12, fontWeight: 700, fontFamily: "inherit", opacity: busy || text.trim().length < 4 ? 0.6 : 1 }}>Use this curve</button>
           </div>
           <div style={{ fontSize: 10.5, color: "#8a7f6d", marginTop: 6 }}>Paste the SOFR (annual/annual) column. Stamped with your name and the time. It replaces the DTCC curve for everyone until DTCC reports newer trades, and the 1M Term curve is derived from it.</div>
           {msg && <div style={{ fontSize: 11.5, color: "#3f5a2a", marginTop: 6 }}>{msg}</div>}
@@ -341,12 +341,12 @@ function ChathamMarkBox({ data, isAdmin, onSaved }: { data: RatesPayload; isAdmi
   return (
     <div style={{ marginBottom: 18 }}>
       {log.length > 0 && (
-        <div style={{ border: "1px solid #ece5d7", borderRadius: 10, background: "#fff", padding: "8px 12px", marginBottom: 8 }}>
+        <div style={{ border: "1px solid #ebeae5", borderRadius: 10, background: "#fff", padding: "8px 12px", marginBottom: 8 }}>
           <div style={{ fontSize: 10.5, fontWeight: 700, color: "#6b6356", marginBottom: 4 }}>DTCC vs Chatham mark (worst miss at 2Y–10Y)</div>
           {log.map(l => (
             <div key={l.date} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 11.5, color: "#4a4d46", padding: "2px 0", fontVariantNumeric: "tabular-nums" }}>
               <span>{l.date}{l.enteredBy ? ` · ${l.enteredBy}` : ""}</span>
-              <span style={{ color: l.maxAbsErrorBp2to10 == null ? "#a89f8f" : l.maxAbsErrorBp2to10 <= 1 ? "#3f7a1f" : "#b45309", fontWeight: 600 }}>
+              <span style={{ color: l.maxAbsErrorBp2to10 == null ? "#9b9992" : l.maxAbsErrorBp2to10 <= 1 ? "#3e8a2f" : "#b45309", fontWeight: 600 }}>
                 {l.maxAbsErrorBp2to10 == null ? "no DTCC close that day" : `${l.maxAbsErrorBp2to10.toFixed(1)} bp`}
               </span>
             </div>
@@ -360,7 +360,7 @@ function ChathamMarkBox({ data, isAdmin, onSaved }: { data: RatesPayload; isAdmi
             {open ? "Close" : "Paste a Chatham mark"}
           </button>
           {open && (
-            <div style={{ marginTop: 8, padding: 10, border: "1px solid #ece5d7", borderRadius: 10, background: "#fff" }}>
+            <div style={{ marginTop: 8, padding: 10, border: "1px solid #ebeae5", borderRadius: 10, background: "#fff" }}>
               <div style={{ fontSize: 11, color: "#6b6356", marginBottom: 6, lineHeight: 1.45 }}>On cf.com/rates/us, select the 1M Term SOFR and SOFR (annual/annual) swap tables (and the 1-Month Term SOFR rate), copy, and paste here. Nothing is saved until you check the preview.</div>
               <textarea value={text} onChange={e => { setText(e.target.value); setParsed(null); }} rows={6} aria-label="Pasted Chatham rates"
                 style={{ ...input, width: "100%", resize: "vertical", fontFamily: "ui-monospace, Menlo, monospace" }} />
@@ -424,17 +424,17 @@ export default function RatesPanel({ onClose, deal, isAdmin = false }: { onClose
   return createPortal(
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9400, background: "rgba(38,40,31,0.42)", backdropFilter: "blur(2px)" }} />
-      <div role="dialog" aria-label="Today's Rates" style={{ position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 9401, width: "min(460px, 100vw)", background: "#faf7f0", borderLeft: "1px solid #d8d2c1", boxShadow: "-8px 0 40px rgba(38,40,31,0.18)", display: "flex", flexDirection: "column", animation: "slideInRight 0.2s ease both" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid #ece5d7", background: "#fff", flexShrink: 0 }}>
-          <span style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#26281f" }}>Today's Rates</span>
+      <div role="dialog" aria-label="Today's Rates" style={{ position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 9401, width: "min(460px, 100vw)", background: "#faf9f5", borderLeft: "1px solid #d8d2c1", boxShadow: "-8px 0 40px rgba(38,40,31,0.18)", display: "flex", flexDirection: "column", animation: "slideInRight 0.2s ease both" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid #ebeae5", background: "#fff", flexShrink: 0 }}>
+          <span style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, fontWeight: 600, color: "#232422" }}>Today's Rates</span>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => load(true)} disabled={loading} title="Refresh"
-              style={{ background: "transparent", border: "1px solid #e3dccd", color: "#7d766a", padding: "5px 10px", minHeight: 32, borderRadius: 7, cursor: loading ? "default" : "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{loading ? "Refreshing…" : "Refresh"}</button>
-            <button onClick={onClose} aria-label="Close" style={{ background: "transparent", border: "1px solid #e3dccd", color: "#7d766a", width: 32, height: 32, borderRadius: 7, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+              style={{ background: "transparent", border: "1px solid #dfddd6", color: "#6b6a65", padding: "5px 10px", minHeight: 32, borderRadius: 7, cursor: loading ? "default" : "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}>{loading ? "Refreshing…" : "Refresh"}</button>
+            <button onClick={onClose} aria-label="Close" style={{ background: "transparent", border: "1px solid #dfddd6", color: "#6b6a65", width: 32, height: 32, borderRadius: 7, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
           </div>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px" }}>
-          {loading && !data && <div style={{ color: "#a89f8f", fontSize: 13, padding: "30px 0", textAlign: "center" }}>Fetching rates…</div>}
+          {loading && !data && <div style={{ color: "#9b9992", fontSize: 13, padding: "30px 0", textAlign: "center" }}>Fetching rates…</div>}
           {error && !data && <div style={{ color: "#c0392b", fontSize: 13, padding: "20px 0" }}>{error}</div>}
           {data && (
             <>

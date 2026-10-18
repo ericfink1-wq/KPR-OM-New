@@ -9,9 +9,9 @@ interface Props {
 }
 
 const overlay: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(28,30,25,0.45)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
-const card: React.CSSProperties = { background: "#fff", border: "1px solid #e7e0d2", borderRadius: 14, padding: "26px 28px", width: "min(420px, 100%)", boxSizing: "border-box", maxHeight: "90vh", overflowY: "auto", fontFamily: "'Inter', sans-serif" };
-const input: React.CSSProperties = { width: "100%", boxSizing: "border-box", padding: "10px 14px", border: "1.5px solid #e7e0d2", borderRadius: 8, fontSize: 14, background: "#faf7f0", color: "#26281f", outline: "none" };
-const primaryBtn: React.CSSProperties = { width: "100%", padding: "10px 0", background: "#26281f", color: "#f1ece1", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", letterSpacing: "0.02em" };
+const card: React.CSSProperties = { background: "#fff", border: "1px solid #e6e4de", borderRadius: 14, padding: "26px 28px", width: "min(420px, 100%)", boxSizing: "border-box", maxHeight: "90vh", overflowY: "auto", fontFamily: "'Roboto',sans-serif" };
+const input: React.CSSProperties = { width: "100%", boxSizing: "border-box", padding: "10px 14px", border: "1.5px solid #e6e4de", borderRadius: 8, fontSize: 14, background: "#faf9f5", color: "#232422", outline: "none" };
+const primaryBtn: React.CSSProperties = { width: "100%", padding: "10px 0", background: "#232422", color: "#f3f2ee", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", letterSpacing: "0.02em" };
 
 export default function TwoFactorModal({ onClose, mandatory }: Props) {
   // step: loading → off (offer setup) → setup (QR+code) → codes (show backup) → on (manage)
@@ -70,11 +70,11 @@ export default function TwoFactorModal({ onClose, mandatory }: Props) {
     <div style={overlay} onClick={mandatory ? undefined : onClose}>
       <div style={card} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, color: "#26281f" }}>Two-Factor Authentication</div>
-          {!mandatory && <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, color: "#a89f8f", cursor: "pointer", lineHeight: 1 }}>×</button>}
+          <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 19, color: "#232422" }}>Two-Factor Authentication</div>
+          {!mandatory && <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, color: "#9b9992", cursor: "pointer", lineHeight: 1 }}>×</button>}
         </div>
 
-        {step === "loading" && <div style={{ fontSize: 13, color: "#a89f8f", padding: "16px 0" }}>Loading…</div>}
+        {step === "loading" && <div style={{ fontSize: 13, color: "#9b9992", padding: "16px 0" }}>Loading…</div>}
 
         {step === "off" && (
           <>
@@ -90,9 +90,9 @@ export default function TwoFactorModal({ onClose, mandatory }: Props) {
         {step === "setup" && (
           <>
             <p style={{ fontSize: 13, color: "#5c5f57", lineHeight: 1.5, marginTop: 6 }}>1. Scan this QR code with your authenticator app (or enter the key manually).</p>
-            {qr && <div style={{ textAlign: "center", margin: "10px 0" }}><img src={qr} alt="2FA QR code" style={{ width: 200, height: 200, border: "1px solid #efe8da", borderRadius: 8 }} /></div>}
+            {qr && <div style={{ textAlign: "center", margin: "10px 0" }}><img src={qr} alt="2FA QR code" style={{ width: 200, height: 200, border: "1px solid #ecebe6", borderRadius: 8 }} /></div>}
             {secret && (
-              <div style={{ fontSize: 11, color: "#7d766a", textAlign: "center", marginBottom: 14, wordBreak: "break-all" }}>
+              <div style={{ fontSize: 11, color: "#6b6a65", textAlign: "center", marginBottom: 14, wordBreak: "break-all" }}>
                 Manual key: <span style={{ fontFamily: "monospace", color: "#383a37", letterSpacing: "0.05em" }}>{secret}</span>
               </div>
             )}
@@ -109,10 +109,10 @@ export default function TwoFactorModal({ onClose, mandatory }: Props) {
             <div style={{ fontSize: 13, color: "#0f7a3d", background: "#eef7ee", border: "1px solid #cfe9c4", borderRadius: 8, padding: "9px 11px", margin: "8px 0 12px", lineHeight: 1.45 }}>
               ✓ Two-factor is on. Save these backup codes somewhere safe — each works once if you lose your phone. They won't be shown again.
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, fontFamily: "monospace", fontSize: 13, background: "#faf7f0", border: "1px solid #efe8da", borderRadius: 8, padding: 12, marginBottom: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, fontFamily: "monospace", fontSize: 13, background: "#faf9f5", border: "1px solid #ecebe6", borderRadius: 8, padding: 12, marginBottom: 14 }}>
               {backupCodes.map(c => <div key={c} style={{ color: "#383a37", letterSpacing: "0.04em" }}>{c}</div>)}
             </div>
-            <button onClick={() => { navigator.clipboard?.writeText(backupCodes.join("\n")).catch(() => {}); }} style={{ ...primaryBtn, background: "transparent", color: "#3f7a1f", border: "1px solid #b8d49a", marginBottom: 8 }}>Copy codes</button>
+            <button onClick={() => { navigator.clipboard?.writeText(backupCodes.join("\n")).catch(() => {}); }} style={{ ...primaryBtn, background: "transparent", color: "#3e8a2f", border: "1px solid #b8d49a", marginBottom: 8 }}>Copy codes</button>
             <button onClick={onClose} style={primaryBtn}>Done</button>
           </>
         )}
@@ -133,14 +133,14 @@ export default function TwoFactorModal({ onClose, mandatory }: Props) {
             <div style={{ fontSize: 13, color: "#0f7a3d", background: "#eef7ee", border: "1px solid #cfe9c4", borderRadius: 8, padding: "9px 11px", margin: "8px 0 12px" }}>
               ✓ Two-factor authentication is <b>enabled</b>. {backupRemaining} backup code{backupRemaining === 1 ? "" : "s"} remaining.
             </div>
-            <p style={{ fontSize: 12.5, color: "#7d766a", lineHeight: 1.5 }}>To turn it off, enter a current authenticator code or your account password.</p>
+            <p style={{ fontSize: 12.5, color: "#6b6a65", lineHeight: 1.5 }}>To turn it off, enter a current authenticator code or your account password.</p>
             <input type="text" inputMode="numeric" value={code} onChange={e => setCode(e.target.value)} placeholder="Authenticator code" style={{ ...input, marginBottom: 8 }} />
             <input type="password" value={disablePw} onChange={e => setDisablePw(e.target.value)} placeholder="…or account password" style={{ ...input, marginBottom: 12 }} />
             {error && <div style={{ fontSize: 12, color: "#dc2626", marginBottom: 10 }}>{error}</div>}
             <button onClick={disable} disabled={busy || (!code.trim() && !disablePw)} style={{ ...primaryBtn, background: "#b91c1c", opacity: (busy || (!code.trim() && !disablePw)) ? 0.6 : 1 }}>{busy ? "Disabling…" : "Disable two-factor"}</button>
             {/* Always-visible exit so a mis-click on "Security" can be backed out of
                 without hunting for the top-right × (which can scroll off a short screen). */}
-            <button onClick={onClose} style={{ ...primaryBtn, background: "transparent", color: "#7d766a", border: "1px solid #e7e0d2", marginTop: 8 }}>Cancel</button>
+            <button onClick={onClose} style={{ ...primaryBtn, background: "transparent", color: "#6b6a65", border: "1px solid #e6e4de", marginTop: 8 }}>Cancel</button>
           </>
         )}
       </div>

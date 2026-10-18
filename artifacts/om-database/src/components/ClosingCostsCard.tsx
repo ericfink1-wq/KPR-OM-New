@@ -157,10 +157,10 @@ export default function ClosingCostsCard({ deal }: Props) {
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const inputStyle: React.CSSProperties = {
-    display: "block", width: "100%", fontSize: 13, padding: "7px 10px", border: "1px solid #e3dccd",
-    borderRadius: 6, color: "#383a37", background: "#fafaf8", marginTop: 4, fontFamily: "'Inter',sans-serif", boxSizing: "border-box",
+    display: "block", width: "100%", fontSize: 13, padding: "7px 10px", border: "1px solid #dfddd6",
+    borderRadius: 6, color: "#383a37", background: "#fafaf8", marginTop: 4, fontFamily: "'Roboto',sans-serif", boxSizing: "border-box",
   };
-  const labelStyle: React.CSSProperties = { display: "block", fontSize: 10, color: "#a69e91", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" };
+  const labelStyle: React.CSSProperties = { display: "block", fontSize: 10, color: "#94928b", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" };
   const selectStyle: React.CSSProperties = { ...inputStyle, minHeight: 36 };
 
   const whereLabel = local.basis === "unresolved" || !local.where || local.where === "an unresolved location"
@@ -169,12 +169,12 @@ export default function ClosingCostsCard({ deal }: Props) {
   const appliedLocalNames = local.applied.map((e) => e.name + (e.schoolDistrict ? ` · ${e.schoolDistrict}` : ""));
 
   return (
-    <div id="section-closing-costs" style={{ background: "#fff", border: "1px solid #efe8da", borderRadius: 12, padding: "16px 20px", marginBottom: 14, boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
+    <div id="section-closing-costs" style={{ background: "#fff", border: "1px solid #ecebe6", borderRadius: 12, padding: "16px 20px", marginBottom: 14, boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "#a69e91", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>
+        <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "#94928b", fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>
           Estimated Closing Costs
         </div>
-        <div style={{ fontSize: 11, color: "#7d766a", lineHeight: 1.45 }}>
+        <div style={{ fontSize: 11, color: "#6b6a65", lineHeight: 1.45 }}>
           {jurisdiction.stateName} customary practices, commercial treatment. Rates show whether or not a price is entered; dollar amounts fill in once you add a price.
         </div>
       </div>
@@ -193,7 +193,7 @@ export default function ClosingCostsCard({ deal }: Props) {
 
       {/* No address yet: a neutral note — the range is expected until a locality is known. */}
       {hasRange && !addrOverride && !hasDealStreet && local.basis !== "manual" && (
-        <div style={{ fontSize: 12, color: "#5c5047", background: "#f7f4ee", border: "1px solid #e3dccd", borderRadius: 8, padding: "10px 12px", marginBottom: 14, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: "#4f4d48", background: "#f7f4ee", border: "1px solid #dfddd6", borderRadius: 8, padding: "10px 12px", marginBottom: 14, lineHeight: 1.5 }}>
           <b>ⓘ No address yet.</b> {jurisdiction.stateName} sets local transfer tax at the <b>{LOCAL_LEVEL_LABEL[jurisdiction.localLevel]}</b> level, so the local line shows the possible <b>range</b> until you type the property address or pick the {jurisdiction.localLevel === "county" ? "county" : "town"} below.
         </div>
       )}
@@ -239,21 +239,21 @@ export default function ClosingCostsCard({ deal }: Props) {
           />
         </label>
         {sugOpen && suggests.length > 0 && (
-          <div style={{ position: "absolute", zIndex: 30, left: 0, right: 0, top: "100%", marginTop: 2, background: "#fff", border: "1px solid #e3dccd", borderRadius: 6, boxShadow: "0 6px 18px rgba(56,58,55,0.14)", overflow: "hidden" }}>
+          <div style={{ position: "absolute", zIndex: 30, left: 0, right: 0, top: "100%", marginTop: 2, background: "#fff", border: "1px solid #dfddd6", borderRadius: 6, boxShadow: "0 6px 18px rgba(56,58,55,0.14)", overflow: "hidden" }}>
             {suggests.map((s, i) => (
               <div key={i}
                 onMouseDown={(e) => { e.preventDefault(); pickAddr(s); }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = "#f7f4ee")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
-                style={{ padding: "9px 10px", fontSize: 12, color: "#383a37", cursor: "pointer", borderTop: i ? "1px solid #f1eadc" : "none", lineHeight: 1.35 }}>
+                style={{ padding: "9px 10px", fontSize: 12, color: "#383a37", cursor: "pointer", borderTop: i ? "1px solid #efeee9" : "none", lineHeight: 1.35 }}>
                 {s.label}
               </div>
             ))}
           </div>
         )}
-        <div style={{ fontSize: 10, color: "#a69e91", marginTop: 4 }}>
+        <div style={{ fontSize: 10, color: "#94928b", marginTop: 4 }}>
           {addrOverride
-            ? <>Estimating a custom address ({effectiveState || "—"}). <span onClick={clearAddr} style={{ color: "#6dba43", cursor: "pointer", fontWeight: 600 }}>↺ use deal address</span></>
+            ? <>Estimating a custom address ({effectiveState || "—"}). <span onClick={clearAddr} style={{ color: "#5bba47", cursor: "pointer", fontWeight: 600 }}>↺ use deal address</span></>
             : (hasDealStreet ? "Using the deal address — type above to estimate a different one." : "Type an address to set the state & locality.")}
         </div>
       </div>
@@ -273,13 +273,13 @@ export default function ClosingCostsCard({ deal }: Props) {
           <input type="date" value={closingDate} onChange={(e) => setClosingDate(e.target.value || todayIso())} style={inputStyle} />
         </label>
       </div>
-      <div style={{ fontSize: 10, color: "#a69e91", marginBottom: 10, minHeight: 14 }}>
+      <div style={{ fontSize: 10, color: "#94928b", marginBottom: 10, minHeight: 14 }}>
         {loanIsAssumed ? `Loan assumed at ${Math.round(DEFAULT_LTV * 100)}% LTV — edit above to override.` : ""}
       </div>
 
       {hasEntityLine && (
         <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, color: "#52554e", marginBottom: 12, cursor: "pointer" }}>
-          <input type="checkbox" checked={entitySale} onChange={(e) => setEntitySale(e.target.checked)} style={{ accentColor: "#3f7a1f", width: 16, height: 16 }} />
+          <input type="checkbox" checked={entitySale} onChange={(e) => setEntitySale(e.target.checked)} style={{ accentColor: "#3e8a2f", width: 16, height: 16 }} />
           Entity / controlling-interest sale (applies the Controlling Interest Transfer Tax)
         </label>
       )}
@@ -288,21 +288,21 @@ export default function ClosingCostsCard({ deal }: Props) {
       {jurisdiction.localLevel !== "none" ? (
         <div style={{ marginBottom: 12 }}>
           <div style={{ ...labelStyle, marginBottom: 4 }}>Local taxing jurisdiction · set by {LOCAL_LEVEL_LABEL[jurisdiction.localLevel]}</div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: local.status === "unverified" && (hasDealStreet || addrOverride) ? "#fdf1ef" : "#fafaf8", border: `1px solid ${local.status === "unverified" && (hasDealStreet || addrOverride) ? "#e9b3aa" : "#e3dccd"}`, borderRadius: 6, padding: "8px 10px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: local.status === "unverified" && (hasDealStreet || addrOverride) ? "#fdf1ef" : "#fafaf8", border: `1px solid ${local.status === "unverified" && (hasDealStreet || addrOverride) ? "#e9b3aa" : "#dfddd6"}`, borderRadius: 6, padding: "8px 10px" }}>
             <span style={{ fontSize: 12.5, color: "#383a37", lineHeight: 1.4 }}>
-              {local.status === "verified" && <span style={{ color: "#3f7a1f", marginRight: 5 }}>✓</span>}
+              {local.status === "verified" && <span style={{ color: "#3e8a2f", marginRight: 5 }}>✓</span>}
               {local.status === "unverified" && (hasDealStreet || addrOverride || local.basis === "manual"
                 ? <span style={{ color: "#b3261e", marginRight: 5 }}>⛔</span>
                 : <span style={{ color: "#8a8170", marginRight: 5 }}>ⓘ</span>)}
               {appliedLocalNames.length ? appliedLocalNames.join(" + ") : (local.status === "unverified" ? `Not resolved — ${whereLabel}` : local.where)}
-              {local.confirmedNone.length > 0 && <span style={{ color: "#7d766a" }}> · no {local.confirmedNone.join("/")} tax here</span>}
+              {local.confirmedNone.length > 0 && <span style={{ color: "#6b6a65" }}> · no {local.confirmedNone.join("/")} tax here</span>}
             </span>
             <button type="button" onClick={() => setPickerOpen((v) => !v)}
-              style={{ background: "transparent", border: "none", color: "#4f8a2b", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif", padding: "6px 6px", flexShrink: 0 }}>
+              style={{ background: "transparent", border: "none", color: "#4f8a2b", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Roboto',sans-serif", padding: "6px 6px", flexShrink: 0 }}>
               {pickerOpen ? "Done" : "Change"}
             </button>
           </div>
-          <div style={{ fontSize: 10, color: "#a69e91", marginTop: 4, lineHeight: 1.45 }}>
+          <div style={{ fontSize: 10, color: "#94928b", marginTop: 4, lineHeight: 1.45 }}>
             {geoStatus === "loading" && <>📍 Resolving the exact jurisdiction from the property address…</>}
             {geoStatus === "done" && geo?.matched && local.basis !== "manual" && (
               <>📍 {[geo.place, geo.municipality].filter(Boolean).join(" / ") || "—"}{geo.county ? ` · ${geo.county}` : ""}{geo.schoolDistrict ? ` · ${geo.schoolDistrict}` : ""} — resolved from the address ({geo.source || "US Census"}).</>
@@ -338,12 +338,12 @@ export default function ClosingCostsCard({ deal }: Props) {
                   </select>
                 </label>
               )}
-              {!entries.length && <div style={{ fontSize: 11, color: "#7d766a" }}>{tableLoading ? "Loading local table…" : "No local table for this state."}</div>}
+              {!entries.length && <div style={{ fontSize: 11, color: "#6b6a65" }}>{tableLoading ? "Loading local table…" : "No local table for this state."}</div>}
             </div>
           )}
         </div>
       ) : (
-        <div style={{ fontSize: 10.5, color: "#7d766a", marginBottom: 12, lineHeight: 1.45 }}>
+        <div style={{ fontSize: 10.5, color: "#6b6a65", marginBottom: 12, lineHeight: 1.45 }}>
           ✓ {jurisdiction.stateName} has no local (county/city) transfer tax — {jurisdiction.localLevelSource.source}, as of {jurisdiction.localLevelSource.asOf}.
         </div>
       )}
@@ -351,14 +351,14 @@ export default function ClosingCostsCard({ deal }: Props) {
       {/* Summary tiles */}
       {hasPrice && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))", gap: 8, marginBottom: 14 }}>
-          {([["Buyer", breakdown.totals.buyer, breakdown.totalsMax.buyer, "#f6f9f0", "#d6e9bd", "#5c7a3c", "#3f7a1f"],
+          {([["Buyer", breakdown.totals.buyer, breakdown.totalsMax.buyer, "#f6f9f0", "#d6e9bd", "#5c7a3c", "#3e8a2f"],
              ["Seller", breakdown.totals.seller, breakdown.totalsMax.seller, "#fff8ec", "#ead9b3", "#7a5c2c", "#8a5a14"],
-             ["Combined", breakdown.totals.combined, breakdown.totalsMax.combined, "#f4f1ea", "#ddd4c2", "#6f6a5f", "#383a37"]] as const).map(
+             ["Combined", breakdown.totals.combined, breakdown.totalsMax.combined, "#f4f1ea", "#dad8d1", "#676767", "#383a37"]] as const).map(
             ([label, lo, hi, bg, bd, lc, vc]) => (
               <div key={label} style={{ background: bg, border: `1px solid ${bd}`, borderRadius: 8, padding: "10px 12px", minWidth: 0 }}>
                 <div style={{ fontSize: 9, color: lc, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 2 }}>{label}{Math.round(lo) !== Math.round(hi) ? " (range)" : ""}</div>
                 <div style={{ fontSize: Math.round(lo) !== Math.round(hi) ? 13 : 16, color: vc, fontWeight: 600, overflowWrap: "anywhere" }}>{fmtRange(lo, hi)}</div>
-                <div style={{ fontSize: 10, color: "#7d766a", marginTop: 2 }}>{Math.round(lo) !== Math.round(hi) ? `${fmtPct(lo / price)}–${fmtPct(hi / price)}` : fmtPct(lo / price)} of price</div>
+                <div style={{ fontSize: 10, color: "#6b6a65", marginTop: 2 }}>{Math.round(lo) !== Math.round(hi) ? `${fmtPct(lo / price)}–${fmtPct(hi / price)}` : fmtPct(lo / price)} of price</div>
               </div>
             )
           )}
@@ -380,7 +380,7 @@ export default function ClosingCostsCard({ deal }: Props) {
             if (r) return (hi ?? 0) > 0 ? <span style={{ color: "#b3261e", fontWeight: 600 }}>{fmtRange(lo ?? 0, hi ?? 0)}</span> : <span style={{ color: "#c9c2b3" }}>—</span>;
             if (dormant || amt <= 0) return <span style={{ color: "#c9c2b3" }}>—</span>;
             const p = isFlat || l.flatAmount != null ? null : effPct(amt, baseAmt);
-            return <span style={{ color, fontWeight: 500 }}>{fmt(amt)}{p && <span style={{ display: "block", fontSize: 9.5, color: "#a69e91", fontWeight: 400, marginTop: 1 }}>({p})</span>}</span>;
+            return <span style={{ color, fontWeight: 500 }}>{fmt(amt)}{p && <span style={{ display: "block", fontSize: 9.5, color: "#94928b", fontWeight: 400, marginTop: 1 }}>({p})</span>}</span>;
           };
           const rateText = l.flatAmount != null ? `flat ${fmt(l.flatAmount)}` : isFlat && !l.unverified ? (dormant ? "—" : `flat ${fmt(l.amount)}`) : formatRate(l);
           const open = openNotes.has(i) || !!l.unverified;
@@ -388,22 +388,22 @@ export default function ClosingCostsCard({ deal }: Props) {
             <>
               <div style={{ color: l.unverified ? "#8a1f14" : "#383a37", fontWeight: l.unverified ? 600 : 500 }}>
                 {l.unverified ? l.name.replace(local.where, whereLabel) : l.name}
-                {dormant ? <span style={{ fontSize: 9, color: "#a69e91", fontWeight: 600 }}> · not applied</span> : null}
+                {dormant ? <span style={{ fontSize: 9, color: "#94928b", fontWeight: 600 }}> · not applied</span> : null}
                 {needsVerify ? <span style={{ fontSize: 9, color: "#b04a2e", fontWeight: 700, marginLeft: 5, whiteSpace: "nowrap" }}>🚩 confirm w/ title</span> : null}
               </div>
-              {l.notes && open && <div style={{ fontSize: 10, color: l.unverified ? "#9a3a2c" : "#7d766a", marginTop: 3, lineHeight: 1.45, fontWeight: 400 }}>{l.notes}</div>}
+              {l.notes && open && <div style={{ fontSize: 10, color: l.unverified ? "#9a3a2c" : "#6b6a65", marginTop: 3, lineHeight: 1.45, fontWeight: 400 }}>{l.notes}</div>}
               <div style={{ fontSize: 9.5, color: "#b3ab9c", marginTop: 3, lineHeight: 1.4, fontWeight: 400 }}>
                 {l.source && <>Source: {l.sourceUrl ? <a href={l.sourceUrl} target="_blank" rel="noreferrer" style={{ color: "#7d8fa8" }}>{l.source}</a> : l.source}{l.asOf ? <> · as of {l.asOf}</> : null}</>}
                 {l.notes && !l.unverified && (
                   <button type="button" onClick={() => toggleNotes(i)}
-                    style={{ background: "none", border: "none", color: "#4f8a2b", fontSize: 10, fontWeight: 600, cursor: "pointer", padding: "4px 0 4px 6px", fontFamily: "'Inter',sans-serif" }}>
+                    style={{ background: "none", border: "none", color: "#4f8a2b", fontSize: 10, fontWeight: 600, cursor: "pointer", padding: "4px 0 4px 6px", fontFamily: "'Roboto',sans-serif" }}>
                     {openNotes.has(i) ? "hide details" : "details"}
                   </button>
                 )}
               </div>
             </>
           );
-          return { l, i, dormant, rateText, title, buyer: amtCell(l.buyer, r?.buyerMin, r?.buyerMax, "#3f7a1f"), seller: amtCell(l.seller, r?.sellerMin, r?.sellerMax, "#8a5a14") };
+          return { l, i, dormant, rateText, title, buyer: amtCell(l.buyer, r?.buyerMin, r?.buyerMax, "#3e8a2f"), seller: amtCell(l.seller, r?.sellerMin, r?.sellerMax, "#8a5a14") };
         });
         const totalLabel = `Total${hasRange ? " (range — local rate unverified)" : ""}`;
         if (isMobile) return (
@@ -412,16 +412,16 @@ export default function ClosingCostsCard({ deal }: Props) {
               <div key={i} style={{ border: `1px solid ${l.unverified ? "#e9b3aa" : "#f0e9da"}`, background: l.unverified ? "#fdf1ef" : "#fff", borderRadius: 8, padding: "10px 12px", opacity: dormant ? 0.5 : 1, fontSize: 12.5 }}>
                 {title}
                 <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", gap: 8, marginTop: 8, fontVariantNumeric: "tabular-nums" }}>
-                  <div><div style={{ fontSize: 9, color: "#a69e91", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>Rate</div><div style={{ fontSize: 11.5, color: l.unverified ? "#b3261e" : "#52554e" }}>{rateText}</div></div>
-                  <div><div style={{ fontSize: 9, color: "#a69e91", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>Buyer</div><div style={{ fontSize: 12.5 }}>{buyer}</div></div>
-                  <div><div style={{ fontSize: 9, color: "#a69e91", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>Seller</div><div style={{ fontSize: 12.5 }}>{seller}</div></div>
+                  <div><div style={{ fontSize: 9, color: "#94928b", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>Rate</div><div style={{ fontSize: 11.5, color: l.unverified ? "#b3261e" : "#52554e" }}>{rateText}</div></div>
+                  <div><div style={{ fontSize: 9, color: "#94928b", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>Buyer</div><div style={{ fontSize: 12.5 }}>{buyer}</div></div>
+                  <div><div style={{ fontSize: 9, color: "#94928b", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>Seller</div><div style={{ fontSize: 12.5 }}>{seller}</div></div>
                 </div>
               </div>
             ))}
             {hasPrice && (
-              <div style={{ background: "#faf7f0", borderRadius: 8, padding: "10px 12px", display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", gap: 8, fontSize: 12.5, fontWeight: 700 }}>
-                <div style={{ color: "#26281f" }}>{totalLabel}</div>
-                <div style={{ color: "#3f7a1f" }}>{fmtRange(breakdown.totals.buyer, breakdown.totalsMax.buyer)}</div>
+              <div style={{ background: "#faf9f5", borderRadius: 8, padding: "10px 12px", display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", gap: 8, fontSize: 12.5, fontWeight: 700 }}>
+                <div style={{ color: "#232422" }}>{totalLabel}</div>
+                <div style={{ color: "#3e8a2f" }}>{fmtRange(breakdown.totals.buyer, breakdown.totalsMax.buyer)}</div>
                 <div style={{ color: "#8a5a14" }}>{fmtRange(breakdown.totals.seller, breakdown.totalsMax.seller)}</div>
               </div>
             )}
@@ -431,11 +431,11 @@ export default function ClosingCostsCard({ deal }: Props) {
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
               <thead>
-                <tr style={{ fontSize: 9, color: "#a69e91", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                  <th style={{ textAlign: "left", padding: "7px 8px", borderBottom: "1px solid #ece5d7" }}>Item</th>
-                  <th style={{ textAlign: "left", padding: "7px 8px", borderBottom: "1px solid #ece5d7", whiteSpace: "nowrap" }}>Rate</th>
-                  <th style={{ textAlign: "right", padding: "7px 8px", borderBottom: "1px solid #ece5d7" }}>Buyer</th>
-                  <th style={{ textAlign: "right", padding: "7px 8px", borderBottom: "1px solid #ece5d7" }}>Seller</th>
+                <tr style={{ fontSize: 9, color: "#94928b", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                  <th style={{ textAlign: "left", padding: "7px 8px", borderBottom: "1px solid #ebeae5" }}>Item</th>
+                  <th style={{ textAlign: "left", padding: "7px 8px", borderBottom: "1px solid #ebeae5", whiteSpace: "nowrap" }}>Rate</th>
+                  <th style={{ textAlign: "right", padding: "7px 8px", borderBottom: "1px solid #ebeae5" }}>Buyer</th>
+                  <th style={{ textAlign: "right", padding: "7px 8px", borderBottom: "1px solid #ebeae5" }}>Seller</th>
                 </tr>
               </thead>
               <tbody>
@@ -448,9 +448,9 @@ export default function ClosingCostsCard({ deal }: Props) {
                   </tr>
                 ))}
                 {hasPrice && (
-                  <tr style={{ background: "#faf7f0" }}>
-                    <td style={{ padding: "10px 8px", color: "#26281f", fontWeight: 700 }} colSpan={2}>{totalLabel}</td>
-                    <td style={{ padding: "10px 8px", textAlign: "right", color: "#3f7a1f", fontWeight: 700, whiteSpace: "nowrap" }}>{fmtRange(breakdown.totals.buyer, breakdown.totalsMax.buyer)}</td>
+                  <tr style={{ background: "#faf9f5" }}>
+                    <td style={{ padding: "10px 8px", color: "#232422", fontWeight: 700 }} colSpan={2}>{totalLabel}</td>
+                    <td style={{ padding: "10px 8px", textAlign: "right", color: "#3e8a2f", fontWeight: 700, whiteSpace: "nowrap" }}>{fmtRange(breakdown.totals.buyer, breakdown.totalsMax.buyer)}</td>
                     <td style={{ padding: "10px 8px", textAlign: "right", color: "#8a5a14", fontWeight: 700, whiteSpace: "nowrap" }}>{fmtRange(breakdown.totals.seller, breakdown.totalsMax.seller)}</td>
                   </tr>
                 )}
@@ -461,12 +461,12 @@ export default function ClosingCostsCard({ deal }: Props) {
       })()}
 
       {jurisdiction.notes && (
-        <div style={{ fontSize: 10, color: "#7d766a", lineHeight: 1.5, marginTop: 12, padding: "8px 10px", background: "#faf7f0", borderRadius: 6, border: "1px solid #f0e8d6" }}>
+        <div style={{ fontSize: 10, color: "#6b6a65", lineHeight: 1.5, marginTop: 12, padding: "8px 10px", background: "#faf9f5", borderRadius: 6, border: "1px solid #f0e8d6" }}>
           <span style={{ fontWeight: 600 }}>&#9432; </span>{jurisdiction.notes}
         </div>
       )}
 
-      <div style={{ fontSize: 9.5, color: "#a69e91", marginTop: 12, lineHeight: 1.6, borderTop: "1px solid #f0e9da", paddingTop: 10 }}>
+      <div style={{ fontSize: 9.5, color: "#94928b", marginTop: 12, lineHeight: 1.6, borderTop: "1px solid #f0e9da", paddingTop: 10 }}>
         <div>Splits: {SPLITS_SOURCE}. {jurisdiction.stateName} rates last verified {jurisdiction.ratesAsOf}. Local level: {jurisdiction.localLevelSource.source} (as of {jurisdiction.localLevelSource.asOf}).</div>
         <div style={{ marginTop: 3 }}>
           Estimates only — customary splits are negotiable and rates change.{" "}

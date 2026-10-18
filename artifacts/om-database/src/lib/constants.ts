@@ -24,16 +24,16 @@ export const CENTER_TYPES = [
 export const STATUS_OPTS = ["Prospect","Under Contract","Owned","Sold","Passed"];
 
 export const STATUS_COLORS: Record<string, string> = {
-  Prospect: "#7d766a",
+  Prospect: "#6b6a65",
   "Under Contract": "#d9890c",
-  Owned: "#6dba43",
+  Owned: "#5bba47",
   Sold: "#0d9488",
-  Passed: "#a69e91",
+  Passed: "#94928b",
 };
 
 export const GRADE_COLORS: Record<string, string> = {
   "A+":"#0f9d63","A":"#0f9d63","A-":"#2aab6e",
-  "B+":"#6dba43","B":"#6dba43","B-":"#8ac85e",
+  "B+":"#5bba47","B":"#5bba47","B-":"#8ac85e",
   "C+":"#c97a18","C":"#d9890c","C-":"#e09440",
   "D":"#dc2626","D-":"#dc2626","F":"#b91c1c",
 };

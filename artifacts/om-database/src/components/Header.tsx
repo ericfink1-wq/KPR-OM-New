@@ -563,16 +563,16 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
     fontWeight: isActive ? 700 : 600,
     letterSpacing: "0.02em",
     boxShadow: isActive ? "inset 0 -3px 0 #5BBA47" : "none",
-    fontFamily: "'Montserrat','Inter',sans-serif",
+    fontFamily: "'Montserrat','Roboto',sans-serif",
   });
 
   const menuBtn = (onClick: () => void, title: React.ReactNode, sub: string, border = true) => (
     <button onClick={onClick}
-      style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: border ? "1px solid #f1eadc" : "none", padding: "12px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}
+      style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: border ? "1px solid #efeee9" : "none", padding: "12px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Roboto',sans-serif" }}
       onMouseEnter={e => e.currentTarget.style.background = "#f9f6f0"}
       onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
       <div style={{ fontWeight: 600, color: "#383a37", display: "flex", alignItems: "center", gap: 7 }}>{title}</div>
-      <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>{sub}</div>
+      <div style={{ fontSize: 11, color: "#94928b", marginTop: 2 }}>{sub}</div>
     </button>
   );
 
@@ -608,10 +608,10 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           }}
         />
         <div style={{ display: "none", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 8, height: 8, background: "#6dba43", borderRadius: "50%", boxShadow: "0 0 0 3px #6dba4326" }} />
-          <span style={{ fontFamily: "'Fraunces',serif", fontWeight: 600, fontSize: 18, color: "#2a2c27", letterSpacing: "-0.01em" }}>KPR Centers</span>
+          <div style={{ width: 8, height: 8, background: "#5bba47", borderRadius: "50%", boxShadow: "0 0 0 3px #6dba4326" }} />
+          <span style={{ fontFamily: "'Lora',Georgia,serif", fontWeight: 600, fontSize: 18, color: "#232422", letterSpacing: "-0.01em" }}>KPR Centers</span>
         </div>
-        <span className="deal-intel-label" style={{ fontSize: 9, color: "#958d80", letterSpacing: "0.22em", borderLeft: "1px solid #e3dccd", paddingLeft: 11, fontWeight: 600, textTransform: "uppercase" }}>Deal Intelligence</span>
+        <span className="deal-intel-label" style={{ fontSize: 9, color: "#8a8983", letterSpacing: "0.22em", borderLeft: "1px solid #dfddd6", paddingLeft: 11, fontWeight: 600, textTransform: "uppercase" }}>Deal Intelligence</span>
         <style>{`@media (max-width: 1180px) { .deal-intel-label { display: none; } }`}</style>
       </div>
 
@@ -632,13 +632,13 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             <button style={T(tab === "analytics" && analyticsMenu === "portfolio")} onClick={() => {
               if (pAnalyticsRef.current) setAnalyticsRect(pAnalyticsRef.current.getBoundingClientRect());
               setAnalyticsMenu(m => m === "portfolio" ? null : "portfolio");
-            }}>Portfolio Analytics <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span></button>
+            }}>Portfolio Analytics <span style={{ fontSize: 9, color: "#94928b" }}>▾</span></button>
           </div>
           <div ref={tAnalyticsRef} style={{ position: "relative", display: "inline-flex" }}>
             <button style={T(tab === "analytics" && analyticsMenu === "tenant")} onClick={() => {
               if (tAnalyticsRef.current) setAnalyticsRect(tAnalyticsRef.current.getBoundingClientRect());
               setAnalyticsMenu(m => m === "tenant" ? null : "tenant");
-            }}>Tenant Analytics <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span></button>
+            }}>Tenant Analytics <span style={{ fontSize: 9, color: "#94928b" }}>▾</span></button>
           </div>
           <button style={T(tab === "comps")} onClick={() => onTab("comps")}>Comps</button>
           <button style={T(tab === "assetmgmt")} onClick={() => onTab("assetmgmt")}>Asset Mgmt</button>
@@ -651,12 +651,12 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             <div onClick={() => setAnalyticsMenu(null)} style={{ position: "fixed", inset: 0, zIndex: 9000 }} />
             <div style={{
               position: "fixed", top: analyticsRect.bottom + 6, left: analyticsRect.left, zIndex: 9001,
-              background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
+              background: "#fff", border: "1px solid #e3e1db", borderRadius: 10,
               boxShadow: "0 8px 28px rgba(56,58,55,0.16)", minWidth: 210, overflow: "hidden", padding: "4px 0",
             }}>
               {ANALYTICS_GROUPS[analyticsMenu].map(([label, dest]) => (
                 <button key={dest} onClick={() => { setAnalyticsMenu(null); onAnalyticsNav?.(dest); }}
-                  style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "8px 16px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif", color: "#383a37", fontWeight: 600, whiteSpace: "nowrap" }}
+                  style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "8px 16px", cursor: "pointer", fontSize: 13, fontFamily: "'Roboto',sans-serif", color: "#383a37", fontWeight: 600, whiteSpace: "nowrap" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                   {label}
@@ -689,7 +689,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
       <div ref={backupTriggerRef} style={{ flexShrink: 0, padding: isMobile ? "0 14px 0 8px" : "0 20px 0 12px", display: "flex", alignItems: "center", gap: 8 }}>
         {isMobile && onOpenSearch && (
           <button onClick={onOpenSearch} aria-label="Search deals and tenants"
-            style={{ width: 40, height: 40, borderRadius: "50%", background: "#fbf9f4", border: "1.5px solid #cdbf9f", color: "#6dba43", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>⌕</button>
+            style={{ width: 40, height: 40, borderRadius: "50%", background: "#fbf9f4", border: "1.5px solid #cdbf9f", color: "#5bba47", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>⌕</button>
         )}
         <button
           aria-label={`Account menu${whatsNewCount + uploadFails > 0 ? ` — ${whatsNewCount + uploadFails} new` : ""}`}
@@ -702,10 +702,10 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             setBackupMenu(m => !m);
           }}
           disabled={restoreBusy}
-          style={{ position: "relative", width: 40, height: 40, borderRadius: "50%", background: "#2a2c27", color: "#f6f2ea", border: "none", cursor: restoreBusy ? "wait" : "pointer", fontSize: 15, fontWeight: 700, fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          style={{ position: "relative", width: 40, height: 40, borderRadius: "50%", background: "#232422", color: "#faf9f5", border: "none", cursor: restoreBusy ? "wait" : "pointer", fontSize: 15, fontWeight: 700, fontFamily: "'Roboto',sans-serif", display: "flex", alignItems: "center", justifyContent: "center" }}>
           {restoreBusy ? "…" : "☰"}
           {whatsNewCount + uploadFails > 0 && (
-            <span aria-hidden="true" style={{ position: "absolute", top: -3, right: -3, minWidth: 17, height: 17, padding: "0 4px", boxSizing: "border-box", borderRadius: 9, background: uploadFails > 0 ? "#c0392b" : "#3f7a1f", color: "#fff", fontSize: 10, fontWeight: 700, lineHeight: "17px", textAlign: "center", boxShadow: "0 0 0 2px #faf7f0" }}>
+            <span aria-hidden="true" style={{ position: "absolute", top: -3, right: -3, minWidth: 17, height: 17, padding: "0 4px", boxSizing: "border-box", borderRadius: 9, background: uploadFails > 0 ? "#c0392b" : "#3e8a2f", color: "#fff", fontSize: 10, fontWeight: 700, lineHeight: "17px", textAlign: "center", boxShadow: "0 0 0 2px #faf9f5" }}>
               {whatsNewCount + uploadFails > 9 ? "9+" : whatsNewCount + uploadFails}
             </span>
           )}
@@ -716,7 +716,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           <div onClick={() => setBackupMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 9000 }} />
           <div role="menu" style={{
             position: "fixed", top: backupRect.bottom + 6, right: 12, zIndex: 9001,
-            background: "#fff", border: "1px solid #e6dfd0", borderRadius: 12,
+            background: "#fff", border: "1px solid #e3e1db", borderRadius: 12,
             boxShadow: "0 12px 36px rgba(56,58,55,0.18)", width: 280, maxWidth: "calc(100vw - 24px)",
             maxHeight: `calc(100vh - ${Math.round(backupRect.bottom) + 18}px)`, overflowY: "auto",
           }}>
@@ -725,14 +725,14 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
               {menuBtn(() => { setBackupMenu(false); setRatesOpen(true); }, <><LineChart size={15} strokeWidth={1.8} aria-hidden />Today's Rates</>, "Benchmark interest rates")}
               {menuBtn(() => { setBackupMenu(false); setHouseViewOpen(true); }, <><Brain size={15} strokeWidth={1.8} aria-hidden />House View</>, "KPR's underwriting lens")}
               {onClosingCalc && menuBtn(() => { setBackupMenu(false); onClosingCalc(); }, "Closing Costs", "Title, transfer & recording taxes")}
-              <div style={{ borderTop: "1px solid #f1eadc" }} />
+              <div style={{ borderTop: "1px solid #efeee9" }} />
             </>}
             {onWhatsNew && menuBtn(() => { setBackupMenu(false); onWhatsNew(); }, <><Sparkles size={15} strokeWidth={1.8} aria-hidden />What's new{whatsNewCount > 0 ? ` (${whatsNewCount})` : ""}</>, "Recent changes to the app")}
             {onHelpOpen && menuBtn(() => { setBackupMenu(false); onHelpOpen(); }, "Tutorial", "How each part of the app works")}
             {menuBtn(() => { setBackupMenu(false); setMcpOpen(true); }, "Claude access", "Connect Claude to this deal library")}
             {menuBtn(() => { setBackupMenu(false); window.dispatchEvent(new Event("kpr:open-feedback")); }, <><Flag size={15} strokeWidth={1.8} aria-hidden />Send feedback</>, "Report a bug or share an idea")}
             {isAdmin && <>
-              <div style={{ padding: "10px 14px 4px", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.1em", color: "#a69e91", textTransform: "uppercase", background: "#faf7f0", borderTop: "1px solid #f1eadc" }}>Admin</div>
+              <div style={{ padding: "10px 14px 4px", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.1em", color: "#94928b", textTransform: "uppercase", background: "#faf9f5", borderTop: "1px solid #efeee9" }}>Admin</div>
               {menuBtn(() => { setBackupMenu(false); setMembersOpen(true); setUploadFails(0); try { localStorage.setItem("uploadlog-last-view", String(Date.now())); } catch { /* ignore */ } }, `Members${uploadFails > 0 ? ` (${uploadFails} failed upload${uploadFails === 1 ? "" : "s"})` : ""}`, "Approve accounts, upload log")}
               {menuBtn(handleFullBackup, "Full backup (.json)", `All deals, sources & images · ${deals.length} deal${deals.length !== 1 ? "s" : ""}`)}
               {menuBtn(handleDealsOnlyBackup, "Deals only (.json, no images)", `Deal data only — a few MB, easy to share`)}
@@ -742,14 +742,14 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
               {menuBtn(handleCleanupAddresses, "Clean up addresses", "Trim duplicated city/state/zip off street fields")}
               {menuBtn(openFeedbackInbox, `Feedback inbox${feedbackUnresolved ? ` (${feedbackUnresolved})` : ""}`, "Bug reports, ideas & comments")}
             </>}
-            <div style={{ borderTop: "1px solid #f1eadc" }} />
+            <div style={{ borderTop: "1px solid #efeee9" }} />
             {menuBtn(() => { setBackupMenu(false); setPwOpen(true); }, "Change password", "Update your sign-in password")}
             {onLogout && menuBtn(() => { setBackupMenu(false); setTwoFAOpen(true); }, <><Lock size={15} strokeWidth={1.8} aria-hidden />Security</>, "Two-factor authentication")}
             {onLogout && menuBtn(() => { setBackupMenu(false); onLogout(); }, "Sign out", "End this session", false)}
-            <div style={{ padding: "8px 14px 10px", borderTop: "1px solid #f1eadc" }}>
+            <div style={{ padding: "8px 14px 10px", borderTop: "1px solid #efeee9" }}>
               <span
                 title={BUILD_TIME ? `This is the code currently running. Built ${new Date(BUILD_TIME).toLocaleString()}. Tell Claude this id to confirm a fix is live.` : "development build"}
-                style={{ fontSize: 11, color: "#8a8172", fontFamily: "'Inter',sans-serif", letterSpacing: "0.03em", alignSelf: "center", whiteSpace: "nowrap", cursor: "default" }}>
+                style={{ fontSize: 11, color: "#8a8172", fontFamily: "'Roboto',sans-serif", letterSpacing: "0.03em", alignSelf: "center", whiteSpace: "nowrap", cursor: "default" }}>
                 build {BUILD_ID}{serverBuild && serverBuild !== BUILD_ID ? ` · server ${serverBuild}` : ""}
               </span>
             </div>
@@ -763,12 +763,12 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
       <div className="kpr-header-row2" style={{ padding: "0 20px 11px 28px", width: "100%", boxSizing: "border-box", display: isMobile ? "none" : "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
       {onOpenSearch && (
           <button onClick={onOpenSearch} title={`Search deals & tenants (${SEARCH_SHORTCUT_LABEL})`}
-            style={{ display: "flex", alignItems: "center", gap: 9, flex: "1 1 320px", maxWidth: 620, background: "#fbf9f4", border: "1.5px solid #cdbf9f", color: "#8a8170", padding: "9px 15px", borderRadius: 999, cursor: "text", fontSize: 13, fontWeight: 500, fontFamily: "'Inter',sans-serif", boxShadow: "inset 0 1px 2px rgba(56,58,55,0.04)" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "#6dba43"; e.currentTarget.style.background = "#fff"; }}
+            style={{ display: "flex", alignItems: "center", gap: 9, flex: "1 1 320px", maxWidth: 620, background: "#fbf9f4", border: "1.5px solid #cdbf9f", color: "#8a8170", padding: "9px 15px", borderRadius: 999, cursor: "text", fontSize: 13, fontWeight: 500, fontFamily: "'Roboto',sans-serif", boxShadow: "inset 0 1px 2px rgba(56,58,55,0.04)" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "#5bba47"; e.currentTarget.style.background = "#fff"; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = "#cdbf9f"; e.currentTarget.style.background = "#fbf9f4"; }}>
-            <span style={{ fontSize: 15, color: "#6dba43", fontWeight: 700, lineHeight: 1 }}>⌕</span>
+            <span style={{ fontSize: 15, color: "#5bba47", fontWeight: 700, lineHeight: 1 }}>⌕</span>
             <span style={{ flex: 1, textAlign: "left" }}>Search deals &amp; tenants…</span>
-            <span className="kpr-kbd-hint" style={{ fontSize: 10, fontWeight: 700, color: "#a89f8f", background: "#efe9dc", borderRadius: 4, padding: "2px 5px", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>{SEARCH_SHORTCUT_LABEL}</span>
+            <span className="kpr-kbd-hint" style={{ fontSize: 10, fontWeight: 700, color: "#9b9992", background: "#efe9dc", borderRadius: 4, padding: "2px 5px", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>{SEARCH_SHORTCUT_LABEL}</span>
           </button>
       )}
         {/* Tools: rates, house view, upload — on the search row so the nav row never overflows */}
@@ -782,13 +782,13 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
 
         {/* Today's Rates */}
         <button onClick={() => setRatesOpen(true)} title="Today's benchmark interest rates"
-          style={{ background: "#fff", border: "1px solid #d6d6d2", color: "#383A37", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Montserrat','Inter',sans-serif", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          style={{ background: "#fff", border: "1px solid #d6d6d2", color: "#383A37", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Montserrat','Roboto',sans-serif", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
           <LineChart size={15} strokeWidth={1.8} aria-hidden /> Today's Rates
         </button>
 
         {/* House View — KPR's distilled underwriting lens (spans all deals) */}
         <button onClick={() => setHouseViewOpen(true)} title="House View — the underwriting lens learned from your deal takes, applied to every analysis"
-          style={{ background: "#fff", border: "1px solid #bfe2b5", color: "#2f7a22", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Montserrat','Inter',sans-serif", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          style={{ background: "#fff", border: "1px solid #bfe2b5", color: "#2f7a22", padding: "8px 13px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Montserrat','Roboto',sans-serif", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
           <Brain size={15} strokeWidth={1.8} aria-hidden /> House View
         </button>
 
@@ -796,7 +796,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         <div ref={uploadTriggerRef} style={{ position: "relative", display: "flex", borderRadius: 8, boxShadow: "0 1px 3px rgba(35,36,34,0.35)" }}>
           <button
             onClick={() => fileRef.current?.click()}
-            style={{ background: "#383A37", border: "none", color: "#fff", padding: "8px 15px", borderRadius: "8px 0 0 8px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Montserrat','Inter',sans-serif" }}>
+            style={{ background: "#383A37", border: "none", color: "#fff", padding: "8px 15px", borderRadius: "8px 0 0 8px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "'Montserrat','Roboto',sans-serif" }}>
             Upload
           </button>
           <button
@@ -819,29 +819,29 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
               top: uploadRect.bottom + 6,
               right: window.innerWidth - uploadRect.right,
               zIndex: 9001,
-              background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
+              background: "#fff", border: "1px solid #e3e1db", borderRadius: 10,
               boxShadow: "0 8px 28px rgba(56,58,55,0.16)", width: 220, overflow: "hidden"
             }}>
               <button onClick={() => { setUploadMenu(false); fileRef.current?.click(); }}
-                style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f1eadc", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}
+                style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #efeee9", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Roboto',sans-serif" }}
                 onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                 <div style={{ fontWeight: 600, color: "#383a37" }}>Upload files…</div>
-                <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Pick one or more PDFs</div>
+                <div style={{ fontSize: 11, color: "#94928b", marginTop: 2 }}>Pick one or more PDFs</div>
               </button>
               <button onClick={() => { setUploadMenu(false); folderRef.current?.click(); }}
-                style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #f1eadc", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}
+                style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #efeee9", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Roboto',sans-serif" }}
                 onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                 <div style={{ fontWeight: 600, color: "#383a37" }}>Import a folder…</div>
-                <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Scan a whole folder of OMs</div>
+                <div style={{ fontSize: 11, color: "#94928b", marginTop: 2 }}>Scan a whole folder of OMs</div>
               </button>
               <button onClick={() => { setUploadMenu(false); jsonRef.current?.click(); }}
-                style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Inter',sans-serif" }}
+                style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", padding: "11px 14px", cursor: "pointer", fontSize: 13, fontFamily: "'Roboto',sans-serif" }}
                 onMouseEnter={e => (e.currentTarget.style.background = "#f9f6f0")}
                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                <div style={{ fontWeight: 600, color: "#3f7a1f" }}>Upload .json deal(s)</div>
-                <div style={{ fontSize: 11, color: "#a69e91", marginTop: 2 }}>Pre-extracted deals from Claude — no API tokens used</div>
+                <div style={{ fontWeight: 600, color: "#3e8a2f" }}>Upload .json deal(s)</div>
+                <div style={{ fontSize: 11, color: "#94928b", marginTop: 2 }}>Pre-extracted deals from Claude — no API tokens used</div>
               </button>
             </div>
           </>,
@@ -874,13 +874,13 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         right: 24,
         zIndex: 9500,
         background: "#fff",
-        border: "1px solid #e3dccd",
-        borderLeft: importProgress.failed && importProgress.failed > 0 ? "3px solid #d9890c" : "3px solid #6dba43",
+        border: "1px solid #dfddd6",
+        borderLeft: importProgress.failed && importProgress.failed > 0 ? "3px solid #d9890c" : "3px solid #5bba47",
         borderRadius: 10,
         padding: "12px 18px",
         boxShadow: "0 12px 36px rgba(56,58,55,0.18)",
         fontSize: 12,
-        fontFamily: "'Inter',sans-serif",
+        fontFamily: "'Roboto',sans-serif",
         color: "#383a37",
         maxWidth: 320,
       }}>
@@ -892,24 +892,24 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
                 : `✓ Imported ${importProgress.done} deal${importProgress.done !== 1 ? "s" : ""}`}
             </div>
             {importProgress.failed && importProgress.failed > 0 ? (
-              <div style={{ fontSize: 11, color: "#a69e91" }}>Check console for details</div>
+              <div style={{ fontSize: 11, color: "#94928b" }}>Check console for details</div>
             ) : null}
             {importProgress.mergedNames && importProgress.mergedNames.length > 0 ? (
-              <div style={{ marginTop: 6, borderTop: "1px solid #f1eadc", paddingTop: 6 }}>
+              <div style={{ marginTop: 6, borderTop: "1px solid #efeee9", paddingTop: 6 }}>
                 {importProgress.mergedNames.map(name => (
-                  <div key={name} style={{ fontSize: 11, color: "#3f7a1f", lineHeight: 1.45 }}>
+                  <div key={name} style={{ fontSize: 11, color: "#3e8a2f", lineHeight: 1.45 }}>
                     <strong>{name}</strong> updated — tenant roster, financials, and red flags refreshed. Your notes and deal info were preserved.
                   </div>
                 ))}
               </div>
             ) : null}
             {importProgress.undo && (
-              <div style={{ marginTop: 8, borderTop: "1px solid #f1eadc", paddingTop: 8, display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ marginTop: 8, borderTop: "1px solid #efeee9", paddingTop: 8, display: "flex", alignItems: "center", gap: 10 }}>
                 {importProgress.undone ? (
-                  <span style={{ fontSize: 11, color: "#7d766a" }}>Reverting…</span>
+                  <span style={{ fontSize: 11, color: "#6b6a65" }}>Reverting…</span>
                 ) : (
                   <>
-                    <span style={{ fontSize: 11, color: "#7d766a" }}>Not what you expected?</span>
+                    <span style={{ fontSize: 11, color: "#6b6a65" }}>Not what you expected?</span>
                     <button onClick={() => importProgress.undo?.()}
                       style={{ border: "1px solid #c98b8b", background: "#fff", color: "#a33a3a", borderRadius: 6, padding: "4px 12px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>
                       Undo this import
@@ -923,7 +923,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           <div>
             <div style={{ fontWeight: 600, marginBottom: 6 }}>Importing deal {importProgress.current} of {importProgress.total}…</div>
             <div style={{ background: "#f0f0ec", borderRadius: 4, height: 4, overflow: "hidden" }}>
-              <div style={{ background: "#6dba43", height: "100%", width: `${(importProgress.current / importProgress.total) * 100}%`, transition: "width 0.2s" }} />
+              <div style={{ background: "#5bba47", height: "100%", width: `${(importProgress.current / importProgress.total) * 100}%`, transition: "width 0.2s" }} />
             </div>
           </div>
         )}
@@ -939,9 +939,9 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         />
         <div style={{
           position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-          zIndex: 9801, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 12,
+          zIndex: 9801, background: "#fff", border: "1px solid #e3e1db", borderRadius: 12,
           boxShadow: "0 16px 48px rgba(56,58,55,0.22)", padding: "24px 28px", width: 300, maxWidth: "90vw",
-          fontFamily: "'Inter',sans-serif",
+          fontFamily: "'Roboto',sans-serif",
         }}>
           <input
             type="password"
@@ -952,8 +952,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             autoFocus
             style={{
               width: "100%", boxSizing: "border-box", padding: "9px 12px",
-              border: adminError ? "1px solid #fca5a5" : "1px solid #e3dccd",
-              borderRadius: 8, fontSize: 13.5, fontFamily: "'Inter',sans-serif",
+              border: adminError ? "1px solid #fca5a5" : "1px solid #dfddd6",
+              borderRadius: 8, fontSize: 13.5, fontFamily: "'Roboto',sans-serif",
               color: "#383a37", outline: "none",
             }}
           />
@@ -963,12 +963,12 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
           <div style={{ display: "flex", gap: 8, marginTop: 14, justifyContent: "flex-end" }}>
             <button
               onClick={() => setAdminPrompt(false)}
-              style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif" }}
+              style={{ background: "transparent", border: "1px solid #e6e4de", color: "#6b6a65", padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontFamily: "'Roboto',sans-serif" }}
             >Cancel</button>
             <button
               onClick={handleAdminUnlock}
               disabled={adminSubmitting || !adminPw.trim()}
-              style={{ background: adminPw.trim() && !adminSubmitting ? "#26281f" : "#e3dccd", border: "none", color: adminPw.trim() && !adminSubmitting ? "#e8e0cf" : "#a89f8f", padding: "7px 18px", borderRadius: 7, cursor: adminPw.trim() && !adminSubmitting ? "pointer" : "default", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}
+              style={{ background: adminPw.trim() && !adminSubmitting ? "#232422" : "#dfddd6", border: "none", color: adminPw.trim() && !adminSubmitting ? "#e8e0cf" : "#9b9992", padding: "7px 18px", borderRadius: 7, cursor: adminPw.trim() && !adminSubmitting ? "pointer" : "default", fontSize: 12, fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}
             >{adminSubmitting ? "…" : "Unlock"}</button>
           </div>
         </div>
@@ -984,30 +984,30 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         />
         <div style={{
           position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-          zIndex: 9101, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 14,
+          zIndex: 9101, background: "#fff", border: "1px solid #e3e1db", borderRadius: 14,
           boxShadow: "0 16px 48px rgba(56,58,55,0.22)", width: 580, maxWidth: "92vw",
           maxHeight: "75vh", display: "flex", flexDirection: "column", overflow: "hidden",
-          fontFamily: "'Inter',sans-serif",
+          fontFamily: "'Roboto',sans-serif",
         }}>
-          <div style={{ padding: "18px 22px 13px", borderBottom: "1px solid #f1eadc", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ padding: "18px 22px 13px", borderBottom: "1px solid #efeee9", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              <div style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 500, color: "#26281f" }}>
+              <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 19, fontWeight: 500, color: "#232422" }}>
                 Feedback inbox
                 {feedbackUnresolved != null && feedbackUnresolved > 0 && (
-                  <span style={{ marginLeft: 10, background: "#6dba43", color: "#fff", borderRadius: 10, fontSize: 11, fontWeight: 700, padding: "2px 8px", fontFamily: "'Inter',sans-serif", verticalAlign: "middle" }}>
+                  <span style={{ marginLeft: 10, background: "#5bba47", color: "#fff", borderRadius: 10, fontSize: 11, fontWeight: 700, padding: "2px 8px", fontFamily: "'Roboto',sans-serif", verticalAlign: "middle" }}>
                     {feedbackUnresolved}
                   </span>
                 )}
               </div>
-              <div style={{ fontSize: 12, color: "#9a917f", marginTop: 3 }}>Submitted via the feedback button. Unresolved items shown first.</div>
+              <div style={{ fontSize: 12, color: "#8f8d86", marginTop: 3 }}>Submitted via the feedback button. Unresolved items shown first.</div>
             </div>
             <button onClick={() => setFeedbackModal(false)} style={{ background: "none", border: "none", color: "#b0a898", cursor: "pointer", fontSize: 22, lineHeight: 1, padding: 0 }}>×</button>
           </div>
           <div style={{ overflowY: "auto", flex: 1 }}>
             {feedbackLoading ? (
-              <div style={{ padding: "28px 22px", textAlign: "center", color: "#a89f8f", fontSize: 13 }}>Loading…</div>
+              <div style={{ padding: "28px 22px", textAlign: "center", color: "#9b9992", fontSize: 13 }}>Loading…</div>
             ) : feedbackList.length === 0 ? (
-              <div style={{ padding: "28px 22px", textAlign: "center", color: "#a89f8f", fontSize: 13 }}>No feedback yet.</div>
+              <div style={{ padding: "28px 22px", textAlign: "center", color: "#9b9992", fontSize: 13 }}>No feedback yet.</div>
             ) : feedbackList.map((f, i) => {
               const date = new Date(f.createdAt).toLocaleString(undefined, {
                 month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
@@ -1028,7 +1028,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
                     <span style={{ background: tc.bg, color: tc.color, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>
                       {f.type}
                     </span>
-                    <span style={{ fontSize: 12, color: "#a89f8f", flexShrink: 0 }}>
+                    <span style={{ fontSize: 12, color: "#9b9992", flexShrink: 0 }}>
                       {f.name || "anonymous"} · {f.page || "unknown page"} · {date}
                     </span>
                   </div>
@@ -1053,7 +1053,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
                           ✕ email failed
                         </div>
                         {f.emailError && (
-                          <div style={{ marginTop: 4, fontSize: 10.5, color: "#b91c1c", fontFamily: "'Inter',monospace", background: "#fef2f2", padding: "4px 8px", borderRadius: 4, wordBreak: "break-all" }}>
+                          <div style={{ marginTop: 4, fontSize: 10.5, color: "#b91c1c", fontFamily: "ui-monospace,monospace", background: "#fef2f2", padding: "4px 8px", borderRadius: 4, wordBreak: "break-all" }}>
                             {f.emailError}
                           </div>
                         )}
@@ -1065,13 +1065,13 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
                     onClick={() => handleToggleResolved(f.id, !f.resolved)}
                     style={{
                       background: "transparent",
-                      border: "1px solid #ddd4c2",
-                      color: f.resolved ? "#6dba43" : "#7d766a",
+                      border: "1px solid #dad8d1",
+                      color: f.resolved ? "#5bba47" : "#6b6a65",
                       padding: "4px 12px",
                       borderRadius: 6,
                       cursor: "pointer",
                       fontSize: 11,
-                      fontFamily: "'Inter',sans-serif",
+                      fontFamily: "'Roboto',sans-serif",
                       fontWeight: 600,
                     }}
                   >
@@ -1081,8 +1081,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
               );
             })}
           </div>
-          <div style={{ padding: "10px 22px", borderTop: "1px solid #f1eadc", flexShrink: 0 }}>
-            <button onClick={() => setFeedbackModal(false)} style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#7d766a", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}>Close</button>
+          <div style={{ padding: "10px 22px", borderTop: "1px solid #efeee9", flexShrink: 0 }}>
+            <button onClick={() => setFeedbackModal(false)} style={{ background: "transparent", border: "1px solid #dad8d1", color: "#6b6a65", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Roboto',sans-serif" }}>Close</button>
           </div>
         </div>
       </>,
@@ -1097,21 +1097,21 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         />
         <div style={{
           position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-          zIndex: 9101, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 14,
+          zIndex: 9101, background: "#fff", border: "1px solid #e3e1db", borderRadius: 14,
           boxShadow: "0 16px 48px rgba(56,58,55,0.22)", width: 540, maxWidth: "90vw",
           maxHeight: "72vh", display: "flex", flexDirection: "column", overflow: "hidden",
         }}>
-          <div style={{ padding: "18px 22px 13px", borderBottom: "1px solid #f1eadc", flexShrink: 0 }}>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 500, color: "#26281f" }}>Restore a snapshot</div>
-            <div style={{ fontSize: 12, color: "#9a917f", marginTop: 4, lineHeight: 1.5 }}>
+          <div style={{ padding: "18px 22px 13px", borderBottom: "1px solid #efeee9", flexShrink: 0 }}>
+            <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 19, fontWeight: 500, color: "#232422" }}>Restore a snapshot</div>
+            <div style={{ fontSize: 12, color: "#8f8d86", marginTop: 4, lineHeight: 1.5 }}>
               Snapshots are taken automatically before imports, deletes, and restores. Restoring is additive — it never removes existing deals.
             </div>
           </div>
           <div style={{ overflowY: "auto", flex: 1 }}>
             {snapshotLoading ? (
-              <div style={{ padding: "28px 22px", textAlign: "center", color: "#a89f8f", fontSize: 13 }}>Loading…</div>
+              <div style={{ padding: "28px 22px", textAlign: "center", color: "#9b9992", fontSize: 13 }}>Loading…</div>
             ) : snapshots.length === 0 ? (
-              <div style={{ padding: "28px 22px", textAlign: "center", color: "#a89f8f", fontSize: 13 }}>
+              <div style={{ padding: "28px 22px", textAlign: "center", color: "#9b9992", fontSize: 13 }}>
                 No snapshots yet. They are created automatically before major changes.
               </div>
             ) : snapshots.map((snap, i) => {
@@ -1128,8 +1128,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
                   borderBottom: i < snapshots.length - 1 ? "1px solid #f5efe2" : "none",
                 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#383a37", fontFamily: "'Inter',sans-serif" }}>{label}</div>
-                    <div style={{ fontSize: 11, color: "#a89f8f", marginTop: 2, fontFamily: "'Inter',sans-serif" }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#383a37", fontFamily: "'Roboto',sans-serif" }}>{label}</div>
+                    <div style={{ fontSize: 11, color: "#9b9992", marginTop: 2, fontFamily: "'Roboto',sans-serif" }}>
                       {date} · {snap.dealCount} deal{snap.dealCount !== 1 ? "s" : ""}
                     </div>
                   </div>
@@ -1137,12 +1137,12 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
                     onClick={() => handleSnapshotRestore(snap)}
                     disabled={snapshotRestoring !== null}
                     style={{
-                      background: isRestoring ? "#f6f2ea" : "transparent",
-                      border: "1px solid #ddd4c2",
-                      color: isRestoring ? "#a89f8f" : "#52554e",
+                      background: isRestoring ? "#faf9f5" : "transparent",
+                      border: "1px solid #dad8d1",
+                      color: isRestoring ? "#9b9992" : "#52554e",
                       padding: "5px 14px", borderRadius: 6,
                       cursor: snapshotRestoring !== null ? (isRestoring ? "wait" : "default") : "pointer",
-                      fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600,
+                      fontSize: 11, fontFamily: "'Roboto',sans-serif", fontWeight: 600,
                       whiteSpace: "nowrap", flexShrink: 0,
                     }}
                   >
@@ -1152,10 +1152,10 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
               );
             })}
           </div>
-          <div style={{ padding: "10px 22px", borderTop: "1px solid #f1eadc", flexShrink: 0 }}>
+          <div style={{ padding: "10px 22px", borderTop: "1px solid #efeee9", flexShrink: 0 }}>
             <button
               onClick={() => setSnapshotModal(false)}
-              style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#7d766a", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif" }}
+              style={{ background: "transparent", border: "1px solid #dad8d1", color: "#6b6a65", padding: "5px 14px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "'Roboto',sans-serif" }}
             >Close</button>
           </div>
         </div>

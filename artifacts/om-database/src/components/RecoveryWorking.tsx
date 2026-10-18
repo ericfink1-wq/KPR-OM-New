@@ -21,7 +21,7 @@ export default function RecoveryWorking({ b }: { b: OccBreakdown }) {
   const showFull = b.reimbMethod === "calculated" && b.fullNnn != null && b.fullNnn > 0;
   if (!lines.length && !showFull && b.reimbMethod !== "gross") return null;
   return (
-    <div style={{ margin: "0 0 5px 8px", paddingLeft: 7, borderLeft: "2px solid #efe8d9", color: "#8b8578", fontSize: 10.5, lineHeight: 1.45 }}>
+    <div style={{ margin: "0 0 5px 8px", paddingLeft: 7, borderLeft: "2px solid #efe8d9", color: "#7a7973", fontSize: 10.5, lineHeight: 1.45 }}>
       {b.reimbMethod === "gross" && <div>Gross lease: the OM says no recoveries are billed.</div>}
       {lines.map((l, i) => (
         <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
@@ -29,7 +29,7 @@ export default function RecoveryWorking({ b }: { b: OccBreakdown }) {
         </div>
       ))}
       {showFull && (
-        <div style={{ marginTop: 3, color: "#6f6a5f" }}>
+        <div style={{ marginTop: 3, color: "#676767" }}>
           If fully NNN: {fmt$(b.fullNnn!)}
           {" "}({Math.round((b.reimbursements / b.fullNnn!) * 100)}% of that)
         </div>

@@ -32,7 +32,7 @@ function daysUntil(s: string | null | undefined): number | null {
 }
 
 function maturityColor(days: number | null): string {
-  if (days == null) return "#a69e91";
+  if (days == null) return "#94928b";
   if (days < 0) return "#dc2626";
   if (days < 365) return "#ea6000";
   if (days < 730) return "#b08000";
@@ -107,7 +107,7 @@ export default function LenderView({ lenderName, deals, onBack, onOpenDeal }: Pr
   const Th = ({ label, k }: { label: string; k: SortKey }) => (
     <th onClick={() => setSort(k)} style={{
       padding: "8px 10px", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
-      color: sortKey === k ? "#2d4ecf" : "#7d766a", textTransform: "uppercase",
+      color: sortKey === k ? "#2d4ecf" : "#6b6a65", textTransform: "uppercase",
       cursor: "pointer", whiteSpace: "nowrap", textAlign: k === "property" ? "left" : "right",
       background: "transparent", border: "none", userSelect: "none",
       borderBottom: "2px solid #e8e2d6",
@@ -117,17 +117,17 @@ export default function LenderView({ lenderName, deals, onBack, onOpenDeal }: Pr
   );
 
   return (
-    <div style={{ padding: "24px 28px", maxWidth: DETAIL_MAX_WIDTH, margin: "0 auto", width: "100%", boxSizing: "border-box", fontFamily: "'Inter',sans-serif" }}>
+    <div style={{ padding: "24px 28px", maxWidth: DETAIL_MAX_WIDTH, margin: "0 auto", width: "100%", boxSizing: "border-box", fontFamily: "'Roboto',sans-serif" }}>
       {/* Back */}
-      <button onClick={onBack} style={{ background: "transparent", border: "1px solid #e7e0d2", color: "#7d766a", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, marginBottom: 20 }}>
+      <button onClick={onBack} style={{ background: "transparent", border: "1px solid #e6e4de", color: "#6b6a65", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontSize: 11, marginBottom: 20 }}>
         ← Back
       </button>
 
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 10, letterSpacing: "0.1em", color: "#a69e91", textTransform: "uppercase", marginBottom: 4 }}>Lender Summary</div>
-        <div style={{ fontFamily: "'Fraunces',serif", fontSize: 28, fontWeight: 700, color: "#262724", marginBottom: 4 }}>{lenderLabel(lenderName)}</div>
-        <div style={{ fontSize: 13, color: "#7d766a" }}>
+        <div style={{ fontSize: 10, letterSpacing: "0.1em", color: "#94928b", textTransform: "uppercase", marginBottom: 4 }}>Lender Summary</div>
+        <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 28, fontWeight: 700, color: "#262724", marginBottom: 4 }}>{lenderLabel(lenderName)}</div>
+        <div style={{ fontSize: 13, color: "#6b6a65" }}>
           {rows.length} loan{rows.length !== 1 ? "s" : ""} across {new Set(rows.map(r => r.deal.id)).size} propert{new Set(rows.map(r => r.deal.id)).size !== 1 ? "ies" : "y"}
         </div>
       </div>
@@ -142,9 +142,9 @@ export default function LenderView({ lenderName, deals, onBack, onOpenDeal }: Pr
           ...(prefRows.length ? [{ label: "Pref Equity", value: fmt$(prefRows.reduce((s, r) => s + (r.amount ?? 0), 0)), sub: `${prefRows.length} tranche${prefRows.length !== 1 ? "s" : ""}` }] : []),
         ].map((tile, i) => (
           <div key={i} style={{ background: "#fff", border: "1px solid #e8e2d6", borderRadius: 10, padding: "14px 16px" }}>
-            <div style={{ fontSize: 9, letterSpacing: "0.08em", color: "#a69e91", textTransform: "uppercase", marginBottom: 4 }}>{tile.label}</div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 700, color: tile.color ?? "#262724", lineHeight: 1.1 }}>{tile.value}</div>
-            {tile.sub && <div style={{ fontSize: 10, color: "#a69e91", marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tile.sub}</div>}
+            <div style={{ fontSize: 9, letterSpacing: "0.08em", color: "#94928b", textTransform: "uppercase", marginBottom: 4 }}>{tile.label}</div>
+            <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 700, color: tile.color ?? "#262724", lineHeight: 1.1 }}>{tile.value}</div>
+            {tile.sub && <div style={{ fontSize: 10, color: "#94928b", marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tile.sub}</div>}
           </div>
         ))}
       </div>
@@ -169,11 +169,11 @@ export default function LenderView({ lenderName, deals, onBack, onOpenDeal }: Pr
                 const matColor = maturityColor(days);
                 const isPref = row.loanType === "Pref Equity";
                 return (
-                  <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#fafaf7", borderBottom: "1px solid #f1eadc" }}>
+                  <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#fafaf7", borderBottom: "1px solid #efeee9" }}>
                     <td style={{ padding: "10px 10px" }}>
                       <button onClick={() => onOpenDeal(row.deal)} style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
                         <div style={{ fontSize: 12, fontWeight: 600, color: "#262724" }}>{row.deal.propertyName || row.deal.fileName}</div>
-                        <div style={{ fontSize: 10, color: "#a69e91" }}>{[row.deal.city, row.deal.state].filter(Boolean).join(", ")}</div>
+                        <div style={{ fontSize: 10, color: "#94928b" }}>{[row.deal.city, row.deal.state].filter(Boolean).join(", ")}</div>
                       </button>
                     </td>
                     <td style={{ padding: "10px 10px", textAlign: "right" }}>
@@ -184,7 +184,7 @@ export default function LenderView({ lenderName, deals, onBack, onOpenDeal }: Pr
                     <td style={{ padding: "10px 10px", textAlign: "right", fontWeight: 600, color: "#262724" }}>{fmt$(row.amount)}</td>
                     <td style={{ padding: "10px 10px", textAlign: "right", color: "#5c5f57" }}>
                       {row.rate != null ? `${row.rate}%` : "—"}
-                      {row.rateType && <span style={{ fontSize: 10, color: "#a69e91", marginLeft: 4 }}>{row.rateType}</span>}
+                      {row.rateType && <span style={{ fontSize: 10, color: "#94928b", marginLeft: 4 }}>{row.rateType}</span>}
                     </td>
                     <td style={{ padding: "10px 10px", textAlign: "right", color: matColor, fontWeight: days != null && days < 365 ? 700 : 400 }}>
                       {fmtDate(row.maturity)}
@@ -199,7 +199,7 @@ export default function LenderView({ lenderName, deals, onBack, onOpenDeal }: Pr
           </table>
         </div>
       </div>
-      <div style={{ marginTop: 8, fontSize: 10, color: "#a69e91" }}>Click any property to open its deal page.</div>
+      <div style={{ marginTop: 8, fontSize: 10, color: "#94928b" }}>Click any property to open its deal page.</div>
     </div>
   );
 }

@@ -40,13 +40,29 @@ export const CATEGORY_LABEL: Record<ChangeCategory, string> = {
 // Olive/sage house palette, with a warm amber for data-quality items so the
 // three kinds of entry are told apart at a glance and not only by their text.
 export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; border: string }> = {
-  new:      { fg: "#3f7a1f", bg: "#eef3e6", border: "#b8d49a" },
+  new:      { fg: "#3e8a2f", bg: "#eef3e6", border: "#b8d49a" },
   improved: { fg: "#1d4ed8", bg: "#eff6ff", border: "#bfdbfe" },
   fixed:    { fg: "#9a5b12", bg: "#fdf4e7", border: "#f0d9b5" },
   data:     { fg: "#0f766e", bg: "#f0fdfa", border: "#99f6e4" },
 };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    id: "2026-10-18-roster-scrub",
+    date: "2026-10-18",
+    category: "new",
+    title: "Roster scrub: every OM in the same standard format, plus a one-line roster",
+    detail: "The Tenants tab now opens with a roster scrub: leased %, in-place rent, investment-grade share, top-5 concentration, WALT, rent rolling in 12/24/36 months, and below- and above-market rent against the library (shown separately, never netted). Proposed or unsigned leases are left out of occupancy, rent and NOI unless you switch them on. Each tenant gets flags you can filter by and a market-rent benchmark. Two new downloads build the same layout for every OM: a KPR Standard Rent Roll in Excel and a one-page KPR OM Summary PDF. The roster itself now fits one line per tenant (recovery chip, next rent step, options, abstract icon). Tap a row for the full detail.",
+    where: "Any deal → Tenants & Sales",
+  },
+  {
+    id: "2026-10-18-design-refresh",
+    date: "2026-10-18",
+    category: "improved",
+    title: "A cleaner look across the site, and a new home page",
+    detail: "Every page now uses the KPR colors and type, with consistent headers, cards, tables and buttons, and loading placeholders instead of blank screens. The home page opens with today's date and live owned-portfolio figures from Datex: occupancy, NOI vs. budget, total debt and the next maturity. The library tiles show trends, the pipeline cards are larger with photos, and \"This week\" is a timeline colored by urgency. Datex leasing activity is now labelled as applications, not signed deals.",
+    where: "Home page and every page",
+  },
   {
     id: "2026-10-18-owned-deal-page",
     date: "2026-10-18",

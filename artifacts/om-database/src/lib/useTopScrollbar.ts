@@ -18,9 +18,9 @@ function ensureStyle() {
   // A visibly-styled thin scrollbar so it's discoverable on every platform (macOS
   // overlay scrollbars would otherwise hide it until hover).
   s.textContent = `
-.hz-topbar{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#cdbf9f #f1eadc}
+.hz-topbar{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#cdbf9f #efeee9}
 .hz-topbar::-webkit-scrollbar{height:10px}
-.hz-topbar::-webkit-scrollbar-track{background:#f1eadc;border-radius:5px}
+.hz-topbar::-webkit-scrollbar-track{background:#efeee9;border-radius:5px}
 .hz-topbar::-webkit-scrollbar-thumb{background:#cdbf9f;border-radius:5px}
 .hz-topbar::-webkit-scrollbar-thumb:hover{background:#b9a87f}`;
   document.head.appendChild(s);

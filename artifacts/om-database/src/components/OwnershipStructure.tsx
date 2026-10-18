@@ -25,7 +25,7 @@ function MoneyInput({ value, placeholder, onChange, onCommit }: {
     : Number(value).toLocaleString("en-US", { maximumFractionDigits: 2 });
   return (
     <div style={{ position: "relative" }}>
-      <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 12.5, color: "#8b8578", pointerEvents: "none" }}>$</span>
+      <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 12.5, color: "#7a7973", pointerEvents: "none" }}>$</span>
       <input inputMode="decimal" value={display} placeholder={placeholder}
         onFocus={() => setText(value == null ? "" : String(value))}
         onBlur={() => { setText(null); onCommit(); }}
@@ -37,7 +37,7 @@ function MoneyInput({ value, placeholder, onChange, onCommit }: {
           setText(raw);
           onChange(raw === "" || raw === "." ? null : Number(raw));
         }}
-        style={{ border: "1px solid #d9d2c4", borderRadius: 6, padding: "7px 9px 7px 18px", fontSize: 12.5, fontFamily: "'Inter',sans-serif", width: "100%", boxSizing: "border-box", background: "#fff" }} />
+        style={{ border: "1px solid #d7d5ce", borderRadius: 6, padding: "7px 9px 7px 18px", fontSize: 12.5, fontFamily: "'Roboto',sans-serif", width: "100%", boxSizing: "border-box", background: "#fff" }} />
     </div>
   );
 }
@@ -67,30 +67,30 @@ export default function OwnershipStructure({ deal, onUpdate }: { deal: Deal; onU
   const fmtMoney = (n: number) => `$${Math.round(n).toLocaleString()}`;
   const pctOf = (cap: number) => totalCapital > 0 ? (cap / totalCapital) * 100 : 0;
 
-  const inp: React.CSSProperties = { border: "1px solid #d9d2c4", borderRadius: 6, padding: "7px 9px", fontSize: 12.5, fontFamily: "'Inter',sans-serif", width: "100%", boxSizing: "border-box", background: "#fff" };
-  const labelStyle: React.CSSProperties = { fontSize: 9.5, color: "#a69e91", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 };
+  const inp: React.CSSProperties = { border: "1px solid #d7d5ce", borderRadius: 6, padding: "7px 9px", fontSize: 12.5, fontFamily: "'Roboto',sans-serif", width: "100%", boxSizing: "border-box", background: "#fff" };
+  const labelStyle: React.CSSProperties = { fontSize: 9.5, color: "#94928b", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 };
 
   return (
-    <div id="section-ownership" data-jump="Ownership Structure" style={{ background: "#ffffff", border: "1px solid #efe8da", borderRadius: 12, padding: "18px 20px", marginBottom: 14, boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
+    <div id="section-ownership" data-jump="Ownership Structure" style={{ background: "#ffffff", border: "1px solid #ecebe6", borderRadius: 12, padding: "18px 20px", marginBottom: 14, boxShadow: "0 1px 2px rgba(56,58,55,0.04)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
-        <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "#a69e91", fontWeight: 600, textTransform: "uppercase" }}>Ownership Structure</div>
-        <div style={{ fontSize: 12, color: "#a69e91" }}>Capital balances → ownership % (auto-calculated)</div>
+        <div style={{ fontSize: 11, letterSpacing: "0.06em", color: "#94928b", fontWeight: 600, textTransform: "uppercase" }}>Ownership Structure</div>
+        <div style={{ fontSize: 12, color: "#94928b" }}>Capital balances → ownership % (auto-calculated)</div>
       </div>
 
       {/* Entity node — top of the org chart */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div style={{ background: "#2a2c27", color: "#fff", borderRadius: 10, padding: "10px 18px", textAlign: "center", maxWidth: "100%" }}>
-          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 15, fontWeight: 600 }}>{entityName}</div>
+        <div style={{ background: "#232422", color: "#fff", borderRadius: 10, padding: "10px 18px", textAlign: "center", maxWidth: "100%" }}>
+          <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 15, fontWeight: 600 }}>{entityName}</div>
           <div style={{ fontSize: 10.5, color: "#c9c3b4", marginTop: 2 }}>
             {owners.length} member{owners.length === 1 ? "" : "s"}{totalCapital > 0 ? ` · ${fmtMoney(totalCapital)} total capital` : ""}
           </div>
         </div>
-        {owners.length > 0 && <div style={{ width: 1, height: 16, background: "#d8cfbd" }} />}
+        {owners.length > 0 && <div style={{ width: 1, height: 16, background: "#d4d2ca" }} />}
       </div>
 
       {/* Member rows */}
       {owners.length === 0 ? (
-        <div style={{ textAlign: "center", color: "#a69e91", fontSize: 12.5, padding: "8px 0 14px" }}>
+        <div style={{ textAlign: "center", color: "#94928b", fontSize: 12.5, padding: "8px 0 14px" }}>
           No owners added yet. Add each member of the purchasing entity and their capital balance.
         </div>
       ) : (
@@ -100,7 +100,7 @@ export default function OwnershipStructure({ deal, onUpdate }: { deal: Deal; onU
             const pct = pctOf(cap);
             const kp = isKpName(o.name);
             return (
-              <div key={i} style={{ border: "1px solid #ece5d7", borderRadius: 10, padding: "10px 12px", background: "#faf7f0" }}>
+              <div key={i} style={{ border: "1px solid #ebeae5", borderRadius: 10, padding: "10px 12px", background: "#faf9f5" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1fr) auto auto", gap: 10, alignItems: "end" }}>
                   <div style={{ minWidth: 0 }}>
                     <div style={labelStyle}>Member</div>
@@ -114,28 +114,28 @@ export default function OwnershipStructure({ deal, onUpdate }: { deal: Deal; onU
                   </div>
                   <div style={{ textAlign: "right", paddingBottom: 7 }}>
                     <div style={labelStyle}>Ownership</div>
-                    <div style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 600, color: "#26281f", fontVariantNumeric: "tabular-nums" }}>{pct.toFixed(2)}%</div>
+                    <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, fontWeight: 600, color: "#232422", fontVariantNumeric: "tabular-nums" }}>{pct.toFixed(2)}%</div>
                   </div>
                   <button onClick={() => removeOwner(i)} title="Remove member" aria-label="Remove member"
                     style={{ background: "transparent", border: "none", color: "#c98", cursor: "pointer", fontSize: 16, paddingBottom: 7 }}>✕</button>
                 </div>
                 {/* Ownership bar */}
-                <div style={{ marginTop: 8, height: 5, background: "#ece5d7", borderRadius: 3, overflow: "hidden" }}>
-                  <div style={{ width: `${Math.min(100, pct)}%`, height: "100%", background: "#6dba43" }} />
+                <div style={{ marginTop: 8, height: 5, background: "#ebeae5", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ width: `${Math.min(100, pct)}%`, height: "100%", background: "#5bba47" }} />
                 </div>
                 <div style={{ marginTop: 6 }}>
-                  <input style={{ ...inp, fontSize: 11.5, padding: "5px 8px", background: "transparent", border: "1px dashed #ddd4c2" }} value={o.note ?? ""} placeholder="Optional: role / class (e.g. GP, LP, Class A)"
+                  <input style={{ ...inp, fontSize: 11.5, padding: "5px 8px", background: "transparent", border: "1px dashed #dad8d1" }} value={o.note ?? ""} placeholder="Optional: role / class (e.g. GP, LP, Class A)"
                     onChange={e => editLocal(i, { note: e.target.value })} onBlur={commit} />
                 </div>
                 {/* KP-only: capital balance held OUTSIDE this JV (does not affect ownership %) */}
                 {kp && (
-                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px dashed #e3dccd" }}>
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px dashed #dfddd6" }}>
                     <div style={{ ...labelStyle, color: "#8a6d3b" }}>KP member balance — capital outside this JV</div>
                     <div style={{ maxWidth: 280 }}>
                       <MoneyInput value={o.kpMemberBalance} placeholder="e.g. 2,000,000"
                         onChange={n => editLocal(i, { kpMemberBalance: n })} onCommit={commit} />
                     </div>
-                    <div style={{ fontSize: 10, color: "#bcae97", marginTop: 4 }}>Tracked for reference; excluded from the JV ownership % above.</div>
+                    <div style={{ fontSize: 10, color: "#b8b5ad", marginTop: 4 }}>Tracked for reference; excluded from the JV ownership % above.</div>
                   </div>
                 )}
               </div>
@@ -146,18 +146,18 @@ export default function OwnershipStructure({ deal, onUpdate }: { deal: Deal; onU
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
         <button onClick={addOwner}
-          style={{ background: "#2a2c27", color: "#fff", border: "none", borderRadius: 7, padding: "7px 13px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+          style={{ background: "#232422", color: "#fff", border: "none", borderRadius: 7, padding: "7px 13px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Roboto',sans-serif", whiteSpace: "nowrap" }}>
           + Add member
         </button>
         {owners.length > 0 && (
           <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
             <div style={{ textAlign: "right" }}>
               <div style={labelStyle}>Total Capital</div>
-              <div style={{ fontFamily: "'Fraunces',serif", fontSize: 16, fontWeight: 600, color: "#383a37" }}>{fmtMoney(totalCapital)}</div>
+              <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 16, fontWeight: 600, color: "#383a37" }}>{fmtMoney(totalCapital)}</div>
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={labelStyle}>Total Ownership</div>
-              <div style={{ fontFamily: "'Fraunces',serif", fontSize: 16, fontWeight: 600, color: totalCapital > 0 ? "#0f9d63" : "#a69e91" }}>
+              <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 16, fontWeight: 600, color: totalCapital > 0 ? "#0f9d63" : "#94928b" }}>
                 {totalCapital > 0 ? "100.00%" : "—"}
               </div>
             </div>

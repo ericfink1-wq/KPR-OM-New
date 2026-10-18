@@ -12,8 +12,8 @@ import { exportSiteAgreementsWorkbook } from "../lib/siteAgreementExcel";
 // with a single line and it touches none of the roster/occupancy logic.
 
 const C = {
-  ink: "#383a37", sub: "#6f6a5f", faint: "#a69e91", line: "#efe8da",
-  green: "#3f7a1f", greenBg: "#eef3e6", amber: "#c97a18", amberBg: "#fbf1e4",
+  ink: "#383a37", sub: "#676767", faint: "#94928b", line: "#ecebe6",
+  green: "#3e8a2f", greenBg: "#eef3e6", amber: "#c97a18", amberBg: "#fbf1e4",
   amberBorder: "#e0c9a8", red: "#dc2626", redBg: "#fdecec", blue: "#2a7de1",
   card: "#fffdf8",
 };
@@ -91,7 +91,7 @@ export default function SiteAgreementsCard({ dealId, dealName, isAdmin }: { deal
     <div id="section-site-agreements" style={sectionStyle}>
       <div style={headStyle}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 14.5, fontWeight: 700, color: C.ink, fontFamily: "'Inter',sans-serif" }}>Site Agreements / REAs</span>
+          <span style={{ fontSize: 14.5, fontWeight: 700, color: C.ink, fontFamily: "'Roboto',sans-serif" }}>Site Agreements / REAs</span>
           {items && items.length > 0 && (
             <span style={{ fontSize: 11.5, color: C.sub }}>
               {items.length} agreement{items.length === 1 ? "" : "s"}
@@ -105,13 +105,13 @@ export default function SiteAgreementsCard({ dealId, dealName, isAdmin }: { deal
           {items && items.length > 0 && (
             <button onClick={() => { void exportSiteAgreementsWorkbook(dealName || "deal", items).catch(() => {}); }}
               title="Export the REA / easement abstracts to Excel — a REA & Easements summary index plus one detailed tab per agreement"
-              style={{ background: "#eafaf0", border: "1px solid #b7e4c7", color: "#1f6f43", padding: "6px 13px", borderRadius: 7, cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 5 }}>
+              style={{ background: "#eafaf0", border: "1px solid #b7e4c7", color: "#1f6f43", padding: "6px 13px", borderRadius: 7, cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Roboto',sans-serif", display: "flex", alignItems: "center", gap: 5 }}>
               ⬇ REA &amp; Easements — Excel
             </button>
           )}
           <button onClick={() => setShowUpload(true)}
             title="Upload a property's REA / easement / operating-agreement abstracts (one JSON, or a whole-property file)"
-            style={{ background: "#fff", border: "1px solid #c2d6f0", color: "#1f4d8f", padding: "6px 13px", borderRadius: 7, cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 5 }}>
+            style={{ background: "#fff", border: "1px solid #c2d6f0", color: "#1f4d8f", padding: "6px 13px", borderRadius: 7, cursor: "pointer", fontSize: 11.5, fontWeight: 600, fontFamily: "'Roboto',sans-serif", display: "flex", alignItems: "center", gap: 5 }}>
             ⬆ Upload site agreements
           </button>
         </div>
@@ -136,7 +136,7 @@ export default function SiteAgreementsCard({ dealId, dealName, isAdmin }: { deal
                 style={{ cursor: "pointer", background: C.card, border: `1px solid ${C.line}`, borderRadius: 10, padding: "11px 13px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
                   <div style={{ flex: "1 1 260px", minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, fontFamily: "'Inter',sans-serif" }}>{a.agreementName}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, fontFamily: "'Roboto',sans-serif" }}>{a.agreementName}</div>
                     <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>
                       {[a.center, typeLabel(a.type), a.effectiveTerm].filter(Boolean).join(" · ")}
                     </div>
@@ -217,7 +217,7 @@ function UploadModal({ dealId, onClose, onSaved }: { dealId: string; onClose: ()
 
   const btn = (bg: string, on: boolean): React.CSSProperties => ({
     background: on ? bg : "#ccc", color: "#fff", border: "none", padding: "9px 18px",
-    borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: on ? "pointer" : "default", fontFamily: "'Inter',sans-serif",
+    borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: on ? "pointer" : "default", fontFamily: "'Roboto',sans-serif",
   });
 
   return createPortal(
@@ -260,7 +260,7 @@ function UploadModal({ dealId, onClose, onSaved }: { dealId: string; onClose: ()
             <div style={{ fontSize: 13.5, color: C.ink, fontWeight: 600 }}>
               Saved {result.saved} agreement{result.saved === 1 ? "" : "s"}{result.skipped ? `, ${result.skipped} skipped (no name)` : ""}.
             </div>
-            <button onClick={onClose} style={{ background: "#2a2c27", color: "#fff", border: "none", padding: "9px 18px", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer", marginTop: 12, fontFamily: "'Inter',sans-serif" }}>Done</button>
+            <button onClick={onClose} style={{ background: "#232422", color: "#fff", border: "none", padding: "9px 18px", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer", marginTop: 12, fontFamily: "'Roboto',sans-serif" }}>Done</button>
           </div>
         )}
       </div>
@@ -302,7 +302,7 @@ function ViewerModal({ a, isAdmin, onClose, onDeleted }: { a: SiteAgreement; isA
         style={{ position: "fixed", zIndex: 2001, top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "min(680px, calc(100vw - 24px))", maxHeight: "calc(100vh - 48px)", overflowY: "auto", background: "#fff", borderRadius: 14, boxShadow: "0 18px 50px rgba(0,0,0,0.3)", padding: "18px 22px", boxSizing: "border-box" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 6 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 16.5, fontWeight: 700, color: C.ink, fontFamily: "'Inter',sans-serif" }}>{a.agreementName}</div>
+            <div style={{ fontSize: 16.5, fontWeight: 700, color: C.ink, fontFamily: "'Roboto',sans-serif" }}>{a.agreementName}</div>
             <div style={{ fontSize: 11.5, color: C.sub, marginTop: 2 }}>{[a.center, typeLabel(a.type), a.effectiveTerm, a.runsWithLand ? "runs with land" : null].filter(Boolean).join(" · ")}</div>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ fontSize: 20, color: C.faint, background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}>×</button>
@@ -373,7 +373,7 @@ function ViewerModal({ a, isAdmin, onClose, onDeleted }: { a: SiteAgreement; isA
         {isAdmin && a.id && (
           <div style={{ marginTop: 16, borderTop: `1px solid ${C.line}`, paddingTop: 12 }}>
             <button onClick={doDelete} disabled={deleting}
-              style={{ background: "#fff", border: `1px solid ${C.red}`, color: C.red, padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: deleting ? "default" : "pointer", fontFamily: "'Inter',sans-serif" }}>
+              style={{ background: "#fff", border: `1px solid ${C.red}`, color: C.red, padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: deleting ? "default" : "pointer", fontFamily: "'Roboto',sans-serif" }}>
               {deleting ? "Deleting…" : "Delete this agreement"}
             </button>
           </div>

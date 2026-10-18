@@ -61,7 +61,7 @@ interface TenantRow {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 14 }}>
+    <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9b9992", fontWeight: 700, marginBottom: 14 }}>
       {children}
     </div>
   );
@@ -69,7 +69,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, padding: "20px 22px", ...style }}>
+    <div style={{ background: "#fff", border: "1px solid #ebeae5", borderRadius: 12, padding: "20px 22px", ...style }}>
       {children}
     </div>
   );
@@ -77,10 +77,10 @@ function Card({ children, style }: { children: React.ReactNode; style?: React.CS
 
 function StatBox({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "14px 18px", minWidth: 0 }}>
-      <div style={{ fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 5, lineHeight: 1.3 }}>{label}</div>
-      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: "#26281f", lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{value}</div>
-      {sub && <div style={{ fontSize: 9, color: "#a69e91", marginTop: 2 }}>{sub}</div>}
+    <div style={{ background: "#fff", border: "1px solid #ebeae5", borderRadius: 10, padding: "14px 18px", minWidth: 0 }}>
+      <div style={{ fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9b9992", fontWeight: 700, marginBottom: 5, lineHeight: 1.3 }}>{label}</div>
+      <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 500, color: "#232422", lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{value}</div>
+      {sub && <div style={{ fontSize: 9, color: "#94928b", marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
@@ -90,7 +90,7 @@ function TenantLink({ name, onClick }: { name: string; onClick?: (name: string) 
   return (
     <span
       onClick={() => onClick(name)}
-      style={{ fontWeight: 600, color: "#383a37", cursor: "pointer", textDecoration: "underline", textDecorationColor: "#d8cfbd", textUnderlineOffset: "2px" }}
+      style={{ fontWeight: 600, color: "#383a37", cursor: "pointer", textDecoration: "underline", textDecorationColor: "#d4d2ca", textUnderlineOffset: "2px" }}
     >
       {name}
     </span>
@@ -100,7 +100,7 @@ function TenantLink({ name, onClick }: { name: string; onClick?: (name: string) 
 function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = max > 0 ? (value / max) * 100 : 0;
   return (
-    <div style={{ flex: 1, height: 8, background: "#f5f1ea", borderRadius: 4, overflow: "hidden", minWidth: 60 }}>
+    <div style={{ flex: 1, height: 8, background: "#f6f5f1", borderRadius: 4, overflow: "hidden", minWidth: 60 }}>
       <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 4, transition: "width 0.3s ease" }} />
     </div>
   );
@@ -112,7 +112,7 @@ function StackedBar({ igPct, notRatedPct }: { igPct: number; notRatedPct: number
       {igPct > 0 && (
         <div
           title={`Investment Grade: ${igPct.toFixed(1)}% of rent`}
-          style={{ flex: igPct, background: "#3f7a1f", display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{ flex: igPct, background: "#3e8a2f", display: "flex", alignItems: "center", justifyContent: "center" }}
         >
           {igPct >= 10 && <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}>{igPct.toFixed(0)}%</span>}
         </div>
@@ -120,7 +120,7 @@ function StackedBar({ igPct, notRatedPct }: { igPct: number; notRatedPct: number
       {notRatedPct > 0 && (
         <div
           title={`Not Rated / Non-IG: ${notRatedPct.toFixed(1)}% of rent`}
-          style={{ flex: notRatedPct, background: "#c9c2b8", display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{ flex: notRatedPct, background: "#c6c4bd", display: "flex", alignItems: "center", justifyContent: "center" }}
         >
           {notRatedPct >= 10 && <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}>{notRatedPct.toFixed(0)}%</span>}
         </div>
@@ -133,7 +133,7 @@ function PillToggle<T extends string>({
   options, value, onChange,
 }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <div style={{ display: "flex", background: "#f1eadc", borderRadius: 9, padding: 3, gap: 2 }}>
+    <div style={{ display: "flex", background: "#efeee9", borderRadius: 9, padding: 3, gap: 2 }}>
       {options.map(opt => (
         <button
           key={opt.value}
@@ -142,12 +142,12 @@ function PillToggle<T extends string>({
             padding: "6px 14px",
             borderRadius: 7,
             border: "none",
-            background: value === opt.value ? "#2a2c27" : "transparent",
-            color: value === opt.value ? "#f6f2ea" : "#8a8579",
+            background: value === opt.value ? "#232422" : "transparent",
+            color: value === opt.value ? "#faf9f5" : "#8a8579",
             fontSize: 12,
             fontWeight: value === opt.value ? 600 : 500,
             cursor: "pointer",
-            fontFamily: "'Inter',sans-serif",
+            fontFamily: "'Roboto',sans-serif",
             letterSpacing: "-0.01em",
             boxShadow: value === opt.value ? "0 4px 14px -6px rgba(42,44,39,0.55)" : "none",
             whiteSpace: "nowrap",
@@ -612,9 +612,9 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
     <div style={{ padding:"20px 24px", maxWidth:1100, margin:"0 auto" }}>
         {/* Pinned search — jump to any tenant or parent company. Sticks to the top
             of the analytics scroll area as you scroll. */}
-        <div style={{ position:"sticky", top:0, zIndex:50, margin:"-20px -24px 16px", padding:"12px 24px", background:"rgba(246,242,234,0.92)", backdropFilter:"blur(10px)", borderBottom:"1px solid #ece5d7" }}>
+        <div style={{ position:"sticky", top:0, zIndex:50, margin:"-20px -24px 16px", padding:"12px 24px", background:"rgba(246,242,234,0.92)", backdropFilter:"blur(10px)", borderBottom:"1px solid #ebeae5" }}>
           <div style={{ position:"relative", maxWidth:560 }}>
-            <span style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", fontSize:14, color:"#a89f8f", pointerEvents:"none" }}>🔍</span>
+            <span style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", fontSize:14, color:"#9b9992", pointerEvents:"none" }}>🔍</span>
             <input
               value={navSearch}
               onChange={e => { setNavSearch(e.target.value); setNavHover(0); }}
@@ -628,28 +628,28 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                 else if (e.key === "Escape") { setNavSearch(""); setNavFocused(false); }
               }}
               placeholder="Search any tenant or parent company (all deals)…"
-              style={{ width:"100%", boxSizing:"border-box", padding:"10px 14px 10px 36px", fontSize:13.5, border:"1px solid #d9d2c4", borderRadius:10, background:"#fff", color:"#383a37", fontFamily:"'Inter',sans-serif", outline:"none", boxShadow:"0 1px 2px rgba(56,58,55,0.05)" }}
+              style={{ width:"100%", boxSizing:"border-box", padding:"10px 14px 10px 36px", fontSize:13.5, border:"1px solid #d7d5ce", borderRadius:10, background:"#fff", color:"#383a37", fontFamily:"'Roboto',sans-serif", outline:"none", boxShadow:"0 1px 2px rgba(56,58,55,0.05)" }}
             />
             {navSearch && (
               <button onMouseDown={e => { e.preventDefault(); setNavSearch(""); }}
-                style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"transparent", border:"none", fontSize:16, color:"#bcae97", cursor:"pointer", lineHeight:1 }}>×</button>
+                style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"transparent", border:"none", fontSize:16, color:"#b8b5ad", cursor:"pointer", lineHeight:1 }}>×</button>
             )}
             {/* Results dropdown */}
             {navFocused && navSearch.trim() && (
-              <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, right:0, background:"#fff", border:"1px solid #e3dccd", borderRadius:12, boxShadow:"0 12px 36px rgba(56,58,55,0.16)", overflow:"hidden", zIndex:60, maxHeight:360, overflowY:"auto" }}>
+              <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, right:0, background:"#fff", border:"1px solid #dfddd6", borderRadius:12, boxShadow:"0 12px 36px rgba(56,58,55,0.16)", overflow:"hidden", zIndex:60, maxHeight:360, overflowY:"auto" }}>
                 {navResults.length === 0 ? (
-                  <div style={{ padding:"14px 16px", fontSize:12.5, color:"#a89f8f" }}>No tenant or parent company matches “{navSearch.trim()}”.</div>
+                  <div style={{ padding:"14px 16px", fontSize:12.5, color:"#9b9992" }}>No tenant or parent company matches “{navSearch.trim()}”.</div>
                 ) : navResults.map((r, i) => (
                   <button key={`${r.kind}-${r.label}`}
                     onMouseDown={e => { e.preventDefault(); pickNav(r); }}
                     onMouseEnter={() => setNavHover(i)}
-                    style={{ display:"flex", alignItems:"center", gap:10, width:"100%", textAlign:"left", background:i===navHover?"#f6f2ea":"transparent", border:"none", borderBottom:i<navResults.length-1?"1px solid #f1eadc":"none", padding:"10px 14px", cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>
-                    <span style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.05em", textTransform:"uppercase", color:r.kind==="parent"?"#8a6d3b":"#3f7a1f", background:r.kind==="parent"?"#f6efe2":"#eef6e6", border:`1px solid ${r.kind==="parent"?"#e0cfa8":"#c6e6a0"}`, borderRadius:4, padding:"2px 6px", flexShrink:0 }}>{r.kind === "parent" ? "Parent" : "Tenant"}</span>
+                    style={{ display:"flex", alignItems:"center", gap:10, width:"100%", textAlign:"left", background:i===navHover?"#faf9f5":"transparent", border:"none", borderBottom:i<navResults.length-1?"1px solid #efeee9":"none", padding:"10px 14px", cursor:"pointer", fontFamily:"'Roboto',sans-serif" }}>
+                    <span style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.05em", textTransform:"uppercase", color:r.kind==="parent"?"#8a6d3b":"#3e8a2f", background:r.kind==="parent"?"#f6efe2":"#eef6e6", border:`1px solid ${r.kind==="parent"?"#e0cfa8":"#c6e6a0"}`, borderRadius:4, padding:"2px 6px", flexShrink:0 }}>{r.kind === "parent" ? "Parent" : "Tenant"}</span>
                     <span style={{ flex:1, minWidth:0 }}>
-                      <span style={{ display:"block", fontSize:13, fontWeight:600, color:"#26281f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.label}</span>
-                      <span style={{ display:"block", fontSize:10.5, color:"#a89f8f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.sub}</span>
+                      <span style={{ display:"block", fontSize:13, fontWeight:600, color:"#232422", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.label}</span>
+                      <span style={{ display:"block", fontSize:10.5, color:"#9b9992", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.sub}</span>
                     </span>
-                    {r.rent > 0 && <span style={{ fontSize:11, fontWeight:600, color:"#5c5047", flexShrink:0 }}>{fmtRent(r.rent)}</span>}
+                    {r.rent > 0 && <span style={{ fontSize:11, fontWeight:600, color:"#4f4d48", flexShrink:0 }}>{fmtRent(r.rent)}</span>}
                   </button>
                 ))}
               </div>
@@ -661,11 +661,11 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:12 }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             {onBack && (
-              <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e7e0d2", color:"#7d766a", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif" }}>← Back</button>
+              <button onClick={onBack} style={{ background:"transparent", border:"1px solid #e6e4de", color:"#6b6a65", padding:"5px 10px", borderRadius:4, cursor:"pointer", fontSize:11, fontFamily:"'Roboto',sans-serif" }}>← Back</button>
             )}
             <div>
-              <div style={{ fontFamily:"'Fraunces',serif", fontSize:22, fontWeight:500, color:"#26281f", letterSpacing:"-0.02em" }}>Tenant Analytics</div>
-              <div style={{ fontSize:12, color:"#a89f8f", marginTop:3 }}>Aggregated from all deals in memory</div>
+              <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:22, fontWeight:500, color:"#232422", letterSpacing:"-0.02em" }}>Tenant Analytics</div>
+              <div style={{ fontSize:12, color:"#9b9992", marginTop:3 }}>Aggregated from all deals in memory</div>
             </div>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
@@ -677,9 +677,9 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                   onClick={() => setScope(opt)}
                   style={{
                     padding:"5px 12px", borderRadius:5, border:"none", cursor:"pointer",
-                    fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif",
+                    fontSize:11, fontWeight:600, fontFamily:"'Roboto',sans-serif",
                     background:scope === opt ? "#383a37" : "transparent",
-                    color:scope === opt ? "#fff" : "#7d766a",
+                    color:scope === opt ? "#fff" : "#6b6a65",
                     transition:"background 0.15s, color 0.15s",
                     whiteSpace:"nowrap",
                   }}
@@ -691,13 +691,13 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
             {ignoredKeys.size > 0 && (
               <button
                 onClick={resetIgnored}
-                style={{ background:"transparent", border:"none", padding:"0 4px", cursor:"pointer", fontSize:11, color:"#a89f8f", textDecoration:"underline", fontFamily:"'Inter',sans-serif" }}
+                style={{ background:"transparent", border:"none", padding:"0 4px", cursor:"pointer", fontSize:11, color:"#9b9992", textDecoration:"underline", fontFamily:"'Roboto',sans-serif" }}
               >
                 Reset ignored ({ignoredKeys.size})
               </button>
             )}
             {onTenantAudit && (
-              <button onClick={onTenantAudit} style={{ background:"transparent", border:"1px solid #ddd4c2", color:"#52554e", padding:"6px 12px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Inter',sans-serif", fontWeight:600 }}>
+              <button onClick={onTenantAudit} style={{ background:"transparent", border:"1px solid #dad8d1", color:"#52554e", padding:"6px 12px", borderRadius:7, cursor:"pointer", fontSize:11, fontFamily:"'Roboto',sans-serif", fontWeight:600 }}>
                 Tenant Name Audit
               </button>
             )}
@@ -705,9 +705,9 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
         </div>
 
         {rows.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "80px 0", color: "#a89f8f" }}>
+        <div style={{ textAlign: "center", padding: "80px 0", color: "#9b9992" }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>🏢</div>
-          <div style={{ fontFamily: "'Fraunces',serif", fontSize: 20, color: "#383a37", marginBottom: 6 }}>No tenants found</div>
+          <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, color: "#383a37", marginBottom: 6 }}>No tenants found</div>
           <div style={{ fontSize: 13 }}>{filter === "owned" ? "No Owned or Sold deals in the database." : "Upload OMs to see tenant analytics."}</div>
         </div>
       ) : (
@@ -740,22 +740,22 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                 const ignored = ignoredKeys.has(row.key);
                 return (
                   <div key={row.key} style={{ display: "flex", alignItems: "center", gap: 10, opacity: ignored ? 0.35 : 1, transition: "opacity 0.15s" }}>
-                    <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
+                    <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b3b1aa", flexShrink: 0 }}>{i + 1}</div>
                     <div style={{ flex:"1 1 0", minWidth:0, overflow:"hidden" }}>
                       <div style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                         <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
                       </div>
                       <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:1, flexWrap:"nowrap" }}>
-                        <span style={{ fontSize:10, color:"#b8b0a3", whiteSpace:"nowrap" }}>
+                        <span style={{ fontSize:10, color:"#b3b1aa", whiteSpace:"nowrap" }}>
                           {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
-                          {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount ? <span style={{ color:"#6dba43", marginLeft:3 }}>({row.ownedCount} owned)</span> : null}
-                          {filter === "all" && row.ownedCount === 0 ? <span style={{ color:"#c8b89a", marginLeft:3, fontStyle:"italic" }}>unowned</span> : null}
+                          {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount ? <span style={{ color:"#5bba47", marginLeft:3 }}>({row.ownedCount} owned)</span> : null}
+                          {filter === "all" && row.ownedCount === 0 ? <span style={{ color:"#c4c1b8", marginLeft:3, fontStyle:"italic" }}>unowned</span> : null}
                         </span>
-                        {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>{row.parentCo}</button>}
+                        {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#94928b", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f3f2ee" }}>{row.parentCo}</button>}
                       </div>
                     </div>
-                    <MiniBar value={row.totalAnnualRent} max={maxRent} color="#6dba43" />
-                    <div style={{ width: 70, textAlign: "right", fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0 }}>{fmtRent(row.totalAnnualRent)}</div>
+                    <MiniBar value={row.totalAnnualRent} max={maxRent} color="#5bba47" />
+                    <div style={{ width: 70, textAlign: "right", fontSize: 11, color: "#55544f", fontWeight: 600, flexShrink: 0 }}>{fmtRent(row.totalAnnualRent)}</div>
                     <IgnoreBtn ignored={ignored} onToggle={() => toggleIgnore(row.key)} />
                   </div>
                 );
@@ -771,31 +771,31 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                 const ignored = ignoredKeys.has(row.key);
                 return (
                   <div key={row.key} style={{ display: "flex", alignItems: "center", gap: 10, opacity: ignored ? 0.35 : 1, transition: "opacity 0.15s" }}>
-                    <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
+                    <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b3b1aa", flexShrink: 0 }}>{i + 1}</div>
                     <div style={{ flex:"1 1 0", minWidth:0, overflow:"hidden" }}>
                       <div style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                         <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
                       </div>
                       <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:1, flexWrap:"nowrap" }}>
-                        <span style={{ fontSize:10, color:"#b8b0a3", whiteSpace:"nowrap" }}>
+                        <span style={{ fontSize:10, color:"#b3b1aa", whiteSpace:"nowrap" }}>
                           {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
-                          {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount ? <span style={{ color:"#6dba43", marginLeft:3 }}>({row.ownedCount} owned)</span> : null}
-                          {filter === "all" && row.ownedCount === 0 ? <span style={{ color:"#c8b89a", marginLeft:3, fontStyle:"italic" }}>unowned</span> : null}
+                          {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount ? <span style={{ color:"#5bba47", marginLeft:3 }}>({row.ownedCount} owned)</span> : null}
+                          {filter === "all" && row.ownedCount === 0 ? <span style={{ color:"#c4c1b8", marginLeft:3, fontStyle:"italic" }}>unowned</span> : null}
                         </span>
-                        {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>{row.parentCo}</button>}
+                        {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#94928b", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f3f2ee" }}>{row.parentCo}</button>}
                       </div>
                     </div>
                     <MiniBar value={row.locationCount} max={maxCount} color="#6baed6" />
-                    <div style={{ width: 52, textAlign: "right", fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0 }}>
+                    <div style={{ width: 52, textAlign: "right", fontSize: 11, color: "#55544f", fontWeight: 600, flexShrink: 0 }}>
                       {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
                       {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount && (
-                        <div style={{ color:"#6dba43", fontSize:9, fontWeight:400 }}>({row.ownedCount} owned)</div>
+                        <div style={{ color:"#5bba47", fontSize:9, fontWeight:400 }}>({row.ownedCount} owned)</div>
                       )}
                       {filter === "all" && row.ownedCount === 0 && (
-                        <div style={{ color:"#a69e91", fontSize:9, fontWeight:400, fontStyle:"italic" }}>unowned</div>
+                        <div style={{ color:"#94928b", fontSize:9, fontWeight:400, fontStyle:"italic" }}>unowned</div>
                       )}
                     </div>
-                    <div style={{ width: 60, textAlign: "right", fontSize: 10.5, color: "#a89f8f", flexShrink: 0 }}>{fmtRent(row.totalAnnualRent)}</div>
+                    <div style={{ width: 60, textAlign: "right", fontSize: 10.5, color: "#9b9992", flexShrink: 0 }}>{fmtRent(row.totalAnnualRent)}</div>
                     <IgnoreBtn ignored={ignored} onToggle={() => toggleIgnore(row.key)} />
                   </div>
                 );
@@ -812,27 +812,27 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                   const ignored = ignoredKeys.has(row.key);
                   return (
                     <div key={row.key} style={{ display:"flex", alignItems:"center", gap:8, opacity: ignored ? 0.35 : 1, transition: "opacity 0.15s" }}>
-                      <span style={{ width:16, textAlign:"right", fontSize:11, color:"#c8b89a", flexShrink:0 }}>{i+1}</span>
+                      <span style={{ width:16, textAlign:"right", fontSize:11, color:"#c4c1b8", flexShrink:0 }}>{i+1}</span>
                       <div style={{ flex:"1 1 0", minWidth:0, overflow:"hidden" }}>
                         <div style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                           <TenantLink name={tenantLabel(row.displayName)} onClick={onTenantClick} />
                         </div>
                         <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:1, flexWrap:"nowrap" }}>
-                          <span style={{ fontSize:10, color:"#b8b0a3", whiteSpace:"nowrap" }}>
+                          <span style={{ fontSize:10, color:"#b3b1aa", whiteSpace:"nowrap" }}>
                             {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
-                            {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount ? <span style={{ color:"#6dba43", marginLeft:3 }}>({row.ownedCount} owned)</span> : null}
-                            {filter === "all" && row.ownedCount === 0 ? <span style={{ color:"#c8b89a", marginLeft:3, fontStyle:"italic" }}>unowned</span> : null}
+                            {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount ? <span style={{ color:"#5bba47", marginLeft:3 }}>({row.ownedCount} owned)</span> : null}
+                            {filter === "all" && row.ownedCount === 0 ? <span style={{ color:"#c4c1b8", marginLeft:3, fontStyle:"italic" }}>unowned</span> : null}
                           </span>
-                          {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#a69e91", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f1ece1" }}>{row.parentCo}</button>}
+                          {row.parentCo && <button onClick={() => onParentClick?.(row.parentCo!)} style={{ background:"transparent", border:"none", padding:"1px 5px", borderRadius:3, cursor:onParentClick?"pointer":"default", fontSize:9, color:"#94928b", fontWeight:500, whiteSpace:"nowrap", backgroundColor:"#f3f2ee" }}>{row.parentCo}</button>}
                         </div>
                       </div>
-                      <div style={{ flex:1, background:"#f1ece1", borderRadius:4, height:6, overflow:"hidden" }}>
+                      <div style={{ flex:1, background:"#f3f2ee", borderRadius:4, height:6, overflow:"hidden" }}>
                         <div style={{ width:`${(row.totalSF/maxSF)*100}%`, background:"#b08968", height:"100%", borderRadius:4 }} />
                       </div>
-                      <span style={{ width:70, textAlign:"right", fontSize:11, color:"#5c5850", fontWeight:600, flexShrink:0 }}>
+                      <span style={{ width:70, textAlign:"right", fontSize:11, color:"#55544f", fontWeight:600, flexShrink:0 }}>
                         {row.totalSF >= 1000 ? `${(row.totalSF/1000).toFixed(0)}K SF` : `${row.totalSF.toLocaleString()} SF`}
                       </span>
-                      <span style={{ width:40, textAlign:"right", fontSize:10, color:"#b8b0a3", flexShrink:0 }}>
+                      <span style={{ width:40, textAlign:"right", fontSize:10, color:"#b3b1aa", flexShrink:0 }}>
                         {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}
                       </span>
                       <IgnoreBtn ignored={ignored} onToggle={() => toggleIgnore(row.key)} />
@@ -848,7 +848,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
           {(formatStats.atm || formatStats.fuelpad || formatStats.storage) && (
             <Card style={{ marginBottom: 14 }}>
               <SectionLabel>Special formats — separate from brand averages</SectionLabel>
-              <div style={{ fontSize: 11, color: "#a69e91", marginTop: -8, marginBottom: 12, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 11, color: "#94928b", marginTop: -8, marginBottom: 12, lineHeight: 1.5 }}>
                 ATMs, fuel / gas pads and storage annexes are tracked as their own formats so their footprints don&rsquo;t skew a brand&rsquo;s size, rent or sales medians. Their own averages are below — tap a card to filter the list.
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
@@ -859,23 +859,23 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                   return (
                     <div key={fmt} onClick={() => setFormatFilter(active ? "all" : fmt)}
                       title={active ? "Showing this format — tap to clear" : `Filter the tenant list to ${plural}`}
-                      style={{ border: `1px solid ${active ? "#2a2c27" : "#ece5d7"}`, background: active ? "#faf8f3" : "#fff", borderRadius: 10, padding: "13px 15px", cursor: "pointer" }}>
+                      style={{ border: `1px solid ${active ? "#232422" : "#ebeae5"}`, background: active ? "#faf8f3" : "#fff", borderRadius: 10, padding: "13px 15px", cursor: "pointer" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9 }}>
                         <span style={{ fontWeight: 700, color: "#383a37", fontSize: 13 }}>{plural}</span>
-                        <span style={{ fontSize: 10, color: "#a69e91" }}>{s.brands} brand{s.brands !== 1 ? "s" : ""} · {s.locations} loc{s.locations !== 1 ? "s" : ""}</span>
+                        <span style={{ fontSize: 10, color: "#94928b" }}>{s.brands} brand{s.brands !== 1 ? "s" : ""} · {s.locations} loc{s.locations !== 1 ? "s" : ""}</span>
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                         <div>
-                          <div style={{ fontSize: 9, letterSpacing: "0.07em", textTransform: "uppercase", color: "#b8b0a3", fontWeight: 700, marginBottom: 2 }}>Avg SF</div>
-                          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: "#26281f" }}>{s.avgSF != null ? Math.round(s.avgSF).toLocaleString() : "—"}</div>
+                          <div style={{ fontSize: 9, letterSpacing: "0.07em", textTransform: "uppercase", color: "#b3b1aa", fontWeight: 700, marginBottom: 2 }}>Avg SF</div>
+                          <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, color: "#232422" }}>{s.avgSF != null ? Math.round(s.avgSF).toLocaleString() : "—"}</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 9, letterSpacing: "0.07em", textTransform: "uppercase", color: "#b8b0a3", fontWeight: 700, marginBottom: 2 }}>Med. rent</div>
-                          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: "#26281f" }}>{s.medianPSF != null ? `$${Math.round(s.medianPSF)}` : "—"}<span style={{ fontSize: 9, color: "#a69e91" }}>{s.medianPSF != null ? " PSF" : ""}</span></div>
+                          <div style={{ fontSize: 9, letterSpacing: "0.07em", textTransform: "uppercase", color: "#b3b1aa", fontWeight: 700, marginBottom: 2 }}>Med. rent</div>
+                          <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, color: "#232422" }}>{s.medianPSF != null ? `$${Math.round(s.medianPSF)}` : "—"}<span style={{ fontSize: 9, color: "#94928b" }}>{s.medianPSF != null ? " PSF" : ""}</span></div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 9, letterSpacing: "0.07em", textTransform: "uppercase", color: "#b8b0a3", fontWeight: 700, marginBottom: 2 }}>Total rent</div>
-                          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: "#26281f" }}>{fmtRent(s.totalRent)}</div>
+                          <div style={{ fontSize: 9, letterSpacing: "0.07em", textTransform: "uppercase", color: "#b3b1aa", fontWeight: 700, marginBottom: 2 }}>Total rent</div>
+                          <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, color: "#232422" }}>{fmtRent(s.totalRent)}</div>
                         </div>
                       </div>
                     </div>
@@ -888,12 +888,12 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
           {/* All Tenants — searchable full list */}
           <Card>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
-              <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700 }}>
+              <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9b9992", fontWeight: 700 }}>
                 All Tenants ({rows.length})
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 {(hasATMs || hasFuelPads || hasStorage) && (
-                  <div style={{ display: "inline-flex", background: "#f1eadc", borderRadius: 7, padding: 2, flexShrink: 0 }}
+                  <div style={{ display: "inline-flex", background: "#efeee9", borderRadius: 7, padding: 2, flexShrink: 0 }}
                     title="Filter by store format. ATMs, fuel pads and storage annexes are tracked separately so their footprints don't skew brand size / rent / sales medians.">
                     {([
                       ["all", "All"],
@@ -903,7 +903,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                       ...(hasStorage ? [["storage", "Storage"] as const] : []),
                     ] as Array<[typeof formatFilter, string]>).map(([val, lbl]) => (
                       <button key={val} onClick={() => setFormatFilter(val)}
-                        style={{ background: formatFilter === val ? "#2a2c27" : "transparent", border: "none", color: formatFilter === val ? "#f6f2ea" : "#5c5047", padding: "4px 9px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+                        style={{ background: formatFilter === val ? "#232422" : "transparent", border: "none", color: formatFilter === val ? "#faf9f5" : "#4f4d48", padding: "4px 9px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Roboto',sans-serif", whiteSpace: "nowrap" }}>
                         {lbl}
                       </button>
                     ))}
@@ -911,7 +911,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                 )}
                 <button onClick={exportTenants} disabled={activeRows.length === 0}
                   title="Export the tenant analysis list to Excel"
-                  style={{ background: "transparent", border: "1px solid #c8b89a", color: activeRows.length === 0 ? "#c9c2b8" : "#5c5047", padding: "5px 10px", borderRadius: 7, cursor: activeRows.length === 0 ? "default" : "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+                  style={{ background: "transparent", border: "1px solid #c4c1b8", color: activeRows.length === 0 ? "#c6c4bd" : "#4f4d48", padding: "5px 10px", borderRadius: 7, cursor: activeRows.length === 0 ? "default" : "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Roboto',sans-serif", whiteSpace: "nowrap" }}>
                   ⬇ Excel
                 </button>
                 <input
@@ -919,29 +919,29 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                   onChange={e => setTenantSearch(e.target.value)}
                   placeholder="Search tenants…"
                   autoComplete="off" autoCorrect="off" spellCheck={false}
-                  style={{ fontSize: 12, padding: "5px 10px", border: "1px solid #e3dccd", borderRadius: 7, color: "#383a37", background: "#f9f6f0", fontFamily: "'Inter',sans-serif", maxWidth: 220, width: "100%", minWidth: 0, boxSizing: "border-box" }}
+                  style={{ fontSize: 12, padding: "5px 10px", border: "1px solid #dfddd6", borderRadius: 7, color: "#383a37", background: "#f9f6f0", fontFamily: "'Roboto',sans-serif", maxWidth: 220, width: "100%", minWidth: 0, boxSizing: "border-box" }}
                 />
               </div>
             </div>
             {mergeMode && (
               <div style={{ background: "#f4f8ef", border: "1px solid #d6e7c4", borderRadius: 9, padding: "10px 12px", marginBottom: 12 }}>
                 {selectedRows.length < 2 ? (
-                  <div style={{ fontSize: 12, color: "#5c5047", lineHeight: 1.5 }}>
-                    <b>Link mode on.</b> Tick two or more rows below that are the same tenant (e.g. <i>Walmart</i> and <i>Wal-Mart</i>), then choose which name to keep. Search narrows the list. {selectedRows.length === 1 && <span style={{ color: "#3f7a1f" }}>1 selected — pick at least one more.</span>}
+                  <div style={{ fontSize: 12, color: "#4f4d48", lineHeight: 1.5 }}>
+                    <b>Link mode on.</b> Tick two or more rows below that are the same tenant (e.g. <i>Walmart</i> and <i>Wal-Mart</i>), then choose which name to keep. Search narrows the list. {selectedRows.length === 1 && <span style={{ color: "#3e8a2f" }}>1 selected — pick at least one more.</span>}
                   </div>
                 ) : (
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 12, color: "#5c5047", fontWeight: 600 }}>Link {selectedRows.length} into:</span>
+                    <span style={{ fontSize: 12, color: "#4f4d48", fontWeight: 600 }}>Link {selectedRows.length} into:</span>
                     <select value={effectiveCanonKey ?? ""} onChange={e => setCanonKey(e.target.value)}
-                      style={{ fontSize: 12, padding: "5px 8px", border: "1px solid #c8b89a", borderRadius: 7, background: "#fff", fontFamily: "'Inter',sans-serif", maxWidth: 240 }}>
+                      style={{ fontSize: 12, padding: "5px 8px", border: "1px solid #c4c1b8", borderRadius: 7, background: "#fff", fontFamily: "'Roboto',sans-serif", maxWidth: 240 }}>
                       {selectedRows.map(r => <option key={r.key} value={r.key}>{tenantLabel(r.displayName)}</option>)}
                     </select>
                     <button onClick={doMerge}
-                      style={{ background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 7, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                      style={{ background: "#3e8a2f", color: "#fff", border: "none", borderRadius: 7, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
                       Link tenants
                     </button>
                     <button onClick={() => { setMergeSel(new Set()); setCanonKey(null); }}
-                      style={{ background: "transparent", color: "#a89f8f", border: "none", padding: "6px 8px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                      style={{ background: "transparent", color: "#9b9992", border: "none", padding: "6px 8px", fontSize: 12, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
                       Clear
                     </button>
                   </div>
@@ -950,7 +950,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                   <div style={{ marginTop: 10, borderTop: "1px solid #e3ecd6", paddingTop: 9, display: "flex", flexDirection: "column", gap: 5 }}>
                     <div style={{ fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8aa56b", fontWeight: 700 }}>Linked tenants ({userMerges.length})</div>
                     {userMerges.map(m => (
-                      <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, color: "#5c5047" }}>
+                      <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, color: "#4f4d48" }}>
                         <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           <b>{m.canonical}</b> ← {m.variants.filter(v => tenantLabel(v) !== m.canonical).map(v => tenantLabel(v)).join(", ") || "(variants)"}
                         </span>
@@ -963,7 +963,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
             )}
             <div style={{ maxHeight: 420, overflowY: "auto", display: "flex", flexDirection: "column" }}>
               {filteredAllTenants.length === 0 ? (
-                <div style={{ padding: "20px 0", textAlign: "center", color: "#a89f8f", fontSize: 12 }}>
+                <div style={{ padding: "20px 0", textAlign: "center", color: "#9b9992", fontSize: 12 }}>
                   No tenants match &ldquo;{tenantSearch}&rdquo;
                 </div>
               ) : (
@@ -977,7 +977,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                       style={{
                         display: "flex", alignItems: "center", gap: 10,
                         padding: "7px 2px",
-                        borderBottom: i < filteredAllTenants.length - 1 ? "1px solid #f5f1ea" : "none",
+                        borderBottom: i < filteredAllTenants.length - 1 ? "1px solid #f6f5f1" : "none",
                         opacity: ignored ? 0.35 : 1,
                         transition: "opacity 0.15s",
                         cursor: mergeMode ? "pointer" : "default",
@@ -986,7 +986,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                     >
                       {mergeMode ? (
                         <input type="checkbox" checked={sel} readOnly
-                          style={{ width: 14, height: 14, flexShrink: 0, accentColor: "#3f7a1f", marginLeft: 6 }} />
+                          style={{ width: 14, height: 14, flexShrink: 0, accentColor: "#3e8a2f", marginLeft: 6 }} />
                       ) : (
                         <div style={{ width: 32, textAlign: "right", fontSize: 10, color: "#c8b8a3", flexShrink: 0 }}>
                           {i + 1}
@@ -1010,17 +1010,17 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                             <span style={{ fontSize: 8.5, color: "#3a5b7c", background: "#e8eff5", border: "1px solid #b8cce0", padding: "0px 5px", borderRadius: 8, fontWeight: 700, marginLeft: 6, verticalAlign: "middle" }} title="Ground lease — base rent with no leasable SF; excluded from SF-based averages">GROUND LEASE</span>
                           )}
                         </div>
-                        <div style={{ fontSize: 10, color: "#b8b0a3", marginTop: 1, display: "flex", alignItems: "center", gap: 4, flexWrap: "nowrap" }}>
+                        <div style={{ fontSize: 10, color: "#b3b1aa", marginTop: 1, display: "flex", alignItems: "center", gap: 4, flexWrap: "nowrap" }}>
                           <span>{row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}</span>
                           {filter === "all" && row.ownedCount > 0 && row.ownedCount < row.locationCount && (
-                            <span style={{ color: "#6dba43" }}>({row.ownedCount} owned)</span>
+                            <span style={{ color: "#5bba47" }}>({row.ownedCount} owned)</span>
                           )}
                           {filter === "all" && row.ownedCount === 0 && (
-                            <span style={{ color: "#c8b89a", fontStyle: "italic" }}>unowned</span>
+                            <span style={{ color: "#c4c1b8", fontStyle: "italic" }}>unowned</span>
                           )}
                         </div>
                       </div>
-                      <div style={{ fontSize: 11, color: "#5c5850", fontWeight: 600, flexShrink: 0, minWidth: 54, textAlign: "right" }}>
+                      <div style={{ fontSize: 11, color: "#55544f", fontWeight: 600, flexShrink: 0, minWidth: 54, textAlign: "right" }}>
                         {fmtRent(row.totalAnnualRent)}
                       </div>
                       {!mergeMode && <IgnoreBtn ignored={ignored} onToggle={() => toggleIgnore(row.key)} />}
@@ -1033,28 +1033,28 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
 
           {/* Parent Company Exposure */}
           {parentRows.length > 0 && (
-            <div style={{ background:"#fff", border:"1px solid #efe8da", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
+            <div style={{ background:"#fff", border:"1px solid #ecebe6", borderRadius:12, padding:"18px 20px", marginBottom:14, boxShadow:"0 1px 2px rgba(56,58,55,0.04)" }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, flexWrap:"wrap", marginBottom:6 }}>
-                <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#a69e91", fontWeight:600, textTransform:"uppercase" }}>Parent Company Exposure</div>
+                <div style={{ fontSize:11, letterSpacing:"0.06em", color:"#94928b", fontWeight:600, textTransform:"uppercase" }}>Parent Company Exposure</div>
                 <div style={{ display:"inline-flex", alignItems:"center", gap:8 }}>
                 <button onClick={exportParents}
                   title="Export parent company exposure to Excel"
-                  style={{ background:"transparent", border:"1px solid #c8b89a", color:"#5c5047", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif", whiteSpace:"nowrap" }}>
+                  style={{ background:"transparent", border:"1px solid #c4c1b8", color:"#4f4d48", padding:"4px 10px", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"'Roboto',sans-serif", whiteSpace:"nowrap" }}>
                   ⬇ Excel
                 </button>
-                <div style={{ display:"inline-flex", background:"#f1eadc", borderRadius:7, padding:2, flexShrink:0 }}>
+                <div style={{ display:"inline-flex", background:"#efeee9", borderRadius:7, padding:2, flexShrink:0 }}>
                   {([["rent","Rent"],["stores","Store count"]] as const).map(([key,label]) => (
                     <button key={key} onClick={() => setParentMode(key)}
-                      style={{ background: parentMode===key ? "#fff" : "transparent", color: parentMode===key ? "#26281f" : "#8b8578",
+                      style={{ background: parentMode===key ? "#fff" : "transparent", color: parentMode===key ? "#232422" : "#7a7973",
                         border:"none", borderRadius:5, padding:"4px 11px", fontSize:11, fontWeight:600, cursor:"pointer",
-                        fontFamily:"'Inter',sans-serif", boxShadow: parentMode===key ? "0 1px 2px rgba(0,0,0,0.08)" : "none" }}>
+                        fontFamily:"'Roboto',sans-serif", boxShadow: parentMode===key ? "0 1px 2px rgba(0,0,0,0.08)" : "none" }}>
                       {label}
                     </button>
                   ))}
                 </div>
                 </div>
               </div>
-              <div style={{ fontSize:10, color:"#a69e91", marginBottom:12 }}>
+              <div style={{ fontSize:10, color:"#94928b", marginBottom:12 }}>
                 {parentMode === "rent"
                   ? "Share of base rent across brands sharing a parent corporation"
                   : "Share of store count across brands sharing a parent corporation"}
@@ -1064,9 +1064,9 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                   ? (parentTotalRent > 0 ? (pr.totalAnnualRent / parentTotalRent) * 100 : 0)
                   : (parentTotalStores > 0 ? (pr.locationCount / parentTotalStores) * 100 : 0);
                 return (
-                <div key={pr.parent} style={{ borderTop:"1px solid #f1ece1", padding:"10px 0" }}>
+                <div key={pr.parent} style={{ borderTop:"1px solid #f3f2ee", padding:"10px 0" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:3 }}>
-                    <button onClick={() => onParentClick?.(pr.parent)} style={{ background:"transparent", border:"none", padding:0, cursor:onParentClick?"pointer":"default", fontFamily:"'Fraunces',serif", fontSize:14, fontWeight:600, color:"#383a37", textDecoration:onParentClick?"underline":"none" }}>
+                    <button onClick={() => onParentClick?.(pr.parent)} style={{ background:"transparent", border:"none", padding:0, cursor:onParentClick?"pointer":"default", fontFamily:"'Lora',Georgia,serif", fontSize:14, fontWeight:600, color:"#383a37", textDecoration:onParentClick?"underline":"none" }}>
                       {pr.parent}
                     </button>
                     <span style={{ fontSize:12, color:"#0f7a4e", fontWeight:600 }}>
@@ -1075,12 +1075,12 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                         : `${pr.locationCount} store${pr.locationCount !== 1 ? "s" : ""} · ${pct.toFixed(1)}%`}
                     </span>
                   </div>
-                  <div style={{ height:6, background:"#f1eadc", borderRadius:4, overflow:"hidden", margin:"4px 0 6px" }}>
-                    <div style={{ width:`${Math.min(100,pct)}%`, height:"100%", background:"#6dba43", borderRadius:4 }} />
+                  <div style={{ height:6, background:"#efeee9", borderRadius:4, overflow:"hidden", margin:"4px 0 6px" }}>
+                    <div style={{ width:`${Math.min(100,pct)}%`, height:"100%", background:"#5bba47", borderRadius:4 }} />
                   </div>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <span style={{ fontSize:11, color:"#6f6a5f" }}>{[...pr.brands].join(" · ")}</span>
-                    <span style={{ fontSize:10, color:"#a89f8f", flexShrink:0, marginLeft:8 }}>
+                    <span style={{ fontSize:11, color:"#676767" }}>{[...pr.brands].join(" · ")}</span>
+                    <span style={{ fontSize:10, color:"#9b9992", flexShrink:0, marginLeft:8 }}>
                       {parentMode === "rent" ? `${pr.locationCount} loc${pr.locationCount !== 1 ? "s" : ""}` : fmtRent(pr.totalAnnualRent)}
                     </span>
                   </div>
@@ -1088,9 +1088,9 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                 );
               })}
               {parentRows.length > 10 && (
-                <div style={{ borderTop:"1px solid #f1ece1", paddingTop:10, textAlign:"center" }}>
+                <div style={{ borderTop:"1px solid #f3f2ee", paddingTop:10, textAlign:"center" }}>
                   <button onClick={() => setShowAllParents(v => !v)}
-                    style={{ background:"transparent", border:"none", cursor:"pointer", fontSize:11, color:"#2d4ecf", fontFamily:"'Inter',sans-serif", textDecoration:"underline" }}>
+                    style={{ background:"transparent", border:"none", cursor:"pointer", fontSize:11, color:"#2d4ecf", fontFamily:"'Roboto',sans-serif", textDecoration:"underline" }}>
                     {showAllParents ? "Show less ↑" : `See all ${parentRows.length} parent companies →`}
                   </button>
                 </div>
@@ -1102,35 +1102,35 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
             <Card style={{ flex: 1, minWidth: 260 }}>
               <SectionLabel>Credit Quality</SectionLabel>
-              <div style={{ fontSize: 11, color: "#5c5850" }}>
-                <span style={{ fontWeight: 600, color: "#3f7a1f" }}>Investment Grade</span>
-                <span style={{ color: "#a89f8f", marginLeft: 8 }}>{igPct.toFixed(1)}% · {fmtRent(igRent)}</span>
+              <div style={{ fontSize: 11, color: "#55544f" }}>
+                <span style={{ fontWeight: 600, color: "#3e8a2f" }}>Investment Grade</span>
+                <span style={{ color: "#9b9992", marginLeft: 8 }}>{igPct.toFixed(1)}% · {fmtRent(igRent)}</span>
               </div>
-              <div style={{ fontSize: 11, color: "#5c5850", marginTop: 4 }}>
+              <div style={{ fontSize: 11, color: "#55544f", marginTop: 4 }}>
                 <span style={{ fontWeight: 600, color: "#8a8579" }}>Not Rated / Non-IG</span>
-                <span style={{ color: "#a89f8f", marginLeft: 8 }}>{notRatedPct.toFixed(1)}% · {fmtRent(totalRent - igRent)}</span>
+                <span style={{ color: "#9b9992", marginLeft: 8 }}>{notRatedPct.toFixed(1)}% · {fmtRent(totalRent - igRent)}</span>
               </div>
               <StackedBar igPct={igPct} notRatedPct={notRatedPct} />
             </Card>
 
             <Card style={{ flex: 1, minWidth: 260 }}>
               <SectionLabel>Anchor vs Inline</SectionLabel>
-              <div style={{ fontSize: 11, color: "#5c5850" }}>
-                <span style={{ fontWeight: 600, color: "#26281f" }}>Anchor</span>
-                <span style={{ color: "#a89f8f", marginLeft: 8 }}>{anchorPct.toFixed(1)}% of rent · {fmtRent(anchorRent)}</span>
+              <div style={{ fontSize: 11, color: "#55544f" }}>
+                <span style={{ fontWeight: 600, color: "#232422" }}>Anchor</span>
+                <span style={{ color: "#9b9992", marginLeft: 8 }}>{anchorPct.toFixed(1)}% of rent · {fmtRent(anchorRent)}</span>
               </div>
-              <div style={{ fontSize: 11, color: "#5c5850", marginTop: 4 }}>
+              <div style={{ fontSize: 11, color: "#55544f", marginTop: 4 }}>
                 <span style={{ fontWeight: 600, color: "#8a8579" }}>Inline</span>
-                <span style={{ color: "#a89f8f", marginLeft: 8 }}>{inlinePct.toFixed(1)}% of rent · {fmtRent(totalRent - anchorRent)}</span>
+                <span style={{ color: "#9b9992", marginLeft: 8 }}>{inlinePct.toFixed(1)}% of rent · {fmtRent(totalRent - anchorRent)}</span>
               </div>
               <div style={{ display: "flex", height: 28, borderRadius: 8, overflow: "hidden", gap: 1.5, marginTop: 12 }}>
                 {anchorPct > 0 && (
-                  <div title={`Anchor: ${anchorPct.toFixed(1)}%`} style={{ flex: anchorPct, background: "#6dba43", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div title={`Anchor: ${anchorPct.toFixed(1)}%`} style={{ flex: anchorPct, background: "#5bba47", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {anchorPct >= 10 && <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}>{anchorPct.toFixed(0)}%</span>}
                   </div>
                 )}
                 {inlinePct > 0 && (
-                  <div title={`Inline: ${inlinePct.toFixed(1)}%`} style={{ flex: inlinePct, background: "#c9c2b8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div title={`Inline: ${inlinePct.toFixed(1)}%`} style={{ flex: inlinePct, background: "#c6c4bd", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {inlinePct >= 10 && <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}>{inlinePct.toFixed(0)}%</span>}
                   </div>
                 )}
@@ -1142,7 +1142,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
           {hasSalesData && (
             <>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9b9992", fontWeight: 700 }}>
                   Sales Performance
                 </div>
                 <PillToggle options={salesOpts} value={salesMetric} onChange={v => setSalesMetric(v)} />
@@ -1152,24 +1152,24 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                 <Card style={{ flex: 1, minWidth: 300 }}>
                   <SectionLabel>Top Individual Stores</SectionLabel>
                   {topStores.length === 0 ? (
-                    <div style={{ fontSize: 12, color: "#a89f8f" }}>No {salesMetric === "gross" ? "gross sales" : "sales PSF"} data available.</div>
+                    <div style={{ fontSize: 12, color: "#9b9992" }}>No {salesMetric === "gross" ? "gross sales" : "sales PSF"} data available.</div>
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
                       {topStores.map((occ, i) => {
                         const metricVal = salesMetric === "psf" ? occ.salesPSF : (occ.grossSales ?? 0);
                         return (
                           <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
+                            <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b3b1aa", flexShrink: 0 }}>{i + 1}</div>
                             <div style={{ flex: "0 0 190px", minWidth: 0 }}>
                               <TenantLink name={tenantLabel(occ.displayName)} onClick={onTenantClick} />
-                              <div style={{ fontSize: 10, color: "#b8b0a3", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{occ.dealName}</div>
+                              <div style={{ fontSize: 10, color: "#b3b1aa", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{occ.dealName}</div>
                             </div>
                             <MiniBar value={metricVal} max={maxStoreVal as number} color="#e8a631" />
                             <div style={{ textAlign: "right", flexShrink: 0, minWidth: 80 }}>
-                              <div style={{ fontSize: 11, color: "#5c5850", fontWeight: 600 }}>
+                              <div style={{ fontSize: 11, color: "#55544f", fontWeight: 600 }}>
                                 {salesMetric === "psf" ? fmtPSF(occ.salesPSF) : fmtRent(occ.grossSales ?? 0)}
                               </div>
-                              {occ.salesYear && <div style={{ fontSize: 9.5, color: "#b8b0a3" }}>{occ.salesYear}</div>}
+                              {occ.salesYear && <div style={{ fontSize: 9.5, color: "#b3b1aa" }}>{occ.salesYear}</div>}
                             </div>
                           </div>
                         );
@@ -1179,24 +1179,24 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                 </Card>
 
                 <Card style={{ flex: 1, minWidth: 300 }}>
-                  <SectionLabel>Top Chains by Average <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: 9, color: "#c9c2b8" }}>· 2+ reporting stores</span></SectionLabel>
+                  <SectionLabel>Top Chains by Average <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: 9, color: "#c6c4bd" }}>· 2+ reporting stores</span></SectionLabel>
                   {topChains.length === 0 ? (
-                    <div style={{ fontSize: 12, color: "#a89f8f" }}>No chains with 2+ reporting stores found.</div>
+                    <div style={{ fontSize: 12, color: "#9b9992" }}>No chains with 2+ reporting stores found.</div>
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
                       {topChains.map((chain, i) => (
                         <div key={chain.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b8b0a3", flexShrink: 0 }}>{i + 1}</div>
+                          <div style={{ width: 18, textAlign: "right", fontSize: 10.5, color: "#b3b1aa", flexShrink: 0 }}>{i + 1}</div>
                           <div style={{ flex: "0 0 190px", minWidth: 0 }}>
                             <TenantLink name={tenantLabel(chain.displayName)} onClick={onTenantClick} />
-                            <div style={{ fontSize: 10, color: "#b8b0a3", marginTop: 1 }}>{chain.values.length} stores</div>
+                            <div style={{ fontSize: 10, color: "#b3b1aa", marginTop: 1 }}>{chain.values.length} stores</div>
                           </div>
                           <MiniBar value={chain.avg} max={maxChainVal as number} color="#6baed6" />
                           <div style={{ textAlign: "right", flexShrink: 0, minWidth: 100 }}>
-                            <div style={{ fontSize: 11, color: "#5c5850", fontWeight: 600 }}>
+                            <div style={{ fontSize: 11, color: "#55544f", fontWeight: 600 }}>
                               {salesMetric === "psf" ? fmtPSF(chain.avg) : fmtRent(chain.avg)}
                             </div>
-                            <div style={{ fontSize: 9.5, color: "#b8b0a3" }}>
+                            <div style={{ fontSize: 9.5, color: "#b3b1aa" }}>
                               {salesMetric === "psf"
                                 ? `$${Math.round(chain.min)}–$${Math.round(chain.max)}`
                                 : `${fmtRent(chain.min)}–${fmtRent(chain.max)}`}

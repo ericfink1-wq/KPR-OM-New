@@ -2,6 +2,23 @@
 
 Persistent context for this repo. Read this fully at the start of every session.
 
+## ROSTER SCRUB + DESIGN SYSTEM (10/18/26)
+- `om-database lib/rosterScrub.ts` (`scrubRoster`, `buildMarketIndex`, `benchmarkFor`, `nextRentStep`): ONE
+  standard scrub for every OM — summary band (`RosterScrubBand.tsx`, top of Tenants tab), per-tenant flags +
+  market-rent benchmark (brand n≥2 → category+size n≥5 → state+size n≥5; ±15% band). Below/above market are
+  reported SEPARATELY, never netted. `isProposedTenant` (utils) = proposed/unsigned → excluded from occupancy,
+  rent, NOI (`recomputeRosterMetrics` too) unless the user toggles them on. Exports: `kprStandardExport.ts`
+  (KPR Standard Rent Roll, fixed `STANDARD_COLUMNS` — don't reorder, a test pins them) + `OmSummaryPDF.tsx` (1 page).
+- Roster is ONE LINE per tenant (`.kpr-roster`: nowrap, fixed row height, sticky head); detail lives in the
+  row-click drawer. Don't re-add wrapping columns — put new detail in the drawer.
+- Site-wide design system lives in `index.css`: tokens + `.kpr-page-head/-title/-sub/-kicker`, `.kpr-section-head`,
+  `.kpr-card`, `.kpr-table` (sticky th, right-aligned numbers, zebra only where no inline bg), `.kpr-chip`,
+  `.kpr-btn`, `.kpr-skel`. Fonts: Montserrat (caps heads) / Lora (display) / Roboto (body, tabular nums). The old
+  beige/Fraunces/Inter palette was remapped away — use the KPR tokens, never reintroduce them.
+- Datex: tenants use OCCPSTAT (`occStatus` C/N/I; I dropped, N = `futureLease`, excluded from live roster);
+  the dotted-TenantId drop is a fallback only. LeaseApp rows are APPLICATIONS ("leasing pipeline (applications)").
+- Home hero KPIs: `HomeLive.tsx` (lazy) — owned-only, from Datex + Asset Mgmt.
+
 ## SESSION 2026-06-19 (extraction-quality + self-improvement push). NEXT-SESSION PICKUP.
 All on `main`, typecheck-clean, 64 api-server tests green. Built this session:
 - **Continuous self-improvement loop** (`artifacts/api-server/src/lib/selfImprove.ts`,

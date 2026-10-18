@@ -18,8 +18,8 @@ import { useIsMobile } from "../hooks/use-mobile";
 // roster paste box). Source PDFs are never stored — each fact cites doc/section/page.
 
 const C = {
-  ink: "#383a37", sub: "#6f6a5f", faint: "#a69e91", line: "#efe8da",
-  green: "#3f7a1f", greenBg: "#eef3e6", greenBorder: "#b8d49a",
+  ink: "#383a37", sub: "#676767", faint: "#94928b", line: "#ecebe6",
+  green: "#3e8a2f", greenBg: "#eef3e6", greenBorder: "#b8d49a",
   amber: "#c97a18", amberBg: "#fbf1e4", amberBorder: "#e0c9a8",
   red: "#dc2626", redBg: "#fdecec", redBorder: "#f3c0c0",
 };
@@ -491,7 +491,7 @@ export default function LeaseAbstractModal({ open, onClose, mode, abstract, deal
       <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(42,44,40,0.52)", zIndex:2000, backdropFilter:"blur(2px)" }} aria-hidden="true" />
       <div
         role="dialog" aria-modal="true"
-        style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:2001, width:"min(760px, calc(100vw - 24px))", maxHeight:"88vh", display:"flex", flexDirection:"column", background:"#fff", borderRadius:14, boxShadow:"0 20px 60px rgba(42,44,40,0.22)", fontFamily:"'Inter',-apple-system,sans-serif" }}
+        style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:2001, width:"min(760px, calc(100vw - 24px))", maxHeight:"88vh", display:"flex", flexDirection:"column", background:"#fff", borderRadius:14, boxShadow:"0 20px 60px rgba(42,44,40,0.22)", fontFamily:"'Roboto',-apple-system,sans-serif" }}
       >
         <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", justifyContent:"space-between", gap:10, padding: isMobile ? "14px 16px 10px" : "18px 22px 12px", borderBottom:`1px solid ${C.line}` }}>
           <div style={{ display:"flex", alignItems:"flex-start", gap:8, minWidth:0 }}>

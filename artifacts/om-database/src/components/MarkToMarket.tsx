@@ -123,9 +123,9 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
   const dealsWithUpside = perDeal.filter(d => d.countedCount > 0).length;
 
   return (
-    <div style={{ padding: "20px 18px 80px", maxWidth: 940, margin: "0 auto", width: "100%", boxSizing: "border-box", fontFamily: "'Inter',sans-serif" }}>
-      <h1 style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: 22, fontWeight: 600, color: "#26281f", margin: "0 0 4px" }}>Mark-to-Market Upside</h1>
-      <p style={{ fontSize: 12.5, color: "#7d766a", margin: "0 0 16px", lineHeight: 1.5 }}>
+    <div style={{ padding: "20px 18px 80px", maxWidth: 940, margin: "0 auto", width: "100%", boxSizing: "border-box", fontFamily: "'Roboto',sans-serif" }}>
+      <h1 className="kpr-page-title">Mark-to-Market Upside</h1>
+      <p style={{ fontSize: 12.5, color: "#6b6a65", margin: "0 0 16px", lineHeight: 1.5 }}>
         In-place rents that sit below the same brand's portfolio-median rent — the rent you could recapture at rollover.
         Each store is compared only with the same brand in the same size band (under 10k, 10–25k, 25–50k, 50k+ SF) and region, falling back to national in that size band when the region has fewer than 3. Ground leases, pads and kiosks are left out. Medians are recency-weighted by lease start and come from your own database, not third-party market data, so treat them as directional. With fewer than 5 comparable stores the column shows where the rent ranks (percentile) instead of a % gap, and its dollars are not added to the upside totals. A store paying more than half its peers is never shown as below market.
       </p>
@@ -135,47 +135,47 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 16 }}>
-        <span style={{ fontSize: 12, color: "#8b8578", fontWeight: 600 }}>At least</span>
+        <span style={{ fontSize: 12, color: "#7a7973", fontWeight: 600 }}>At least</span>
         {THRESHOLDS.map(t => (
           <button key={t} onClick={() => setThreshold(t)}
             style={{ padding: "7px 13px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer", minHeight: 34,
-              border: `1px solid ${threshold === t ? "#6dba43" : "#e0d8c8"}`,
+              border: `1px solid ${threshold === t ? "#5bba47" : "#dcdad3"}`,
               background: threshold === t ? "#f0fae8" : "#fff",
-              color: threshold === t ? "#3f7a1f" : "#8b8578" }}>
+              color: threshold === t ? "#3e8a2f" : "#7a7973" }}>
             {t}% below
           </button>
         ))}
       </div>
 
       {benchmarks == null ? (
-        <p style={{ fontSize: 13, color: "#a89f8f", fontStyle: "italic" }}>Loading benchmarks…</p>
+        <p style={{ fontSize: 13, color: "#9b9992", fontStyle: "italic" }}>Loading benchmarks…</p>
       ) : (
         <>
           {/* Portfolio rollup */}
           <div style={{ background: "#f4f8ef", border: "1px solid #d7e6c6", borderRadius: 12, padding: "16px 18px", marginBottom: 16, display: "flex", gap: 28, flexWrap: "wrap" }}>
             <div>
               <div style={{ fontSize: 10.5, color: "#7a8a68", fontWeight: 600, marginBottom: 3 }}>Capturable upside / yr</div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: "#2f6b1f", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>{fmtMoney(totalUpside)}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: "#2f6b1f", fontFamily: "'Lora',Georgia,serif", lineHeight: 1 }}>{fmtMoney(totalUpside)}</div>
             </div>
             {totalLocked > 0 && (
               <div title="Upside sitting behind fixed-rate renewal options priced below market — the tenant can renew at the cheap rate, so this rent isn't capturable while the options remain.">
                 <div style={{ fontSize: 10.5, color: "#9a6b1f", fontWeight: 600, marginBottom: 3 }}>🔒 Locked by options / yr</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: "#9a6b1f", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>{fmtMoney(totalLocked)}</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "#9a6b1f", fontFamily: "'Lora',Georgia,serif", lineHeight: 1 }}>{fmtMoney(totalLocked)}</div>
               </div>
             )}
             <div>
               <div style={{ fontSize: 10.5, color: "#7a8a68", fontWeight: 600, marginBottom: 3 }}>Below-market leases</div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: "#2a2c28", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>{totalLeases}</div>
-              {thinLeases > 0 && <div style={{ fontSize: 10.5, color: "#a89f8f", marginTop: 3 }}>{thinLeases} with under {MIN_PEERS_FOR_DOLLARS} comps — not counted in $</div>}
+              <div style={{ fontSize: 24, fontWeight: 700, color: "#232422", fontFamily: "'Lora',Georgia,serif", lineHeight: 1 }}>{totalLeases}</div>
+              {thinLeases > 0 && <div style={{ fontSize: 10.5, color: "#9b9992", marginTop: 3 }}>{thinLeases} with under {MIN_PEERS_FOR_DOLLARS} comps — not counted in $</div>}
             </div>
             <div>
               <div style={{ fontSize: 10.5, color: "#7a8a68", fontWeight: 600, marginBottom: 3 }}>Deals with upside</div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: "#2a2c28", fontFamily: "'Fraunces',Georgia,serif", lineHeight: 1 }}>{dealsWithUpside}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: "#232422", fontFamily: "'Lora',Georgia,serif", lineHeight: 1 }}>{dealsWithUpside}</div>
             </div>
           </div>
 
           {perDeal.length === 0 ? (
-            <p style={{ fontSize: 13, color: "#a89f8f", fontStyle: "italic" }}>
+            <p style={{ fontSize: 13, color: "#9b9992", fontStyle: "italic" }}>
               No leases are {threshold}%+ below their brand benchmark{scope === "owned" ? " among your owned deals" : ""}.
               {scope === "owned" ? " Switch to All deals, or l" : " L"}ower the threshold — or this may mean rents are at/above market,
               or that few stores have 2+ same-brand peers of a similar size yet.
@@ -184,22 +184,22 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
             <>
               <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
                 <button onClick={() => setCollapsed(collapsed.size ? new Set() : new Set(perDeal.map(d => d.dealId)))}
-                  style={{ background: "none", border: "none", color: "#3f7a1f", cursor: "pointer", fontSize: 11.5, fontWeight: 700 }}>
+                  style={{ background: "none", border: "none", color: "#3e8a2f", cursor: "pointer", fontSize: 11.5, fontWeight: 700 }}>
                   {collapsed.size ? "Expand all" : "Collapse all"}
                 </button>
               </div>
               {perDeal.map(dm => {
             const isOpen = !collapsed.has(dm.dealId);
             return (
-            <div key={dm.dealId} style={{ background: "#fff", border: "1px solid #e7e0d2", borderRadius: 12, padding: "10px 16px", marginBottom: 12 }}>
+            <div key={dm.dealId} style={{ background: "#fff", border: "1px solid #e6e4de", borderRadius: 12, padding: "10px 16px", marginBottom: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flexWrap: "wrap" }}>
                   <button onClick={() => onOpenDeal(dm.dealId)}
-                    style={{ background: "none", border: "none", padding: 0, color: "#26281f", cursor: "pointer", fontWeight: 700, fontSize: 15, fontFamily: "'Fraunces',Georgia,serif", textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
+                    style={{ background: "none", border: "none", padding: 0, color: "#232422", cursor: "pointer", fontWeight: 700, fontSize: 15, fontFamily: "'Lora',Georgia,serif", textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
                     {dm.dealName}
                   </button>
                   <button onClick={() => toggleCollapse(dm.dealId)} title={isOpen ? "Collapse" : "Expand"} aria-expanded={isOpen}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#f4f1ea", border: "1px solid #e3dccd", borderRadius: 8, padding: "4px 10px", color: "#6b6356", cursor: "pointer", fontSize: 11, fontWeight: 700, flexShrink: 0, fontFamily: "'Inter',sans-serif", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#f4f1ea", border: "1px solid #dfddd6", borderRadius: 8, padding: "4px 10px", color: "#6b6356", cursor: "pointer", fontSize: 11, fontWeight: 700, flexShrink: 0, fontFamily: "'Roboto',sans-serif", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                     <span style={{ fontSize: 12, lineHeight: 1 }}>{isOpen ? "▾" : "▸"}</span>{isOpen ? "Collapse" : "Expand"}
                   </button>
                 </div>
@@ -212,7 +212,7 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
                 <div style={{ marginTop: 6 }}>
                   {dm.rows.map((r, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderTop: "1px solid #f4efe4", fontSize: 12.5 }}>
-                      <div style={{ flex: 1, minWidth: 0, fontWeight: 600, color: "#2a2c28", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <div style={{ flex: 1, minWidth: 0, fontWeight: 600, color: "#232422", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {r.name}
                         {r.locked && (
                           <span title={`Upside locked by below-market renewal ${r.lockNote ?? "options"} — the tenant can renew at the cheap rate.`}
@@ -221,9 +221,9 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
                           </span>
                         )}
                       </div>
-                      <div style={{ color: "#7d766a", whiteSpace: "nowrap" }}>
+                      <div style={{ color: "#6b6a65", whiteSpace: "nowrap" }}>
                         ${r.inPlace.toFixed(2)} vs ${r.median.toFixed(2)} median
-                        <span style={{ color: "#a89f8f" }} title={`Same brand, ${r.band} SF stores${r.region ? `, ${r.region}` : " (national — too few in the region)"}${r.years[0] ? `, leases ${r.years[0]}–${r.years[1]}` : ""}. Ground leases and pads excluded.`}> (n={r.locations} · {r.band}{r.region ? ` · ${r.region}` : " · US"})</span>
+                        <span style={{ color: "#9b9992" }} title={`Same brand, ${r.band} SF stores${r.region ? `, ${r.region}` : " (national — too few in the region)"}${r.years[0] ? `, leases ${r.years[0]}–${r.years[1]}` : ""}. Ground leases and pads excluded.`}> (n={r.locations} · {r.band}{r.region ? ` · ${r.region}` : " · US"})</span>
                       </div>
                       <div style={{ width: 64, textAlign: "right", fontWeight: 700, color: "#b3711a" }}
                         title={r.locations < 5 ? `Only ${r.locations} comparable stores — showing where this rent ranks instead of a % gap` : undefined}>
@@ -233,7 +233,7 @@ export default function MarkToMarket({ deals, onOpenDeal }: Props) {
                         <div style={{ width: 70, textAlign: "right", fontWeight: 700, color: r.locked ? "#9a6b1f" : "#2f6b1f", textDecoration: r.locked ? "line-through" : "none" }}>{r.annual != null ? `${fmtMoney(r.annual)}/yr` : "—"}</div>
                       ) : (
                         <div title={`Only ${r.locations} comparable stores — too few to put a dollar figure on, so it isn't added to the upside totals.`}
-                          style={{ width: 70, textAlign: "right", fontSize: 10.5, fontWeight: 600, color: "#a89f8f", lineHeight: 1.2 }}>not counted<br />(n={r.locations})</div>
+                          style={{ width: 70, textAlign: "right", fontSize: 10.5, fontWeight: 600, color: "#9b9992", lineHeight: 1.2 }}>not counted<br />(n={r.locations})</div>
                       )}
                     </div>
                   ))}

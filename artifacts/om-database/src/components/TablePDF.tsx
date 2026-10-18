@@ -23,9 +23,9 @@ Font.registerHyphenationCallback((word) => {
 // repeats on every page.
 
 const C = {
-  ink: "#26281f", body: "#383a37", muted: "#7d766a", faint: "#a89f8f",
-  olive: "#3f7a1f", oliveDk: "#2f5d16", sage: "#eef3e6", sageBd: "#cfe3b8",
-  rule: "#e3dccd", cream: "#fcfbf6", green: "#0f6d47",
+  ink: "#232422", body: "#383a37", muted: "#6b6a65", faint: "#9b9992",
+  olive: "#3e8a2f", oliveDk: "#2f5d16", sage: "#eef3e6", sageBd: "#cfe3b8",
+  rule: "#dfddd6", cream: "#fcfbf6", green: "#0f6d47",
 };
 
 // LETTER landscape, minus the page padding below and the row padding on each side.

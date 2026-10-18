@@ -86,22 +86,22 @@ export default function ClosingCostEstimator({ deals, onClose }: { deals: Deal[]
   } as Deal) : null), [activeState, resolved, query]);
 
   const inp: React.CSSProperties = {
-    flex: 1, minWidth: 0, border: "1px solid #c8b89a", borderRadius: 8, padding: "9px 11px",
-    fontSize: 14, color: "#383a37", fontFamily: "'Inter',sans-serif", outline: "none", background: "#fff",
+    flex: 1, minWidth: 0, border: "1px solid #c4c1b8", borderRadius: 8, padding: "9px 11px",
+    fontSize: 14, color: "#383a37", fontFamily: "'Roboto',sans-serif", outline: "none", background: "#fff",
   };
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(38,40,31,0.45)", backdropFilter: "blur(3px)", zIndex: 9500, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "5vh 16px 16px", overflowY: "auto" }}>
       <div onClick={e => e.stopPropagation()} style={{ background: "#faf8f3", borderRadius: 16, width: "100%", maxWidth: 640, boxShadow: "0 20px 60px rgba(38,40,31,0.3)", overflow: "hidden" }}>
         {/* Header */}
-        <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid #f1eadc", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, background: "#fff" }}>
+        <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid #efeee9", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, background: "#fff" }}>
           <div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 600, color: "#26281f" }}>Closing Cost Estimator</div>
-            <div style={{ fontSize: 12.5, color: "#8b8578", marginTop: 4, lineHeight: 1.5 }}>
+            <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 19, fontWeight: 600, color: "#232422" }}>Closing Cost Estimator</div>
+            <div style={{ fontSize: 12.5, color: "#7a7973", marginTop: 4, lineHeight: 1.5 }}>
               Estimate title, transfer, and recording costs for any property — even one not in the database. Enter an address to verify it, or pick a state.
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", fontSize: 22, color: "#a89f8f", cursor: "pointer", lineHeight: 1, flexShrink: 0 }}>×</button>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", fontSize: 22, color: "#9b9992", cursor: "pointer", lineHeight: 1, flexShrink: 0 }}>×</button>
         </div>
 
         <div style={{ padding: "16px 22px 20px", maxHeight: "78vh", overflowY: "auto" }}>
@@ -119,32 +119,32 @@ export default function ClosingCostEstimator({ deals, onClose }: { deals: Deal[]
                 style={{ ...inp, width: "100%" }}
               />
               {sugOpen && suggests.length > 0 && (
-                <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 20, background: "#fff", border: "1px solid #d9d2c4", borderRadius: 8, boxShadow: "0 10px 28px rgba(38,40,31,0.16)", overflow: "hidden", maxHeight: 260, overflowY: "auto" }}>
+                <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 20, background: "#fff", border: "1px solid #d7d5ce", borderRadius: 8, boxShadow: "0 10px 28px rgba(38,40,31,0.16)", overflow: "hidden", maxHeight: 260, overflowY: "auto" }}>
                   {suggests.map((s, i) => (
                     <button
                       key={`${s.address}-${i}`}
                       type="button"
                       onMouseDown={e => { e.preventDefault(); pickSuggest(s); }}
-                      style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: i < suggests.length - 1 ? "1px solid #f1eadc" : "none", padding: "9px 12px", cursor: "pointer", fontSize: 13, color: "#383a37", fontFamily: "'Inter',sans-serif" }}
-                      onMouseEnter={e => (e.currentTarget.style.background = "#f6f2ea")}
+                      style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", background: "transparent", border: "none", borderBottom: i < suggests.length - 1 ? "1px solid #efeee9" : "none", padding: "9px 12px", cursor: "pointer", fontSize: 13, color: "#383a37", fontFamily: "'Roboto',sans-serif" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#faf9f5")}
                       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                     >
                       <span style={{ flexShrink: 0, fontSize: 12 }}>📍</span>
                       <span style={{ flex: 1, minWidth: 0 }}>{s.label}</span>
-                      {s.state && <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: "#8b8578" }}>{s.state}</span>}
+                      {s.state && <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: "#7a7973" }}>{s.state}</span>}
                     </button>
                   ))}
                 </div>
               )}
             </div>
             <button onClick={() => { setSugOpen(false); verify(query); }} disabled={busy || !query.trim()}
-              style={{ background: busy ? "#9bbf7e" : "#3f7a1f", border: "none", color: "#fff", padding: "9px 16px", borderRadius: 8, cursor: busy ? "default" : "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif", flexShrink: 0 }}>
+              style={{ background: busy ? "#9bbf7e" : "#3e8a2f", border: "none", color: "#fff", padding: "9px 16px", borderRadius: 8, cursor: busy ? "default" : "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Roboto',sans-serif", flexShrink: 0 }}>
               {busy ? "Verifying…" : "Verify"}
             </button>
           </div>
 
           {dealMatch && !resolved && (
-            <div style={{ fontSize: 11.5, color: "#3f7a1f", marginBottom: 8 }}>
+            <div style={{ fontSize: 11.5, color: "#3e8a2f", marginBottom: 8 }}>
               “{dealMatch.propertyName}” is already in your library.{" "}
               {dealMatch.address && <button onClick={() => { const a = [dealMatch.address, dealMatch.city, dealMatch.state].filter(Boolean).join(", "); setQuery(a); verify(a); }} style={{ background: "none", border: "none", color: "#4f7aac", textDecoration: "underline", cursor: "pointer", fontSize: 11.5, padding: 0 }}>Use its address ↗</button>}
             </div>
@@ -153,17 +153,17 @@ export default function ClosingCostEstimator({ deals, onClose }: { deals: Deal[]
           {err && <div style={{ fontSize: 12, color: "#b5503a", marginBottom: 8 }}>{err}</div>}
 
           {resolved?.matched && (
-            <div style={{ fontSize: 12, color: "#3f7a1f", background: "#f4f8ef", border: "1px solid #cfe3b8", borderRadius: 8, padding: "9px 12px", marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: "#3e8a2f", background: "#f4f8ef", border: "1px solid #cfe3b8", borderRadius: 8, padding: "9px 12px", marginBottom: 12 }}>
               ✓ Verified: <b>{resolved.matchedAddress}</b>{resolved.county ? ` · ${resolved.county}` : ""}{resolved.state ? `, ${resolved.state}` : ""} <span style={{ color: "#7d9a5c" }}>({resolved.source || "US Census"})</span>
             </div>
           )}
 
           {/* Manual state fallback (always available) */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, fontSize: 12, color: "#7d766a" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, fontSize: 12, color: "#6b6a65" }}>
             <span>{resolved ? "Or override the state:" : "No address? Pick a state:"}</span>
             <select value={resolved ? "" : manualState} disabled={!!resolved && false}
               onChange={e => { setManualState(e.target.value); setResolved(null); setErr(null); }}
-              style={{ border: "1px solid #d9d2c4", borderRadius: 7, padding: "6px 9px", fontSize: 13, color: "#383a37", background: "#fff" }}>
+              style={{ border: "1px solid #d7d5ce", borderRadius: 7, padding: "6px 9px", fontSize: 13, color: "#383a37", background: "#fff" }}>
               <option value="">Select state…</option>
               {stateOptions.map(s => <option key={s.abbr} value={s.abbr}>{s.name}</option>)}
             </select>
@@ -173,7 +173,7 @@ export default function ClosingCostEstimator({ deals, onClose }: { deals: Deal[]
           {syntheticDeal ? (
             <ClosingCostsCard deal={syntheticDeal} />
           ) : (
-            <div style={{ textAlign: "center", color: "#a89f8f", fontSize: 13, padding: "26px 16px" }}>
+            <div style={{ textAlign: "center", color: "#9b9992", fontSize: 13, padding: "26px 16px" }}>
               Verify an address or choose a state to see the closing-cost breakdown.
             </div>
           )}

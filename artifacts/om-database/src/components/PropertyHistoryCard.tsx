@@ -21,18 +21,18 @@ export default function PropertyHistoryCard({ deal }: { deal: Deal }) {
   if (!hist.length) return null;
   const shown = open ? hist : hist.slice(0, 1);
   return (
-    <div style={{ background: "#fff", border: "1px solid #e3dccd", borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
+    <div style={{ background: "#fff", border: "1px solid #dfddd6", borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 700, color: "#7d766a" }}>Property history</div>
-        <div style={{ fontSize: 11, color: "#a89f8f" }}>Current figures come from the newest document; this is what changed before it.</div>
+        <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 700, color: "#6b6a65" }}>Property history</div>
+        <div style={{ fontSize: 11, color: "#9b9992" }}>Current figures come from the newest document; this is what changed before it.</div>
       </div>
       {shown.map(h => {
         const events = open ? h.events : h.events.slice(0, 6);
         return (
           <div key={h.id} style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: "#26281f" }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: "#232422" }}>
               {fmtDate(h.fromAsOf)} → {fmtDate(h.toAsOf)}
-              <span style={{ fontWeight: 400, color: "#a89f8f", fontSize: 11 }}> · {h.events.length} change{h.events.length === 1 ? "" : "s"}{h.fromSource ? ` · earlier: ${h.fromSource}` : ""}</span>
+              <span style={{ fontWeight: 400, color: "#9b9992", fontSize: 11 }}> · {h.events.length} change{h.events.length === 1 ? "" : "s"}{h.fromSource ? ` · earlier: ${h.fromSource}` : ""}</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 6 }}>
               {events.map((e, i) => {
@@ -49,7 +49,7 @@ export default function PropertyHistoryCard({ deal }: { deal: Deal }) {
         );
       })}
       {(hist.length > 1 || hist[0].events.length > 6) && (
-        <button onClick={() => setOpen(o => !o)} style={{ marginTop: 10, background: "none", border: "none", padding: "6px 0", color: "#3f7a1f", fontWeight: 600, fontSize: 12, cursor: "pointer", minHeight: 32 }}>
+        <button onClick={() => setOpen(o => !o)} style={{ marginTop: 10, background: "none", border: "none", padding: "6px 0", color: "#3e8a2f", fontWeight: 600, fontSize: 12, cursor: "pointer", minHeight: 32 }}>
           {open ? "Show less" : `Show all${hist.length > 1 ? ` (${hist.length} earlier documents)` : ""}`} ›
         </button>
       )}

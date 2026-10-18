@@ -61,7 +61,7 @@ function fmtRent(n: number): string {
 }
 
 function barColor(year: string): string {
-  if (year === "Unknown") return "#c9c2b8";
+  if (year === "Unknown") return "#c6c4bd";
   if (year === "Expired") return "#a39a8c";
   const y = parseInt(year);
   if (y <= NOW_YEAR) return "#b0a898";
@@ -69,13 +69,13 @@ function barColor(year: string): string {
   if (delta <= 2) return "#dc6347";
   if (delta <= 4) return "#e8a631";
   if (delta <= 6) return "#a3c45a";
-  return "#6dba43";
+  return "#5bba47";
 }
 
 const CREDIT_COLORS: Record<string, string> = {
-  "Investment Grade": "#6dba43",
+  "Investment Grade": "#5bba47",
   "Non-Investment Grade": "#e8a631",
-  "Unrated": "#c9c2b8",
+  "Unrated": "#c6c4bd",
 };
 
 // ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ const CREDIT_COLORS: Record<string, string> = {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 14 }}>
+    <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9b9992", fontWeight: 700, marginBottom: 14 }}>
       {children}
     </div>
   );
@@ -92,7 +92,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, padding: "20px 22px", boxSizing: "border-box", ...style }}>
+    <div style={{ background: "#fff", border: "1px solid #ebeae5", borderRadius: 12, padding: "20px 22px", boxSizing: "border-box", ...style }}>
       {children}
     </div>
   );
@@ -100,10 +100,10 @@ function Card({ children, style }: { children: React.ReactNode; style?: React.CS
 
 function StatBox({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 10, padding: "14px 18px", flex: "1 1 140px", minWidth: 0, boxSizing: "border-box" }}>
-      <div style={{ fontSize: 9.5, letterSpacing: "0.13em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 500, color: "#26281f", lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "#a89f8f", marginTop: 4 }}>{sub}</div>}
+    <div style={{ background: "#fff", border: "1px solid #ebeae5", borderRadius: 10, padding: "14px 18px", flex: "1 1 140px", minWidth: 0, boxSizing: "border-box" }}>
+      <div style={{ fontSize: 9.5, letterSpacing: "0.13em", textTransform: "uppercase", color: "#9b9992", fontWeight: 700, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 26, fontWeight: 500, color: "#232422", lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: "#9b9992", marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -113,7 +113,7 @@ function SegmentBar({ items, colorMap }: {
   colorMap: (label: string, idx: number) => string;
 }) {
   const total = items.reduce((s, i) => s + i.annualRent, 0);
-  if (total === 0) return <div style={{ height: 24, background: "#f1eadc", borderRadius: 6 }} />;
+  if (total === 0) return <div style={{ height: 24, background: "#efeee9", borderRadius: 6 }} />;
   return (
     <div style={{ display: "flex", height: 28, borderRadius: 8, overflow: "hidden", gap: 1.5 }}>
       {items.map((item, idx) => (
@@ -151,9 +151,9 @@ function SegmentLegend({ items, colorMap }: {
       {items.map((item, idx) => (
         <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <div style={{ width: 9, height: 9, borderRadius: 2, background: colorMap(item.label, idx), flexShrink: 0 }} />
-          <span style={{ fontSize: 11, color: "#5c5850" }}>
+          <span style={{ fontSize: 11, color: "#55544f" }}>
             <span style={{ fontWeight: 600 }}>{item.label}</span>
-            <span style={{ color: "#a89f8f", marginLeft: 4 }}>{item.pct}% · {fmtRent(item.annualRent)}</span>
+            <span style={{ color: "#9b9992", marginLeft: 4 }}>{item.pct}% · {fmtRent(item.annualRent)}</span>
           </span>
         </div>
       ))}
@@ -193,10 +193,10 @@ function ExpirationWaterfall({ data: raw, onYearClick }: { data: ExpirationBucke
           style={{ display: "flex", alignItems: "center", gap: 10, cursor: clickable ? "pointer" : "default", borderRadius: 6 }}
           title={isExpired ? `Leases whose expiry date (before ${NOW_YEAR}) has already passed — expired or in holdover as of today` : clickable ? `View ${d.year === "Unknown" ? "unknown expiry" : d.year} rollover detail` : undefined}
         >
-          <div style={{ width: 52, textAlign: "right", fontSize: 11, fontWeight: 600, color: d.year === "Unknown" || isExpired ? "#a89f8f" : "#383a37", flexShrink: 0 }}>
+          <div style={{ width: 52, textAlign: "right", fontSize: 11, fontWeight: 600, color: d.year === "Unknown" || isExpired ? "#9b9992" : "#383a37", flexShrink: 0 }}>
             {d.year}
           </div>
-          <div style={{ flex: 1, position: "relative", height: 22, background: "#f5f1ea", borderRadius: 5, overflow: "hidden" }}>
+          <div style={{ flex: 1, position: "relative", height: 22, background: "#f6f5f1", borderRadius: 5, overflow: "hidden" }}>
             <div
               style={{
                 position: "absolute",
@@ -213,20 +213,20 @@ function ExpirationWaterfall({ data: raw, onYearClick }: { data: ExpirationBucke
               {d.pct}%
             </div>
           </div>
-          <div style={{ width: 62, textAlign: "right", fontSize: 10.5, color: "#a89f8f", flexShrink: 0 }}>
+          <div style={{ width: 62, textAlign: "right", fontSize: 10.5, color: "#9b9992", flexShrink: 0 }}>
             {fmtRent(d.annualRent)}
           </div>
-          <div style={{ width: 28, textAlign: "right", fontSize: 10, color: "#b8b0a3", flexShrink: 0 }}>
+          <div style={{ width: 28, textAlign: "right", fontSize: 10, color: "#b3b1aa", flexShrink: 0 }}>
             {d.tenantCount}
           </div>
           {onYearClick && (
-            <div style={{ width: 14, textAlign: "center", fontSize: 10, color: "#c9c2b8", flexShrink: 0 }}>{clickable ? "›" : ""}</div>
+            <div style={{ width: 14, textAlign: "center", fontSize: 10, color: "#c6c4bd", flexShrink: 0 }}>{clickable ? "›" : ""}</div>
           )}
         </div>
         );
       })}
       {data.length > 0 && (
-        <div style={{ display: "flex", gap: 10, marginTop: 4, paddingTop: 8, borderTop: "1px solid #f1eadc" }}>
+        <div style={{ display: "flex", gap: 10, marginTop: 4, paddingTop: 8, borderTop: "1px solid #efeee9" }}>
           <div style={{ width: 52 }} />
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px" }}>
@@ -234,18 +234,18 @@ function ExpirationWaterfall({ data: raw, onYearClick }: { data: ExpirationBucke
                 { color: "#dc6347", label: "≤2 yrs" },
                 { color: "#e8a631", label: "3-4 yrs" },
                 { color: "#a3c45a", label: "5-6 yrs" },
-                { color: "#6dba43", label: "7+ yrs" },
-                { color: "#c9c2b8", label: "Unknown" },
+                { color: "#5bba47", label: "7+ yrs" },
+                { color: "#c6c4bd", label: "Unknown" },
               ].map(item => (
                 <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <div style={{ width: 8, height: 8, borderRadius: 2, background: item.color }} />
-                  <span style={{ fontSize: 9.5, color: "#a89f8f" }}>{item.label}</span>
+                  <span style={{ fontSize: 9.5, color: "#9b9992" }}>{item.label}</span>
                 </div>
               ))}
             </div>
           </div>
-          <div style={{ width: 62, textAlign: "right", fontSize: 9.5, color: "#b8b0a3" }}>Rent</div>
-          <div style={{ width: 28, textAlign: "right", fontSize: 9.5, color: "#b8b0a3" }}>#</div>
+          <div style={{ width: 62, textAlign: "right", fontSize: 9.5, color: "#b3b1aa" }}>Rent</div>
+          <div style={{ width: 28, textAlign: "right", fontSize: 9.5, color: "#b3b1aa" }}>#</div>
           {onYearClick && <div style={{ width: 14 }} />}
         </div>
       )}
@@ -264,34 +264,34 @@ function TopTenantsPanel({ data }: { data: TenantConcentration }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
         {data.topTenants.map((t, i) => (
           <div key={t.name} style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            <div style={{ width: 14, textAlign: "right", fontSize: 10, color: "#c9c2b8", flexShrink: 0, fontWeight: 600 }}>{i + 1}</div>
+            <div style={{ width: 14, textAlign: "right", fontSize: 10, color: "#c6c4bd", flexShrink: 0, fontWeight: 600 }}>{i + 1}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 3 }}>
                 <span style={{ fontSize: 11.5, fontWeight: 600, color: "#383a37", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "72%" }}>{t.name}</span>
-                <span style={{ fontSize: 10.5, color: "#a89f8f", flexShrink: 0 }}>{t.pct}%</span>
+                <span style={{ fontSize: 10.5, color: "#9b9992", flexShrink: 0 }}>{t.pct}%</span>
               </div>
-              <div style={{ height: 5, background: "#f5f1ea", borderRadius: 3, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${(t.pct / maxPct) * 100}%`, background: i === 0 ? "#6dba43" : "#a3c45a", borderRadius: 3 }} />
+              <div style={{ height: 5, background: "#f6f5f1", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${(t.pct / maxPct) * 100}%`, background: i === 0 ? "#5bba47" : "#a3c45a", borderRadius: 3 }} />
               </div>
             </div>
           </div>
         ))}
       </div>
       {data.topTenants.length > 0 && (
-        <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #f1eadc", display: "flex", gap: 10 }}>
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #efeee9", display: "flex", gap: 10 }}>
           <div style={{ flex: 1, textAlign: "center" }}>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, color: "#26281f", fontWeight: 500 }}>{data.topTenants[0]?.pct ?? 0}%</div>
-            <div style={{ fontSize: 10, color: "#a89f8f", marginTop: 2 }}>Top tenant</div>
+            <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, color: "#232422", fontWeight: 500 }}>{data.topTenants[0]?.pct ?? 0}%</div>
+            <div style={{ fontSize: 10, color: "#9b9992", marginTop: 2 }}>Top tenant</div>
           </div>
-          <div style={{ width: 1, background: "#f1eadc" }} />
+          <div style={{ width: 1, background: "#efeee9" }} />
           <div style={{ flex: 1, textAlign: "center" }}>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, color: "#26281f", fontWeight: 500 }}>{Math.round(data.top5Pct)}%</div>
-            <div style={{ fontSize: 10, color: "#a89f8f", marginTop: 2 }}>Top 5 combined</div>
+            <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, color: "#232422", fontWeight: 500 }}>{Math.round(data.top5Pct)}%</div>
+            <div style={{ fontSize: 10, color: "#9b9992", marginTop: 2 }}>Top 5 combined</div>
           </div>
-          <div style={{ width: 1, background: "#f1eadc" }} />
+          <div style={{ width: 1, background: "#efeee9" }} />
           <div style={{ flex: 1, textAlign: "center" }}>
-            <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, color: "#26281f", fontWeight: 500 }}>{Math.round(data.anchorPct)}%</div>
-            <div style={{ fontSize: 10, color: "#a89f8f", marginTop: 2 }}>{data.anchorCount} anchor{data.anchorCount !== 1 ? "s" : ""}</div>
+            <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, color: "#232422", fontWeight: 500 }}>{Math.round(data.anchorPct)}%</div>
+            <div style={{ fontSize: 10, color: "#9b9992", marginTop: 2 }}>{data.anchorCount} anchor{data.anchorCount !== 1 ? "s" : ""}</div>
           </div>
         </div>
       )}
@@ -707,10 +707,10 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h1 style={{ margin: 0, fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, color: "#26281f", letterSpacing: "-0.02em" }}>
+          <h1 className="kpr-page-title">
             {scope === "owned" ? "Portfolio Analytics — Owned" : `Market Corpus${data ? ` (${data.summary.dealCount} OMs)` : ""}`}
           </h1>
-          <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 3 }}>{scope === "owned" ? "KPR's owned properties — each counted once" : "Every deal in the library — the market, not KPR's exposure"}</div>
+          <div style={{ fontSize: 12, color: "#9b9992", marginTop: 3 }}>{scope === "owned" ? "KPR's owned properties — each counted once" : "Every deal in the library — the market, not KPR's exposure"}</div>
         </div>
         <div style={{ display: "flex", alignItems: "flex-start", columnGap: 12, rowGap: 14, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {/* All / Owned scope toggle */}
@@ -721,9 +721,9 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
                 onClick={() => setScope(opt)}
                 style={{
                   padding:"5px 12px", borderRadius:5, border:"none", cursor:"pointer",
-                  fontSize:11, fontWeight:600, fontFamily:"'Inter',sans-serif",
+                  fontSize:11, fontWeight:600, fontFamily:"'Roboto',sans-serif",
                   background:scope === opt ? "#383a37" : "transparent",
-                  color:scope === opt ? "#fff" : "#7d766a",
+                  color:scope === opt ? "#fff" : "#6b6a65",
                   transition:"background 0.15s, color 0.15s",
                   whiteSpace:"nowrap",
                 }}
@@ -733,7 +733,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
             ))}
           </div>
           {onTenantAnalytics && (
-            <button onClick={onTenantAnalytics} style={{ background: "transparent", border: "1px solid #ddd4c2", color: "#52554e", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
+            <button onClick={onTenantAnalytics} style={{ background: "transparent", border: "1px solid #dad8d1", color: "#52554e", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Roboto',sans-serif", fontWeight: 600 }}>
               Tenant Analytics
             </button>
           )}
@@ -743,11 +743,11 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
             <div style={{ position: "relative" }}>
               <button onClick={() => setMaintMenuOpen(o => !o)} disabled={maintaining || rebuilding || rebuildingComps}
                 aria-label={`Maintenance${staleCount + auditStats.deals > 0 ? ` — ${staleCount + auditStats.deals} need attention` : ""}`}
-                style={{ position: "relative", background: "transparent", border: "1px solid #d9d2c4", color: "#6f6a5f", padding: "7px 13px", borderRadius: 7, cursor: "pointer", fontSize: 11.5, fontFamily: "'Inter',sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
-                ⚙ Maintenance <span style={{ fontSize: 9, color: "#a69e91" }}>▾</span>
+                style={{ position: "relative", background: "transparent", border: "1px solid #d7d5ce", color: "#676767", padding: "7px 13px", borderRadius: 7, cursor: "pointer", fontSize: 11.5, fontFamily: "'Roboto',sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
+                ⚙ Maintenance <span style={{ fontSize: 9, color: "#94928b" }}>▾</span>
                 {staleCount + auditStats.deals > 0 && (
                   <span title={`${auditStats.deals} deal${auditStats.deals === 1 ? "" : "s"} with data issues · ${staleCount} outdated analys${staleCount === 1 ? "is" : "es"}`}
-                    style={{ position: "absolute", top: -7, right: -7, minWidth: 18, height: 18, padding: "0 5px", boxSizing: "border-box", borderRadius: 9, background: "#c97a18", color: "#fff", fontSize: 10, fontWeight: 700, lineHeight: "18px", textAlign: "center", boxShadow: "0 0 0 2px #f6f2ea" }}>
+                    style={{ position: "absolute", top: -7, right: -7, minWidth: 18, height: 18, padding: "0 5px", boxSizing: "border-box", borderRadius: 9, background: "#c97a18", color: "#fff", fontSize: 10, fontWeight: 700, lineHeight: "18px", textAlign: "center", boxShadow: "0 0 0 2px #faf9f5" }}>
                     {staleCount + auditStats.deals > 99 ? "99+" : staleCount + auditStats.deals}
                   </span>
                 )}
@@ -755,13 +755,13 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
               {maintMenuOpen && (
                 <>
                   <div onClick={() => setMaintMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 9000 }} />
-                  <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 6, zIndex: 9001, background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10, boxShadow: "0 8px 28px rgba(56,58,55,0.16)", minWidth: 250, maxWidth: "calc(100vw - 32px)", overflow: "hidden", padding: "4px 0", fontFamily: "'Inter',sans-serif" }}>
+                  <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 6, zIndex: 9001, background: "#fff", border: "1px solid #e3e1db", borderRadius: 10, boxShadow: "0 8px 28px rgba(56,58,55,0.16)", minWidth: 250, maxWidth: "calc(100vw - 32px)", overflow: "hidden", padding: "4px 0", fontFamily: "'Roboto',sans-serif" }}>
                     {([
-                      [auditStats.deals > 0 ? `⚠ Review ${auditStats.deals} deal${auditStats.deals === 1 ? "" : "s"} with data issues (${auditStats.issues})` : "✓ Data integrity — nothing flagged", () => { setMaintMenuOpen(false); onDataAudit?.(); }, auditStats.deals > 0 ? "#92400e" : "#3f7a1f", false, "Open the Data Audit worklist — the deals whose numbers don't tie out."],
+                      [auditStats.deals > 0 ? `⚠ Review ${auditStats.deals} deal${auditStats.deals === 1 ? "" : "s"} with data issues (${auditStats.issues})` : "✓ Data integrity — nothing flagged", () => { setMaintMenuOpen(false); onDataAudit?.(); }, auditStats.deals > 0 ? "#92400e" : "#3e8a2f", false, "Open the Data Audit worklist — the deals whose numbers don't tie out."],
                       ...(onFeedback ? [["🧠 Feedback & Trends", () => { setMaintMenuOpen(false); onFeedback(); }, "#6b3f8f", false, "Every open data issue across the library, grouped by type; answer in plain English to create guardrails for future extractions."] as const] : []),
-                      ["★ Score unscored deals", () => { setMaintMenuOpen(false); handleScoreUnscored(); }, "#3f7a1f", scoring, "Run the AI grade on every deal that has no grade yet."],
+                      ["★ Score unscored deals", () => { setMaintMenuOpen(false); handleScoreUnscored(); }, "#3e8a2f", scoring, "Run the AI grade on every deal that has no grade yet."],
                       ...(staleCount > 0 ? [[`⚠ Refresh ${staleCount} outdated analys${staleCount === 1 ? "is" : "es"}`, () => { setMaintMenuOpen(false); handleRefreshStale(); }, "#92400e", refreshingStale || !!batchInfo, "Re-run the AI write-up on deals analyzed under older scoring logic."] as const] : []),
-                      ...(staleCount > 0 && !batchInfo ? [["💸 …or batch them at ~½ cost", () => { setMaintMenuOpen(false); handleBatchRefresh(); }, "#3f7a1f", batchBusy, "Same refresh as one background batch — about half the AI cost; applies automatically when ready."] as const] : []),
+                      ...(staleCount > 0 && !batchInfo ? [["💸 …or batch them at ~½ cost", () => { setMaintMenuOpen(false); handleBatchRefresh(); }, "#3e8a2f", batchBusy, "Same refresh as one background batch — about half the AI cost; applies automatically when ready."] as const] : []),
                         ["🧹 Clean & re-audit all", () => { setMaintMenuOpen(false); handleCleanAndReaudit(); }, "#383a37", maintaining, "Auto-fix the unambiguous issues across every deal, then re-check all the numbers. Token-free, snapshots first (reversible)."],
                         ["✅ Clear answered questions", () => { setMaintMenuOpen(false); handleTriageQuestions(); }, "#383a37", maintaining, "Close the import questions the data now answers by itself (e.g. a WALT the rent roll confirms), so the real contradictions aren't buried. Shows you the count first; nothing is deleted."],
                         ["↺ Rebuild comps index", () => { setMaintMenuOpen(false); handleRebuildComps(); }, "#383a37", rebuildingComps, "Rebuild the comparable-sales index from every deal's owned/manual/OM comps."],
@@ -771,19 +771,19 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
                         ...(isAdmin ? [["🗑 Remove deleted deals", () => { setMaintMenuOpen(false); handlePurgeTrashed(); }, "#b06a4e", maintaining, "Permanently remove trashed deals whose data still sits in the DB. Snapshots first."] as const] : []),
                                           ] as [string, () => void, string, boolean, string][]).map(([label, fn, color, busy, tip], i) => (
                       <button key={label} onClick={fn} disabled={busy} title={tip}
-                        style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderTop: i > 0 && (label.startsWith("★") || label.startsWith("🧹")) ? "1px solid #f1eadc" : "none", padding: "10px 14px", cursor: busy ? "default" : "pointer", fontSize: 12.5, fontWeight: 600, color, whiteSpace: "normal", opacity: busy ? 0.5 : 1 }}
+                        style={{ display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderTop: i > 0 && (label.startsWith("★") || label.startsWith("🧹")) ? "1px solid #efeee9" : "none", padding: "10px 14px", cursor: busy ? "default" : "pointer", fontSize: 12.5, fontWeight: 600, color, whiteSpace: "normal", opacity: busy ? 0.5 : 1 }}
                         onMouseEnter={e => { if (!busy) e.currentTarget.style.background = "#f9f6f0"; }}
                         onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
                         {label}
                       </button>
                     ))}
                     {auditStats.breakdown.length > 0 && (
-                      <div style={{ borderTop: "1px solid #f1eadc", padding: "8px 12px 10px" }}>
-                        <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: "#a69e91", textTransform: "uppercase", marginBottom: 5 }}>What's flagged</div>
+                      <div style={{ borderTop: "1px solid #efeee9", padding: "8px 12px 10px" }}>
+                        <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", color: "#94928b", textTransform: "uppercase", marginBottom: 5 }}>What's flagged</div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                           {auditStats.breakdown.map(b => (
                             <button key={b.key} onClick={() => { setMaintMenuOpen(false); onDataAudit?.(b.key); }} title={`Show the deals flagged for: ${b.label}`}
-                              style={{ fontSize: 10, color: "#6f6a5f", background: "#f6f1e7", border: "1px solid #e7e0d2", borderRadius: 10, padding: "2px 8px", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap", cursor: "pointer" }}>
+                              style={{ fontSize: 10, color: "#676767", background: "#f6f1e7", border: "1px solid #e6e4de", borderRadius: 10, padding: "2px 8px", fontFamily: "'Roboto',sans-serif", whiteSpace: "nowrap", cursor: "pointer" }}>
                               {b.label} · <b style={{ color: "#383a37" }}>{b.count}</b> ›
                             </button>
                           ))}
@@ -799,13 +799,13 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
                   onChange={e => { const f = e.target.files?.[0]; if (f) handleImportTransactions(f); e.currentTarget.value = ""; }} />
             </div>
             {[scoreMsg, staleMsg, batchMsg, maintainMsg].filter(Boolean).map((m, i) => (
-              <span key={i} style={{ fontSize: 10.5, color: m!.startsWith("✓") ? "#0f9d63" : m!.startsWith("⚠") ? "#dc2626" : "#a69e91", fontFamily: "'Inter',sans-serif", maxWidth: 300, textAlign: "right" }}>{m}</span>
+              <span key={i} style={{ fontSize: 10.5, color: m!.startsWith("✓") ? "#0f9d63" : m!.startsWith("⚠") ? "#dc2626" : "#94928b", fontFamily: "'Roboto',sans-serif", maxWidth: 300, textAlign: "right" }}>{m}</span>
             ))}
           </div>
           {(rebuildCompsMsg || rebuildMsg) && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-              {rebuildCompsMsg && <span style={{ fontSize: 10.5, color: rebuildCompsMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{rebuildCompsMsg}</span>}
-              {rebuildMsg && <span style={{ fontSize: 10.5, color: rebuildMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Inter',sans-serif" }}>{rebuildMsg}</span>}
+              {rebuildCompsMsg && <span style={{ fontSize: 10.5, color: rebuildCompsMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Roboto',sans-serif" }}>{rebuildCompsMsg}</span>}
+              {rebuildMsg && <span style={{ fontSize: 10.5, color: rebuildMsg.startsWith("✓") ? "#0f9d63" : "#dc2626", fontFamily: "'Roboto',sans-serif" }}>{rebuildMsg}</span>}
             </div>
           )}
         </div>
@@ -818,13 +818,13 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
         </div>
       )}
       {noDeals && (
-        <div style={{ textAlign: "center", padding: "60px 0", color: "#a89f8f", fontSize: 13 }}>
+        <div style={{ textAlign: "center", padding: "60px 0", color: "#9b9992", fontSize: 13 }}>
           No deals match the selected filters.
         </div>
       )}
 
       {!noDeals && loading && (
-        <div style={{ textAlign: "center", padding: "80px 0", color: "#a89f8f" }}>
+        <div style={{ textAlign: "center", padding: "80px 0", color: "#9b9992" }}>
           <div style={{ fontSize: 13 }}>Computing…</div>
         </div>
       )}
@@ -875,11 +875,11 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
               <div id="section-lease-rollover" style={{ scrollMarginTop: 80 }} />
               <SectionLabel>Lease Expiration Waterfall — % of Rent by Year</SectionLabel>
               {data.leaseExpiration.length === 0 ? (
-                <div style={{ color: "#a89f8f", fontSize: 13, padding: "20px 0" }}>No lease expiry data available.</div>
+                <div style={{ color: "#9b9992", fontSize: 13, padding: "20px 0" }}>No lease expiry data available.</div>
               ) : (
                 <ExpirationWaterfall data={data.leaseExpiration} onYearClick={onYearClick ? (year => onYearClick(year, scope)) : undefined} />
               )}
-              <div style={{ fontSize: 10.5, color: "#a89f8f", marginTop: 8, lineHeight: 1.45 }}>
+              <div style={{ fontSize: 10.5, color: "#9b9992", marginTop: 8, lineHeight: 1.45 }}>
                 {scope === "owned" && data.datex && data.datex.deals > 0
                   ? <>{data.datex.deals === data.datex.of ? `All ${data.datex.of}` : `${data.datex.deals} of ${data.datex.of}`} owned centers use today's tenants from Datex{data.datex.asOf ? ` (synced ${new Date(data.datex.asOf + "T00:00:00").toLocaleDateString()})` : ""}.{data.datex.deals < data.datex.of ? " The rest use their OM or rent roll, as of that document's date." : ""}</>
                   : <>Expiry dates come from each deal's OM or rent roll, so these are as of each document's date, not live.{scope === "owned" ? " For today's rollover on owned centers, Datex is the source of record." : ""}</>}
@@ -889,7 +889,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
             <Card>
               <SectionLabel>Tenant Concentration — Top 5 by Rent</SectionLabel>
               {data.tenantConcentration.topTenants.length === 0 ? (
-                <div style={{ color: "#a89f8f", fontSize: 13, padding: "20px 0" }}>No tenant rent data available.</div>
+                <div style={{ color: "#9b9992", fontSize: 13, padding: "20px 0" }}>No tenant rent data available.</div>
               ) : (
                 <TopTenantsPanel data={data.tenantConcentration} />
               )}
@@ -900,23 +900,23 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
           <Card style={{ width: "100%" }}>
             <SectionLabel>Credit Mix — % of Rent</SectionLabel>
             {data.creditMix.length === 0 ? (
-              <div style={{ color: "#a89f8f", fontSize: 13, padding: "20px 0" }}>No credit rating data available.</div>
+              <div style={{ color: "#9b9992", fontSize: 13, padding: "20px 0" }}>No credit rating data available.</div>
             ) : (
               <>
                 <SegmentBar
                   items={data.creditMix}
-                  colorMap={(label) => CREDIT_COLORS[label] ?? "#c9c2b8"}
+                  colorMap={(label) => CREDIT_COLORS[label] ?? "#c6c4bd"}
                 />
                 <SegmentLegend
                   items={data.creditMix}
-                  colorMap={(label) => CREDIT_COLORS[label] ?? "#c9c2b8"}
+                  colorMap={(label) => CREDIT_COLORS[label] ?? "#c6c4bd"}
                 />
-                <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #f1eadc" }}>
+                <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #efeee9" }}>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                     {data.creditMix.map(item => (
-                      <div key={item.label} style={{ flex: "1 1 120px", textAlign: "center", background: "#faf7f0", borderRadius: 8, padding: "10px 6px" }}>
-                        <div style={{ fontFamily: "'Fraunces',serif", fontSize: 20, color: "#26281f", fontWeight: 500 }}>{item.pct}%</div>
-                        <div style={{ fontSize: 9.5, color: "#a89f8f", marginTop: 2 }}>{item.count} tenants</div>
+                      <div key={item.label} style={{ flex: "1 1 120px", textAlign: "center", background: "#faf9f5", borderRadius: 8, padding: "10px 6px" }}>
+                        <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 20, color: "#232422", fontWeight: 500 }}>{item.pct}%</div>
+                        <div style={{ fontSize: 9.5, color: "#9b9992", marginTop: 2 }}>{item.count} tenants</div>
                       </div>
                     ))}
                   </div>
@@ -926,7 +926,7 @@ export default function PortfolioAnalytics({ filterDealIds, ownedDealIds, isAdmi
           </Card>
 
           {data.summary.totalAnnualRent === 0 && (
-            <div style={{ marginTop: 20, padding: "16px 20px", background: "#faf7f0", border: "1px solid #ece5d7", borderRadius: 10, fontSize: 13, color: "#a89f8f" }}>
+            <div style={{ marginTop: 20, padding: "16px 20px", background: "#faf9f5", border: "1px solid #ebeae5", borderRadius: 10, fontSize: 13, color: "#9b9992" }}>
               The tenant index is empty. Try uploading some deals or run Rebuild Index to backfill.
             </div>
           )}

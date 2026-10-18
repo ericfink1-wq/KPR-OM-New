@@ -59,10 +59,10 @@ export default function OwnedRiskCards({ deals, onOpenDeal, onNav }: { deals: De
   }, [owned, abstracts]);
 
   if (!owned.length) return null;
-  const card: React.CSSProperties = { background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, padding: "14px 16px", minWidth: 0 };
-  const label: React.CSSProperties = { fontSize: 9.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "#a89f8f", fontWeight: 700 };
+  const card: React.CSSProperties = { background: "#fff", border: "1px solid #ebeae5", borderRadius: 12, padding: "14px 16px", minWidth: 0 };
+  const label: React.CSSProperties = { fontSize: 9.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9b9992", fontWeight: 700 };
   const link = (text: string, dest: string) => onNav ? (
-    <button onClick={() => onNav(dest)} style={{ background: "none", border: "none", padding: 0, color: "#3f7a1f", fontWeight: 600, fontSize: 11.5, cursor: "pointer", marginTop: 8 }}>{text} ›</button>
+    <button onClick={() => onNav(dest)} style={{ background: "none", border: "none", padding: 0, color: "#3e8a2f", fontWeight: 600, fontSize: 11.5, cursor: "pointer", marginTop: 8 }}>{text} ›</button>
   ) : null;
   const pctOnWatch = watchRollup.total > 0 ? Math.round((watchRollup.onWatch / watchRollup.total) * 1000) / 10 : 0;
 
@@ -71,18 +71,18 @@ export default function OwnedRiskCards({ deals, onOpenDeal, onNav }: { deals: De
       <div style={card}>
         <div style={label}>Owned rent with watchlist tenants</div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 4 }}>
-          <span style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 600, color: watchRollup.onWatch > 0 ? "#b3261e" : "#0f7a43" }}>{money(watchRollup.onWatch)}</span>
-          <span style={{ fontSize: 12, color: "#7d766a" }}>/yr · {pctOnWatch}% of owned base rent</span>
+          <span style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 24, fontWeight: 600, color: watchRollup.onWatch > 0 ? "#b3261e" : "#0f7a43" }}>{money(watchRollup.onWatch)}</span>
+          <span style={{ fontSize: 12, color: "#6b6a65" }}>/yr · {pctOnWatch}% of owned base rent</span>
         </div>
         {watchRollup.brands.length === 0 ? (
-          <div style={{ fontSize: 12, color: "#7d766a", marginTop: 6 }}>No owned tenants are on the retailer watchlist.</div>
+          <div style={{ fontSize: 12, color: "#6b6a65", marginTop: 6 }}>No owned tenants are on the retailer watchlist.</div>
         ) : (
           <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
             {watchRollup.brands.slice(0, 5).map(b => (
               <div key={b.brand} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5 }}>
                 <span style={{ flex: 1, minWidth: 0, color: "#383a37", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.brand}</span>
                 <span style={{ fontSize: 10, fontWeight: 700, color: STATUS_TONE[b.status] ?? "#a16207", textTransform: "uppercase" }}>{b.status}</span>
-                <span style={{ color: "#7d766a", whiteSpace: "nowrap" }}>{money(b.rent)} · {b.centers.size} ctr</span>
+                <span style={{ color: "#6b6a65", whiteSpace: "nowrap" }}>{money(b.rent)} · {b.centers.size} ctr</span>
               </div>
             ))}
           </div>
@@ -93,23 +93,23 @@ export default function OwnedRiskCards({ deals, onOpenDeal, onNav }: { deals: De
       <div style={card}>
         <div style={label}>Rent at risk if the key anchor goes dark</div>
         {cascade == null ? (
-          <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 8 }}>Loading lease abstracts…</div>
+          <div style={{ fontSize: 12, color: "#9b9992", marginTop: 8 }}>Loading lease abstracts…</div>
         ) : cascade.length === 0 ? (
-          <div style={{ fontSize: 12, color: "#7d766a", marginTop: 8, lineHeight: 1.5 }}>No owned center has a co-tenancy clause that trips on a single anchor (from the abstracts and lease-risk data on file).</div>
+          <div style={{ fontSize: 12, color: "#6b6a65", marginTop: 8, lineHeight: 1.5 }}>No owned center has a co-tenancy clause that trips on a single anchor (from the abstracts and lease-risk data on file).</div>
         ) : (
           <>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 4 }}>
-              <span style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 600, color: "#c2410c" }}>{money(cascade.reduce((s, r) => s + r.rent, 0))}</span>
-              <span style={{ fontSize: 12, color: "#7d766a" }}>/yr across {cascade.length} center{cascade.length === 1 ? "" : "s"} (worst anchor each)</span>
+              <span style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 24, fontWeight: 600, color: "#c2410c" }}>{money(cascade.reduce((s, r) => s + r.rent, 0))}</span>
+              <span style={{ fontSize: 12, color: "#6b6a65" }}>/yr across {cascade.length} center{cascade.length === 1 ? "" : "s"} (worst anchor each)</span>
             </div>
             <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
               {cascade.slice(0, 6).map(r => (
                 <button key={r.d.id} onClick={() => onOpenDeal(r.d.id)} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, background: "none", border: "none", padding: "2px 0", cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
                   <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#383a37" }}>
-                    <b>{r.d.propertyName || r.d.fileName}</b> <span style={{ color: "#7d766a" }}>if {r.anchor} goes dark</span>
+                    <b>{r.d.propertyName || r.d.fileName}</b> <span style={{ color: "#6b6a65" }}>if {r.anchor} goes dark</span>
                   </span>
                   <span style={{ color: "#c2410c", fontWeight: 700, whiteSpace: "nowrap" }}>{money(r.rent)}</span>
-                  <span style={{ color: "#a89f8f", whiteSpace: "nowrap", fontSize: 11 }}>{r.tenants} tenant{r.tenants === 1 ? "" : "s"}</span>
+                  <span style={{ color: "#9b9992", whiteSpace: "nowrap", fontSize: 11 }}>{r.tenants} tenant{r.tenants === 1 ? "" : "s"}</span>
                 </button>
               ))}
             </div>

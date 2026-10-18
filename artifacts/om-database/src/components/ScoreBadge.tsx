@@ -11,13 +11,13 @@ interface Props {
 // when an unrelated parent state change (modal/selection) re-renders the grid.
 function ScoreBadge({ score, size = 14 }: Props) {
   if (!score) return null;
-  const color = GRADE_COLORS[score.grade] || "#a69e91";
+  const color = GRADE_COLORS[score.grade] || "#94928b";
   return (
     <span title={score.rationale || ""} style={{
       display: "inline-flex", alignItems: "center", justifyContent: "center",
       width: size * 2, height: size * 2, borderRadius: "50%",
       border: `1.5px solid ${color}55`, background: `${color}15`,
-      fontFamily: "'Fraunces', serif", fontSize: size, fontWeight: 700,
+      fontFamily: "'Lora',Georgia,serif", fontSize: size, fontWeight: 700,
       color, letterSpacing: "-0.02em", cursor: score.rationale ? "help" : "default",
       flexShrink: 0,
     }}>

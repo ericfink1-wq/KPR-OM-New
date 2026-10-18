@@ -80,6 +80,6 @@ export function scoreDealConfidence(deal: Deal): DealConfidence {
 
   const score = Math.max(0, Math.min(100, factors.reduce((a, f) => a + f.pts, 0)));
   const label = score >= 85 ? "High" : score >= 70 ? "Good" : score >= 50 ? "Partial" : "Low";
-  const color = score >= 85 ? "#0f9d63" : score >= 70 ? "#3f7a1f" : score >= 50 ? "#c97a18" : "#dc2626";
+  const color = score >= 85 ? "#0f9d63" : score >= 70 ? "#3e8a2f" : score >= 50 ? "#c97a18" : "#dc2626";
   return { score, label, color, factors, gaps };
 }

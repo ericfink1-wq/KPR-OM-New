@@ -167,44 +167,44 @@ function OccTip({ val, source, breakdown, grade }: { val: number; source: "state
         style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}
       >
         <span style={{ color: grade ? grade.color : undefined, fontWeight: grade && grade.tier !== "healthy" ? 700 : undefined }}>{val.toFixed(1)}%</span>
-        <span style={{ fontSize: 8, letterSpacing: "0.04em", color: isStated ? "#0f9d63" : "#7d766a", background: isStated ? "#e7f8f0" : "#f3f4f6", border: `1px solid ${isStated ? "#a7f3d0" : "#d1d5db"}`, borderRadius: 3, padding: "0px 3px", fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
+        <span style={{ fontSize: 8, letterSpacing: "0.04em", color: isStated ? "#0f9d63" : "#6b6a65", background: isStated ? "#e7f8f0" : "#f3f4f6", border: `1px solid ${isStated ? "#a7f3d0" : "#d1d5db"}`, borderRadius: 3, padding: "0px 3px", fontWeight: 700, fontFamily: "'Roboto',sans-serif" }}>
           {source}
         </span>
       </span>
       {open && pos && createPortal(
         <div style={{
           position: "fixed", top: pos.top, left: pos.left, transform: pos.flip ? "none" : "translateY(-100%)",
-          background: "#fff", border: "1px solid #e6dfd0", borderRadius: 10,
+          background: "#fff", border: "1px solid #e3e1db", borderRadius: 10,
           boxShadow: "0 8px 24px rgba(56,58,55,0.18)", padding: "10px 14px",
           zIndex: 10000, width: 290, maxWidth: "calc(100vw - 24px)",
-          fontSize: 11, fontFamily: "'Inter',sans-serif",
+          fontSize: 11, fontFamily: "'Roboto',sans-serif",
         }}>
           {breakdown ? (
             <>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
-                <span style={{ color: "#a89f8f" }}>Base rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.base)}</span>
+                <span style={{ color: "#9b9992" }}>Base rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.base)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
-                <span style={{ color: "#a89f8f" }}>{recoveryLabel(breakdown)}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.reimbursements)}</span>
+                <span style={{ color: "#9b9992" }}>{recoveryLabel(breakdown)}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.reimbursements)}</span>
               </div>
               <RecoveryWorking b={breakdown} />
               {breakdown.percentRent > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
-                  <span style={{ color: "#a89f8f" }}>+ % Rent{breakdown.percentRentFormula ? " (lease formula)" : ""}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.percentRent)}</span>
+                  <span style={{ color: "#9b9992" }}>+ % Rent{breakdown.percentRentFormula ? " (lease formula)" : ""}</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.percentRent)}</span>
                 </div>
               )}
               {breakdown.other > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3 }}>
-                  <span style={{ color: "#a89f8f" }}>+ Other rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.other)}</span>
+                  <span style={{ color: "#9b9992" }}>+ Other rent</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.other)}</span>
                 </div>
               )}
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3, borderTop: "1px solid #f1eadc", paddingTop: 4, marginTop: 2 }}>
-                <span style={{ color: "#a89f8f" }}>= Total</span><span style={{ fontWeight: 700 }}>{fmt$(breakdown.total)}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 3, borderTop: "1px solid #efeee9", paddingTop: 4, marginTop: 2 }}>
+                <span style={{ color: "#9b9992" }}>= Total</span><span style={{ fontWeight: 700 }}>{fmt$(breakdown.total)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 4 }}>
-                <span style={{ color: "#a89f8f" }}>÷ Sales</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.sales)}</span>
+                <span style={{ color: "#9b9992" }}>÷ Sales</span><span style={{ fontWeight: 600 }}>{fmt$(breakdown.sales)}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, borderTop: "1px solid #f1eadc", paddingTop: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 20, borderTop: "1px solid #efeee9", paddingTop: 4 }}>
                 <span style={{ fontWeight: 600, color: "#383a37" }}>Occ Cost</span><span style={{ fontWeight: 700, color: "#383a37" }}>{val.toFixed(1)}%</span>
               </div>
             </>
@@ -212,7 +212,7 @@ function OccTip({ val, source, breakdown, grade }: { val: number; source: "state
             <div style={{ color: "#383a37" }}>OM-stated: <b>{val.toFixed(1)}%</b></div>
           )}
           {grade && (
-            <div style={{ marginTop: 7, paddingTop: 6, borderTop: "1px solid #f1eadc", display: "flex", alignItems: "flex-start", gap: 6 }}>
+            <div style={{ marginTop: 7, paddingTop: 6, borderTop: "1px solid #efeee9", display: "flex", alignItems: "flex-start", gap: 6 }}>
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: grade.color, flexShrink: 0, marginTop: 3 }} />
               <span style={{ color: "#5c5f57", lineHeight: 1.4 }}><b style={{ color: grade.color }}>{grade.short}.</b> {grade.detail}</span>
             </div>
@@ -458,7 +458,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
   const TH = ({ label, k, align = "right" }: { label: string; k: SortKey; align?: "left" | "right" }) => (
     <th onClick={() => toggleSort(k)} style={{
       padding: "7px 10px", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
-      color: sortKey === k ? "#3f7a1f" : "#7d766a", textTransform: "uppercase",
+      color: sortKey === k ? "#3e8a2f" : "#6b6a65", textTransform: "uppercase",
       cursor: "pointer", whiteSpace: "nowrap", textAlign: align,
       background: "transparent", border: "none", userSelect: "none",
       borderBottom: "1px solid #e8e2d6",
@@ -474,11 +474,11 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 15 }}>📊</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#383a37", fontFamily: "'Inter',sans-serif" }}>Tenant Sales</span>
-            <span style={{ fontSize: 11, color: "#958d80" }}>— no sales data available</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#383a37", fontFamily: "'Roboto',sans-serif" }}>Tenant Sales</span>
+            <span style={{ fontSize: 11, color: "#8a8983" }}>— no sales data available</span>
           </div>
           <button onClick={() => fileRef.current?.click()} disabled={uploadBusy} style={{
-            background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 6,
+            background: "#3e8a2f", color: "#fff", border: "none", borderRadius: 6,
             padding: "6px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer",
             opacity: uploadBusy ? 0.6 : 1, whiteSpace: "nowrap",
           }}>
@@ -487,7 +487,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
         </div>
         {uploadError && <div style={{ marginTop: 8, fontSize: 11, color: "#dc2626" }}>⚠ {uploadError}</div>}
         <input ref={fileRef} type="file" accept="application/pdf,.pdf,.xlsx,.xls,.xlsm,.xlsb,.csv" style={{ display: "none" }} onChange={onUpload} />
-        <div style={{ marginTop: 10, fontSize: 11, color: "#958d80", lineHeight: 1.55 }}>
+        <div style={{ marginTop: 10, fontSize: 11, color: "#8a8983", lineHeight: 1.55 }}>
           Upload a tenant sales report PDF and the year will be automatically detected. Sales data is tracked by year so you always know how current the numbers are.
         </div>
       </div>
@@ -522,7 +522,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
         onClick={() => setCollapsed(c => !c)}
       >
         <span style={{ fontSize: 15 }}>📊</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#2d5a0e", fontFamily: "'Inter',sans-serif", flexShrink: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#2d5a0e", fontFamily: "'Roboto',sans-serif", flexShrink: 0 }}>
           Tenant Sales
         </span>
 
@@ -596,7 +596,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
             />
 
             <button onClick={() => fileRef.current?.click()} disabled={uploadBusy} style={{
-              background: "#3f7a1f", color: "#fff", border: "none", borderRadius: 6,
+              background: "#3e8a2f", color: "#fff", border: "none", borderRadius: 6,
               padding: "5px 13px", fontSize: 11, fontWeight: 600, cursor: "pointer",
               opacity: uploadBusy ? 0.6 : 1, marginLeft: "auto", whiteSpace: "nowrap",
             }}>
@@ -618,10 +618,10 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
 
           {/* Table */}
           {rows.length === 0 ? (
-            <div style={{ fontSize: 12, color: "#958d80", textAlign: "center", padding: "16px 0" }}>No tenants match your filter.</div>
+            <div style={{ fontSize: 12, color: "#8a8983", textAlign: "center", padding: "16px 0" }}>No tenants match your filter.</div>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <table className="kpr-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: "#eef5e8" }}>
                     <TH label="Tenant" k="name" align="left" />
@@ -655,9 +655,9 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                       <th style={{ borderBottom: "1px solid #e8e2d6" }} />
                       {displayYears.map(y => (
                         <>
-                          <th key={`${y}-psf`} onClick={() => toggleSort("salesPSF")} style={{ padding: "4px 10px", fontSize: 10, color: "#7d766a", textAlign: "right", cursor: "pointer", borderLeft: "2px solid #c8ddb8", borderBottom: "1px solid #e8e2d6" }}>Sales PSF</th>
-                          <th key={`${y}-tot`} onClick={() => toggleSort("annualSales")} style={{ padding: "4px 10px", fontSize: 10, color: "#7d766a", textAlign: "right", cursor: "pointer", borderBottom: "1px solid #e8e2d6" }}>Total Sales</th>
-                          <th key={`${y}-occ`} onClick={() => toggleSort("occupancyCost")} style={{ padding: "4px 10px", fontSize: 10, color: "#7d766a", textAlign: "right", cursor: "pointer", borderBottom: "1px solid #e8e2d6" }}>Occ Cost %</th>
+                          <th key={`${y}-psf`} onClick={() => toggleSort("salesPSF")} style={{ padding: "4px 10px", fontSize: 10, color: "#6b6a65", textAlign: "right", cursor: "pointer", borderLeft: "2px solid #c8ddb8", borderBottom: "1px solid #e8e2d6" }}>Sales PSF</th>
+                          <th key={`${y}-tot`} onClick={() => toggleSort("annualSales")} style={{ padding: "4px 10px", fontSize: 10, color: "#6b6a65", textAlign: "right", cursor: "pointer", borderBottom: "1px solid #e8e2d6" }}>Total Sales</th>
+                          <th key={`${y}-occ`} onClick={() => toggleSort("occupancyCost")} style={{ padding: "4px 10px", fontSize: 10, color: "#6b6a65", textAlign: "right", cursor: "pointer", borderBottom: "1px solid #e8e2d6" }}>Occ Cost %</th>
                         </>
                       ))}
                     </tr>
@@ -668,13 +668,13 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                     <tr key={row.name} style={{ background: row.removed ? "#f6f4ef" : (i % 2 === 0 ? "#fff" : "#f8fbf5"), borderBottom: "1px solid #eef0eb", opacity: row.removed ? 0.65 : 1 }}>
                       <td style={{ padding: "7px 10px", fontWeight: 600, color: "#262724", whiteSpace: "nowrap" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                          <span style={row.removed ? { textDecoration: "line-through", color: "#a89f8f", fontWeight: 500 } : undefined}>{row.name}</span>
+                          <span style={row.removed ? { textDecoration: "line-through", color: "#9b9992", fontWeight: 500 } : undefined}>{row.name}</span>
                           {(() => {
                             const same = identicalSalesYears(row.byYear);
                             if (!same) return null;
                             return <span title={`${same[0]} and ${same[1]} report exactly the same sales — usually a figure carried forward rather than a real report. Verify with the tenant's statement.`} style={{ fontSize: 8.5, fontWeight: 700, color: "#9a6a12", background: "#fff3df", border: "1px solid #f2d4a0", borderRadius: 3, padding: "1px 6px", cursor: "help", whiteSpace: "nowrap" }}>⚠ {same[0]} = {same[1]}</span>;
                           })()}
-                          {isFormer(row) && !row.removed && <span title="Not on the current rent roll — a former tenant" style={{ fontSize: 8, fontWeight: 700, color: "#6f6a5f", background: "#f1f0ec", borderRadius: 3, padding: "0 5px" }}>FORMER</span>}
+                          {isFormer(row) && !row.removed && <span title="Not on the current rent roll — a former tenant" style={{ fontSize: 8, fontWeight: 700, color: "#676767", background: "#f1f0ec", borderRadius: 3, padding: "0 5px" }}>FORMER</span>}
                           {!row.removed && (() => {
                             const r = riskFor(row);
                             if (!r) return null;
@@ -693,7 +693,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                           })()}
                           {onChangeSalesHistory && (
                             row.removed ? (
-                              <button onClick={() => applySalesEdit(row.key, { type: "readd" })} title="Removed — click to re-add if that was a mistake / the tenant is back" style={{ fontSize: 9, fontWeight: 700, color: "#3f7a1f", background: "#f4f8ef", border: "1px solid #cfe3b8", borderRadius: 3, padding: "1px 6px", cursor: "pointer" }}>↩ Re-add</button>
+                              <button onClick={() => applySalesEdit(row.key, { type: "readd" })} title="Removed — click to re-add if that was a mistake / the tenant is back" style={{ fontSize: 9, fontWeight: 700, color: "#3e8a2f", background: "#f4f8ef", border: "1px solid #cfe3b8", borderRadius: 3, padding: "1px 6px", cursor: "pointer" }}>↩ Re-add</button>
                             ) : linkEditKey === row.key ? (
                               <select autoFocus defaultValue=""
                                 onChange={e => {
@@ -711,7 +711,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                             ) : rosterByKey.has(row.key) ? (
                               <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                                 <span title="Matched to a tenant on the rent roll" style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.04em", color: "#0f9d63", background: "#e7f8f0", border: "1px solid #a7f3d0", borderRadius: 3, padding: "0 4px" }}>LINKED</span>
-                                <button onClick={() => setLinkEditKey(row.key)} title="Linked to the wrong tenant? Re-link or remove." style={{ background: "transparent", border: "none", color: "#a89f8f", cursor: "pointer", fontSize: 9.5, padding: 0, textDecoration: "underline" }}>edit</button>
+                                <button onClick={() => setLinkEditKey(row.key)} title="Linked to the wrong tenant? Re-link or remove." style={{ background: "transparent", border: "none", color: "#9b9992", cursor: "pointer", fontSize: 9.5, padding: 0, textDecoration: "underline" }}>edit</button>
                               </span>
                             ) : (
                               <button onClick={() => setLinkEditKey(row.key)} title="Not matched to a rent-roll tenant — link it, or remove if it's gone." style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: "0.04em", color: "#b45309", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 3, padding: "1px 6px", cursor: "pointer" }}>UNLINKED ▾</button>
@@ -769,7 +769,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
             </div>
           )}
           {formerCount > 0 && (
-            <button onClick={() => setShowFormer(v => !v)} style={{ marginTop: 8, background: "transparent", border: "1px solid #e3dccd", color: "#7d766a", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer" }}>
+            <button onClick={() => setShowFormer(v => !v)} style={{ marginTop: 8, background: "transparent", border: "1px solid #dfddd6", color: "#6b6a65", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer" }}>
               {showFormer ? "Hide" : "Show"} former tenants ({formerCount})
             </button>
           )}

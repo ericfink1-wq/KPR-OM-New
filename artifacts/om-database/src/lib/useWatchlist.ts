@@ -72,5 +72,5 @@ export const WATCH_STATUS_META: Record<string, { label: string; color: string; b
   liquidating: { label: "Liquidating", color: "#fff",     bg: "#b3261e", border: "#b3261e" },
   bankruptcy:  { label: "Bankruptcy",  color: "#fff",     bg: "#d9534f", border: "#d9534f" },
   distressed:  { label: "Distressed",  color: "#7a4a00",  bg: "#fbe6cf", border: "#e8c49a" },
-  watch:       { label: "Watchlist",   color: "#5a5340",  bg: "#f1eadc", border: "#ddd4c2" },
+  watch:       { label: "Watchlist",   color: "#5a5340",  bg: "#efeee9", border: "#dad8d1" },
 };

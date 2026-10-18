@@ -255,15 +255,15 @@ Statuses: Owned/Under Contract/Sold are KPR's actual deals (kpr object = real ec
 
   // ── styles ───────────────────────────────────────────────────────────────
   const winCell: React.CSSProperties = { background: "#f0fae8", color: "#2f6e10", fontWeight: 700 };
-  const darkBtn: React.CSSProperties = { background: "#26281f", border: "none", color: "#e8e0cf", padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" };
-  const ghostBtn: React.CSSProperties = { background: "#fff", border: "1px solid #d9d2c4", color: "#5c5047", padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" };
+  const darkBtn: React.CSSProperties = { background: "#232422", border: "none", color: "#e8e0cf", padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Roboto',sans-serif" };
+  const ghostBtn: React.CSSProperties = { background: "#fff", border: "1px solid #d7d5ce", color: "#4f4d48", padding: "7px 14px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Roboto',sans-serif" };
 
   return (
     <div style={{ padding: isMobile ? "14px 14px 40px" : "20px 28px 40px", maxWidth: DETAIL_MAX_WIDTH, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       {/* Toolbar */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 18 }}>
-        <button onClick={onBack} style={{ ...ghostBtn, padding: "5px 10px", fontSize: 11, fontWeight: 400, color: "#7d766a", border: "1px solid #e7e0d2" }}>← Back</button>
-        <div style={{ fontFamily: "'Fraunces',serif", fontSize: isMobile ? 18 : 21, fontWeight: 500, color: "#26281f", flex: 1, minWidth: 140 }}>
+        <button onClick={onBack} style={{ ...ghostBtn, padding: "5px 10px", fontSize: 11, fontWeight: 400, color: "#6b6a65", border: "1px solid #e6e4de" }}>← Back</button>
+        <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: isMobile ? 18 : 21, fontWeight: 500, color: "#232422", flex: 1, minWidth: 140 }}>
           Comparing {deals.length} properties
         </div>
         <button onClick={runAiAnalysis} disabled={aiLoading} style={{ ...darkBtn, opacity: aiLoading ? 0.6 : 1 }}>
@@ -293,17 +293,17 @@ Statuses: Owned/Under Contract/Sold are KPR's actual deals (kpr object = real ec
               <div style={sectionLabelStyle}>{s.title}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {deals.map((d, di) => (
-                  <div key={d.id} style={{ background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, overflow: "hidden" }}>
-                    <button onClick={() => onOpen(d.id)} style={{ width: "100%", textAlign: "left", background: "#faf7f0", border: "none", borderBottom: "1px solid #f1eadc", padding: "10px 14px", cursor: "pointer" }}>
-                      <div style={{ fontFamily: "'Fraunces',serif", fontSize: 14, fontWeight: 500, color: "#26281f" }}>{d.propertyName || d.fileName || "Untitled"}</div>
-                      <div style={{ fontSize: 10, color: "#a89f8f" }}>{statusBadge(d)} · {cityState(d) || d.market || ""}</div>
+                  <div key={d.id} style={{ background: "#fff", border: "1px solid #ebeae5", borderRadius: 12, overflow: "hidden" }}>
+                    <button onClick={() => onOpen(d.id)} style={{ width: "100%", textAlign: "left", background: "#faf9f5", border: "none", borderBottom: "1px solid #efeee9", padding: "10px 14px", cursor: "pointer" }}>
+                      <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 14, fontWeight: 500, color: "#232422" }}>{d.propertyName || d.fileName || "Untitled"}</div>
+                      <div style={{ fontSize: 10, color: "#9b9992" }}>{statusBadge(d)} · {cityState(d) || d.market || ""}</div>
                     </button>
                     <div>
                       {s.rows.filter(r => deals.some(x => r.disp(x) !== "—")).map(r => {
                         const win = winnersFor(r).has(di);
                         return (
                           <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "7px 14px", borderTop: "1px solid #f6f1e7", fontSize: 12.5 }}>
-                            <span style={{ color: "#8b8578" }}>{r.label}</span>
+                            <span style={{ color: "#7a7973" }}>{r.label}</span>
                             <span style={{ fontWeight: 600, color: win ? "#2f6e10" : "#383a37" }}>{r.disp(d)}{win ? " ★" : ""}</span>
                           </div>
                         );
@@ -318,15 +318,15 @@ Statuses: Owned/Under Contract/Sold are KPR's actual deals (kpr object = real ec
       ) : (
         // DESKTOP: classic side-by-side table with section bands + winner highlight
         <div style={{ overflowX: "auto" }}>
-          <table style={{ borderCollapse: "collapse", width: "100%", background: "#fff", border: "1px solid #ece5d7", borderRadius: 12, overflow: "hidden" }}>
+          <table style={{ borderCollapse: "collapse", width: "100%", background: "#fff", border: "1px solid #ebeae5", borderRadius: 12, overflow: "hidden" }}>
             <thead>
-              <tr style={{ background: "#faf7f0" }}>
-                <th className="freeze-col" style={{ padding: "12px 14px", textAlign: "left", fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "#a89f8f", textTransform: "uppercase", width: 180, position: "sticky", left: 0, background: "#faf7f0", zIndex: 1 }}>Metric</th>
+              <tr style={{ background: "#faf9f5" }}>
+                <th className="freeze-col" style={{ padding: "12px 14px", textAlign: "left", fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "#9b9992", textTransform: "uppercase", width: 180, position: "sticky", left: 0, background: "#faf9f5", zIndex: 1 }}>Metric</th>
                 {deals.map(d => (
                   <th key={d.id} style={{ padding: "12px 14px", textAlign: "left", minWidth: 175 }}>
                     <button onClick={() => onOpen(d.id)} style={{ background: "transparent", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }}>
-                      <div style={{ fontFamily: "'Fraunces',serif", fontSize: 14, fontWeight: 500, color: "#26281f" }}>{d.propertyName || d.fileName || "Untitled"}</div>
-                      <div style={{ fontSize: 10, color: "#a89f8f", marginTop: 2 }}>{statusBadge(d)} · {cityState(d) || d.market || ""}</div>
+                      <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 14, fontWeight: 500, color: "#232422" }}>{d.propertyName || d.fileName || "Untitled"}</div>
+                      <div style={{ fontSize: 10, color: "#9b9992", marginTop: 2 }}>{statusBadge(d)} · {cityState(d) || d.market || ""}</div>
                     </button>
                   </th>
                 ))}
@@ -341,8 +341,8 @@ Statuses: Owned/Under Contract/Sold are KPR's actual deals (kpr object = real ec
                   {s.rows.filter(r => deals.some(d => r.disp(d) !== "—")).map(r => {
                     const winners = winnersFor(r);
                     return (
-                      <tr key={r.label} style={{ borderTop: "1px solid #f1eadc" }}>
-                        <td className="freeze-col" style={{ padding: "9px 14px", fontSize: 11, fontWeight: 600, color: "#7d766a", whiteSpace: "nowrap", position: "sticky", left: 0, background: "#fff", zIndex: 1 }}>{r.label}</td>
+                      <tr key={r.label} style={{ borderTop: "1px solid #efeee9" }}>
+                        <td className="freeze-col" style={{ padding: "9px 14px", fontSize: 11, fontWeight: 600, color: "#6b6a65", whiteSpace: "nowrap", position: "sticky", left: 0, background: "#fff", zIndex: 1 }}>{r.label}</td>
                         {deals.map((d, di) => (
                           <td key={d.id} style={{ padding: "9px 14px", fontSize: 12.5, color: "#383a37", fontWeight: 500, ...(winners.has(di) ? winCell : {}) }}>
                             {r.disp(d)}{winners.has(di) ? " ★" : ""}
@@ -361,7 +361,7 @@ Statuses: Owned/Under Contract/Sold are KPR's actual deals (kpr object = real ec
       {/* ── Tenant overlap ──────────────────────────────────────────────────── */}
       <div style={sectionLabelStyle}>Shared tenants {overlap.length > 0 ? `(${overlap.length})` : ""}</div>
       {overlap.length === 0 ? (
-        <div style={{ background: "#faf7f0", border: "1px dashed #e3dccd", borderRadius: 12, padding: "12px 16px", fontSize: 12.5, color: "#9a917f" }}>
+        <div style={{ background: "#faf9f5", border: "1px dashed #dfddd6", borderRadius: 12, padding: "12px 16px", fontSize: 12.5, color: "#8f8d86" }}>
           No tenants appear in more than one of these centers — fully diversified across this set.
         </div>
       ) : (
@@ -369,8 +369,8 @@ Statuses: Owned/Under Contract/Sold are KPR's actual deals (kpr object = real ec
           {overlap.map(o => (
             <span key={o.label} onClick={() => onTenantClick?.(o.label)}
               title={`In ${o.deals.size} of ${deals.length} centers`}
-              style={{ background: o.anchor ? "#f0fae8" : "#f6f2ea", border: `1px solid ${o.anchor ? "#c6e6a0" : "#e3dccd"}`, color: o.anchor ? "#3d7a1c" : "#5c5047", borderRadius: 7, padding: "4px 9px", fontSize: 11.5, fontWeight: 600, cursor: onTenantClick ? "pointer" : "default" }}>
-              {o.label}{o.anchor ? " ⚓" : ""} <span style={{ color: "#a89f8f", fontWeight: 500 }}>×{o.deals.size}</span>
+              style={{ background: o.anchor ? "#f0fae8" : "#faf9f5", border: `1px solid ${o.anchor ? "#c6e6a0" : "#dfddd6"}`, color: o.anchor ? "#3d7a1c" : "#4f4d48", borderRadius: 7, padding: "4px 9px", fontSize: 11.5, fontWeight: 600, cursor: onTenantClick ? "pointer" : "default" }}>
+              {o.label}{o.anchor ? " ⚓" : ""} <span style={{ color: "#9b9992", fontWeight: 500 }}>×{o.deals.size}</span>
             </span>
           ))}
         </div>
@@ -380,7 +380,7 @@ Statuses: Owned/Under Contract/Sold are KPR's actual deals (kpr object = real ec
 }
 
 const sectionLabelStyle: React.CSSProperties = {
-  fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: "#a89f8f",
+  fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", color: "#9b9992",
   textTransform: "uppercase", marginTop: 26, marginBottom: 10,
 };
 
@@ -393,10 +393,10 @@ function CompareMarkdown({ text }: { text: string }) {
   const lines = text.split("\n");
   return <>{lines.map((line, i) => {
     const hm = /^(#{1,6})\s+(.*)$/.exec(line);
-    if (hm && (hm[1].length === 1 || hm[1].length >= 4)) return <div key={i} style={{ fontFamily: "'Fraunces',serif", fontSize: hm[1].length === 1 ? 17 : 14, fontWeight: 600, color: "#26281f", marginTop: 12, marginBottom: 3 }}>{inl(hm[2])}</div>;
-    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) return <div key={i} style={{ height: 1, background: "#e7e0d2", margin: "8px 0" }} />;
-    if (line.startsWith("### ")) return <div key={i} style={{ fontFamily: "'Fraunces',serif", fontSize: 14, fontWeight: 600, color: "#26281f", marginTop: 12, marginBottom: 3 }}>{inl(line.slice(4))}</div>;
-    if (line.startsWith("## ")) return <div key={i} style={{ fontFamily: "'Fraunces',serif", fontSize: 16, fontWeight: 600, color: "#26281f", marginTop: 12, marginBottom: 3 }}>{inl(line.slice(3))}</div>;
+    if (hm && (hm[1].length === 1 || hm[1].length >= 4)) return <div key={i} style={{ fontFamily: "'Lora',Georgia,serif", fontSize: hm[1].length === 1 ? 17 : 14, fontWeight: 600, color: "#232422", marginTop: 12, marginBottom: 3 }}>{inl(hm[2])}</div>;
+    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) return <div key={i} style={{ height: 1, background: "#e6e4de", margin: "8px 0" }} />;
+    if (line.startsWith("### ")) return <div key={i} style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 14, fontWeight: 600, color: "#232422", marginTop: 12, marginBottom: 3 }}>{inl(line.slice(4))}</div>;
+    if (line.startsWith("## ")) return <div key={i} style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 16, fontWeight: 600, color: "#232422", marginTop: 12, marginBottom: 3 }}>{inl(line.slice(3))}</div>;
     if (/^[-*] /.test(line)) return <div key={i} style={{ display: "flex", gap: 7, marginLeft: 2 }}><span style={{ color: "#c89a3e", flexShrink: 0 }}>›</span><span>{inl(line.slice(2))}</span></div>;
     if (line === "") return <div key={i} style={{ height: 5 }} />;
     return <span key={i}>{inl(line)}<br /></span>;

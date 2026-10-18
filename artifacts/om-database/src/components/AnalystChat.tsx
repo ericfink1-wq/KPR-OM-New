@@ -12,7 +12,8 @@ import { useWatchlist } from "../lib/useWatchlist";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import DealTiles from "./DealTiles";
 const ThisWeekCard = lazy(() => import("./ThisWeekCard"));
-import { CalendarClock, BarChart3, ShieldAlert, Scale, Landmark, Users, ChevronRight, ArrowUp, Square } from "lucide-react";
+const HomeHeroKpis = lazy(() => import("./HomeLive"));
+import { CalendarClock, BarChart3, ShieldAlert, Scale, Landmark, Users, ChevronRight, ArrowUp, Square, FileText, Tags, ScrollText, Ruler, MapPin, Database, Building2, Wallet, Maximize2, ShieldCheck, type LucideIcon } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -56,7 +57,14 @@ const HOME_CSS = `
 .kpr-home{font-family:'Roboto',system-ui,sans-serif;color:${K.ink}}
 .kpr-wrap{max-width:1320px;margin:0 auto;padding:0 28px;box-sizing:border-box}
 .kpr-hero{position:relative;overflow:hidden;background:${K.charcoal};padding:34px 0 40px;margin-bottom:28px}
-.kpr-hero-inner{position:relative;z-index:1}
+.kpr-hero:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(91,186,71,.07) 0 2px,transparent 2px 22px),radial-gradient(1200px 300px at 85% -10%,rgba(91,186,71,.22),transparent 60%);pointer-events:none}
+.kpr-hero-inner{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:32px;align-items:center}
+.kpr-hero-date{font-family:'Montserrat',sans-serif;font-weight:700;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:${K.green};margin-bottom:12px}
+.kpr-stat-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;color:#9aa096}
+.kpr-stat-ico{width:28px;height:28px;border-radius:8px;background:#f1f7ee;color:#3e8a2f;display:flex;align-items:center;justify-content:center}
+.kpr-delta{font-family:'Roboto',sans-serif;font-size:11.5px;font-weight:600;color:#3e8a2f;background:#eef7eb;border-radius:20px;padding:1px 7px;white-space:nowrap}
+.kpr-stat{transition:background .15s ease}
+.kpr-rule-grid-light>div.kpr-stat:hover{background:#fcfcfa}
 .kpr-hero-greet h1{font-family:'Lora',Georgia,serif;font-weight:500;font-size:34px;line-height:1.12;color:#fff;margin:0 0 10px;letter-spacing:-.01em}
 .kpr-hero-greet p{font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.74);margin:0;max-width:620px}
 .kpr-hero-panel{position:relative;z-index:1;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:14px 16px 16px;background:rgba(0,0,0,.12)}
@@ -97,6 +105,7 @@ const HOME_CSS = `
 .kpr-ask-card:hover{border-color:${K.green};transform:translateY(-1px)}
 .kpr-ask-icon{flex-shrink:0;width:32px;height:32px;border-radius:8px;background:#eef7eb;color:#3e8a2f;display:flex;align-items:center;justify-content:center}
 @media(max-width:1023px){.kpr-lib-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.kpr-hero-inner{grid-template-columns:1fr;gap:20px}}
+@media(max-width:640px){.kpr-stat-top{margin-bottom:5px}.kpr-stat-ico{width:24px;height:24px}}
 @media(max-width:1500px){.kpr-hero{padding-right:0}.kpr-hero-inner{padding-right:64px}}
 @media(max-width:640px){
   .kpr-wrap{padding:0 16px}
@@ -115,12 +124,25 @@ const HOME_CSS = `
 }
 `;
 
-function HomeStat({ label, value, sub, dark }: { label: string; value: string; sub?: string; dark?: boolean }) {
+/** Tiny trend line — monthly counts, oldest → newest. */
+function Sparkline({ values, color = K.green }: { values: number[]; color?: string }) {
+  if (values.length < 2 || values.every(v => v === values[0])) return null;
+  const w = 64, h = 20, max = Math.max(...values), min = Math.min(...values), span = max - min || 1;
+  const pts = values.map((v, i) => `${((i / (values.length - 1)) * w).toFixed(1)},${(h - 2 - ((v - min) / span) * (h - 4)).toFixed(1)}`).join(" ");
+  return <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden><polyline points={pts} fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+function HomeStat({ label, value, sub, dark, icon: Icon, delta, spark }: { label: string; value: string; sub?: string; dark?: boolean; icon?: LucideIcon; delta?: string | null; spark?: number[] }) {
   return (
     <div className={`kpr-stat${dark ? " dark" : ""}`}>
+      {(Icon || delta || spark) && (
+        <div className="kpr-stat-top">
+          {Icon ? <span className="kpr-stat-ico"><Icon size={15} strokeWidth={1.8} aria-hidden /></span> : <span />}
+          {spark ? <Sparkline values={spark} /> : delta ? <span className="kpr-delta">{delta}</span> : null}
+        </div>
+      )}
       <div className="kpr-stat-v">{value}</div>
       <div className="kpr-stat-l">{label}</div>
-      {sub && <div className="kpr-stat-s">{sub}</div>}
+      {sub && <div className="kpr-stat-s">{sub}{spark && delta ? <span className="kpr-delta" style={{ marginLeft: 6 }}>{delta}</span> : null}</div>}
     </div>
   );
 }
@@ -302,7 +324,19 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
       active.forEach(d => walk(d as unknown as Record<string, unknown>));
       return n;
     })();
-    return { total: active.length, tenantBrands, leases, sfAnalyzed, markets, dataPoints };
+    // Trend: deals recorded per month over the last 12 months (by upload date), and the
+    // cumulative SF / leases — the sparklines on the tiles. Deltas = added in the last 30 days.
+    const now = new Date(), months: string[] = [];
+    for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`); }
+    const ym = (d: Deal) => String(d.uploadedAt || "").slice(0, 7);
+    const perMonth = months.map(m => active.filter(d => ym(d) === m).length);
+    const before = (m: string) => active.filter(d => ym(d) && ym(d) <= m);
+    const sfCum = months.map(m => before(m).reduce((s, d) => s + num(d.totalSF), 0));
+    const leaseCum = months.map(m => before(m).reduce((s, d) => s + (d.tenants || []).length, 0));
+    const cut = Date.now() - 30 * 86_400_000;
+    const recent = active.filter(d => d.uploadedAt && Date.parse(d.uploadedAt) >= cut);
+    return { total: active.length, tenantBrands, leases, sfAnalyzed, markets, dataPoints, perMonth, sfCum, leaseCum,
+      newDeals: recent.length, newLeases: recent.reduce((s, d) => s + (d.tenants || []).length, 0), newSF: recent.reduce((s, d) => s + num(d.totalSF), 0) };
   })();
 
   // ── Owned portfolio stats ────────────────────────────────────────────────
@@ -345,9 +379,11 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
             <section className="kpr-hero">
               <div className="kpr-wrap kpr-hero-inner">
               <div className="kpr-hero-greet">
+                <div className="kpr-hero-date">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</div>
                 <h1>Good {getTimeGreeting()}.</h1>
                 <p>I'm your KPR deal analyst. I know your entire deal library — ask me anything about your deals, comps, lease rollover, demographics, or market trends.</p>
               </div>
+              <Suspense fallback={<div className="kpr-hero-panel" style={{ minHeight: 150, opacity: .5 }} aria-hidden />}><HomeHeroKpis deals={active} /></Suspense>
               </div>
               <svg className="kpr-chevron" viewBox="0 0 120 120" aria-hidden><path d="M120 0 L120 120 L0 120 Z" fill={K.green} /><path d="M120 34 L120 120 L34 120 Z" fill="#4a9a3a" /></svg>
             </section>
@@ -359,12 +395,12 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
                 <SectionTitle>Intelligence library</SectionTitle>
                 <div className="kpr-card" style={{ padding: 0, overflow: "hidden" }}>
                   <div className="kpr-rule-grid kpr-rule-grid-light kpr-lib-grid">
-                    <HomeStat label="OMs read" value={stats.total ? stats.total.toLocaleString() : "—"} sub="every deal recorded" />
-                    <HomeStat label="Tenant brands" value={stats.tenantBrands ? stats.tenantBrands.toLocaleString() : "—"} sub="distinct brands" />
-                    <HomeStat label="Leases analyzed" value={stats.leases ? stats.leases.toLocaleString() : "—"} sub="roster rows read" />
-                    <HomeStat label="SF analyzed" value={stats.sfAnalyzed ? fmtSF(stats.sfAnalyzed) : "—"} sub="across all centers" />
-                    <HomeStat label="Markets covered" value={stats.markets ? stats.markets.toLocaleString() : "—"} sub="distinct markets" />
-                    <HomeStat label="Data points" value={stats.dataPoints ? stats.dataPoints.toLocaleString() : "—"} sub="figures captured" />
+                    <HomeStat icon={FileText} spark={stats.perMonth} delta={stats.newDeals ? `+${stats.newDeals} in 30d` : null} label="OMs read" value={stats.total ? stats.total.toLocaleString() : "—"} sub="every deal recorded" />
+                    <HomeStat icon={Tags} label="Tenant brands" value={stats.tenantBrands ? stats.tenantBrands.toLocaleString() : "—"} sub="distinct brands" />
+                    <HomeStat icon={ScrollText} spark={stats.leaseCum} delta={stats.newLeases ? `+${stats.newLeases.toLocaleString()}` : null} label="Leases analyzed" value={stats.leases ? stats.leases.toLocaleString() : "—"} sub="roster rows read" />
+                    <HomeStat icon={Ruler} spark={stats.sfCum} delta={stats.newSF ? `+${fmtSF(stats.newSF)}` : null} label="SF analyzed" value={stats.sfAnalyzed ? fmtSF(stats.sfAnalyzed) : "—"} sub="across all centers" />
+                    <HomeStat icon={MapPin} label="Markets covered" value={stats.markets ? stats.markets.toLocaleString() : "—"} sub="distinct markets" />
+                    <HomeStat icon={Database} label="Data points" value={stats.dataPoints ? stats.dataPoints.toLocaleString() : "—"} sub="figures captured" />
                   </div>
                 </div>
               </section>
@@ -381,10 +417,10 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
                 ) : (
                   <div className="kpr-card" style={{ padding: 0, overflow: "hidden" }}>
                     <div className="kpr-rule-grid kpr-rule-grid-light kpr-owned-grid">
-                      <HomeStat label="Properties" value={portfolio.count.toLocaleString()} sub="marked Owned" />
-                      {portfolio.value > 0 && <HomeStat label="Cost basis" value={fmtM(portfolio.value)} sub="purchase price, or asking where none" />}
-                      {portfolio.sf > 0 && <HomeStat label="Square footage" value={fmtSF(portfolio.sf)} sub="gross leasable area" />}
-                      {portfolio.igRentPct != null && <HomeStat label="Investment-grade rent" value={`${portfolio.igRentPct}%`} sub="of in-place base rent" />}
+                      <HomeStat icon={Building2} label="Properties" value={portfolio.count.toLocaleString()} sub="marked Owned" />
+                      {portfolio.value > 0 && <HomeStat icon={Wallet} label="Cost basis" value={fmtM(portfolio.value)} sub="purchase price, or asking where none" />}
+                      {portfolio.sf > 0 && <HomeStat icon={Maximize2} label="Square footage" value={fmtSF(portfolio.sf)} sub="gross leasable area" />}
+                      {portfolio.igRentPct != null && <HomeStat icon={ShieldCheck} label="Investment-grade rent" value={`${portfolio.igRentPct}%`} sub="of in-place base rent" />}
                     </div>
                     {portfolio.anchors.length > 0 && (
                       <div className="kpr-anchors">
@@ -403,19 +439,19 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
               </section>
             )}
 
-            {/* Weekly digest of owned-property critical dates (no email in the app — it lives here). */}
-            {portfolio.count > 0 && (
-              <section className="kpr-section">
-                <SectionTitle>This week</SectionTitle>
-                <Suspense fallback={null}><ThisWeekCard deals={active} onOpenDeal={onOpenDeal} onSeeAll={() => onNav?.("am:dates")} /></Suspense>
-              </section>
-            )}
-
             {/* Owned-portfolio risk cards live on Portfolio Analytics → Owned only (Eric, 10/17/26). */}
             {active.some(d => d.status === "Under Contract" || d.status === "Prospect") && (
               <section className="kpr-section">
                 <SectionTitle>Pipeline</SectionTitle>
                 <DealTiles deals={active} onOpen={onOpenDeal} />
+              </section>
+            )}
+
+            {/* Weekly digest of owned-property critical dates (no email in the app — it lives here). */}
+            {portfolio.count > 0 && (
+              <section className="kpr-section">
+                <SectionTitle>This week</SectionTitle>
+                <Suspense fallback={null}><ThisWeekCard deals={active} onOpenDeal={onOpenDeal} onSeeAll={() => onNav?.("am:dates")} /></Suspense>
               </section>
             )}
 
@@ -466,15 +502,15 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
             {msgs.map((m, i) => (
               <div key={i} style={{ display: "flex", flexDirection: m.role === "user" ? "row-reverse" : "row", gap: 12, animation: "riseIn 0.22s ease both" }}>
                 {m.role === "assistant" && (
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#26281f", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: 12, color: "#e8e0cf", fontWeight: 500 }}>K</span>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#232422", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 12, color: "#e8e0cf", fontWeight: 500 }}>K</span>
                   </div>
                 )}
                 <div style={{
                   maxWidth: "76%",
-                  background: m.role === "user" ? "#26281f" : "#fff",
+                  background: m.role === "user" ? "#232422" : "#fff",
                   color: m.role === "user" ? "#e8e0cf" : "#383a37",
-                  border: m.role === "user" ? "none" : "1px solid #e7e0d2",
+                  border: m.role === "user" ? "none" : "1px solid #e6e4de",
                   borderRadius: m.role === "user" ? "14px 14px 4px 14px" : "4px 14px 14px 14px",
                   padding: "12px 16px",
                   fontSize: 13.5,
@@ -487,10 +523,10 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
             ))}
             {loading && (
               <div style={{ display: "flex", gap: 12, animation: "riseIn 0.2s ease both" }}>
-                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#26281f", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontFamily: "'Fraunces', serif", fontSize: 12, color: "#e8e0cf" }}>K</span>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#232422", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 12, color: "#e8e0cf" }}>K</span>
                 </div>
-                <div style={{ background: "#fff", border: "1px solid #e7e0d2", borderRadius: "4px 14px 14px 14px", padding: "16px 20px", display: "flex", gap: 5 }}>
+                <div style={{ background: "#fff", border: "1px solid #e6e4de", borderRadius: "4px 14px 14px 14px", padding: "16px 20px", display: "flex", gap: 5 }}>
                   {[0,1,2].map(i => (
                     <span key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#c8bfb0", display: "block", animation: `dotPulse 1.2s ease ${i*0.2}s infinite` }}/>
                   ))}
@@ -506,7 +542,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
       <div className="kpr-chatbar-wrap" style={{ background: "linear-gradient(180deg, rgba(250,249,245,0) 0%, rgba(250,249,245,0.92) 38%)", flexShrink: 0 }}>
         <div className="kpr-chatbar" style={{ maxWidth: onAsk ? 1320 : 1400, margin: "0 auto", padding: "10px 28px 12px", boxSizing: "border-box" }}>
         {msgs.length > 0 && (
-          <button onClick={() => setMsgs([])} style={{ fontSize: 10, color: "#a89f8f", background: "transparent", border: "none", cursor: "pointer", marginBottom: 8, fontFamily: "'Inter', sans-serif" }}>
+          <button onClick={() => setMsgs([])} style={{ fontSize: 10, color: "#9b9992", background: "transparent", border: "none", cursor: "pointer", marginBottom: 8, fontFamily: "'Roboto',sans-serif" }}>
             ← New conversation
           </button>
         )}
@@ -514,7 +550,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
           {showSuggestions && (
             <div style={{
               position: "absolute", bottom: "calc(100% + 6px)", left: 0, right: 54,
-              background: "#fff", border: "1px solid #e3dccd", borderRadius: 12,
+              background: "#fff", border: "1px solid #dfddd6", borderRadius: 12,
               boxShadow: "0 4px 20px rgba(56,58,55,0.13)", overflow: "hidden", zIndex: 200,
             }}>
               {SUGGESTED.slice(0, 5).map((s, i) => (
@@ -522,11 +558,11 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
                   onMouseDown={e => { e.preventDefault(); setInput(s); setShowSuggestions(false); }}
                   style={{
                     display: "block", width: "100%", textAlign: "left", background: "transparent",
-                    border: "none", borderBottom: i < 4 ? "1px solid #f1eadc" : "none",
+                    border: "none", borderBottom: i < 4 ? "1px solid #efeee9" : "none",
                     padding: "10px 14px", fontSize: 13, color: "#5c5f57", cursor: "pointer",
-                    fontFamily: "'Inter',sans-serif", lineHeight: 1.4,
+                    fontFamily: "'Roboto',sans-serif", lineHeight: 1.4,
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "#faf7f0")}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#faf9f5")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                 >{s}</button>
               ))}
@@ -595,18 +631,18 @@ function MarkdownText({ text }: { text: string }) {
     const hm = /^(#{1,6})\s+(.*)$/.exec(line);
     if (hm && (hm[1].length === 1 || hm[1].length >= 4)) {
       const big = hm[1].length === 1;
-      elements.push(<div key={i} style={{ fontFamily: "'Fraunces', serif", fontSize: big ? 18 : 14.5, fontWeight: big ? 500 : 600, color: "#26281f", marginTop: big ? 6 : 10, marginBottom: 4 }}>{inlineFmt(hm[2])}</div>);
+      elements.push(<div key={i} style={{ fontFamily: "'Lora',Georgia,serif", fontSize: big ? 18 : 14.5, fontWeight: big ? 500 : 600, color: "#232422", marginTop: big ? 6 : 10, marginBottom: 4 }}>{inlineFmt(hm[2])}</div>);
     } else if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
-      elements.push(<div key={i} style={{ height: 1, background: "#e7e0d2", margin: "10px 0" }} />);
+      elements.push(<div key={i} style={{ height: 1, background: "#e6e4de", margin: "10px 0" }} />);
     } else if (line.startsWith("### ")) {
-      elements.push(<div key={i} style={{ fontFamily: "'Fraunces', serif", fontSize: 15, fontWeight: 600, color: "#26281f", marginTop: 12, marginBottom: 4 }}>{inlineFmt(line.slice(4))}</div>);
+      elements.push(<div key={i} style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 15, fontWeight: 600, color: "#232422", marginTop: 12, marginBottom: 4 }}>{inlineFmt(line.slice(4))}</div>);
     } else if (line.startsWith("## ")) {
-      elements.push(<div key={i} style={{ fontFamily: "'Fraunces', serif", fontSize: 17, fontWeight: 500, color: "#26281f", marginTop: 14, marginBottom: 4 }}>{inlineFmt(line.slice(3))}</div>);
+      elements.push(<div key={i} style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, fontWeight: 500, color: "#232422", marginTop: 14, marginBottom: 4 }}>{inlineFmt(line.slice(3))}</div>);
     } else if (/^[-*] /.test(line)) {
-      elements.push(<div key={i} style={{ display: "flex", gap: 8, marginLeft: 4 }}><span style={{ color: "#6dba43", flexShrink: 0 }}>›</span><span>{inlineFmt(line.slice(2))}</span></div>);
+      elements.push(<div key={i} style={{ display: "flex", gap: 8, marginLeft: 4 }}><span style={{ color: "#5bba47", flexShrink: 0 }}>›</span><span>{inlineFmt(line.slice(2))}</span></div>);
     } else if (/^\d+\. /.test(line)) {
       const [num2, ...rest] = line.split(". ");
-      elements.push(<div key={i} style={{ display: "flex", gap: 8, marginLeft: 4 }}><span style={{ color: "#a89f8f", flexShrink: 0 }}>{num2}.</span><span>{inlineFmt(rest.join(". "))}</span></div>);
+      elements.push(<div key={i} style={{ display: "flex", gap: 8, marginLeft: 4 }}><span style={{ color: "#9b9992", flexShrink: 0 }}>{num2}.</span><span>{inlineFmt(rest.join(". "))}</span></div>);
     } else if (line === "") {
       elements.push(<div key={i} style={{ height: 6 }} />);
     } else {
@@ -620,7 +656,7 @@ function inlineFmt(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
   return parts.map((p, i) => {
     if (p.startsWith("**") && p.endsWith("**")) return <strong key={i}>{p.slice(2, -2)}</strong>;
-    if (p.startsWith("`") && p.endsWith("`")) return <code key={i} style={{ background: "#f1eadc", borderRadius: 3, padding: "0 4px", fontSize: "0.9em" }}>{p.slice(1, -1)}</code>;
+    if (p.startsWith("`") && p.endsWith("`")) return <code key={i} style={{ background: "#efeee9", borderRadius: 3, padding: "0 4px", fontSize: "0.9em" }}>{p.slice(1, -1)}</code>;
     return p;
   });
 }

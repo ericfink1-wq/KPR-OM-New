@@ -2,10 +2,10 @@ import { useState, FormEvent } from "react";
 import { apiResetPassword } from "../lib/api";
 
 const inputStyle: React.CSSProperties = {
-  width: "100%", boxSizing: "border-box", padding: "10px 14px", border: "1.5px solid #e7e0d2",
-  borderRadius: 8, fontSize: 14, fontFamily: "'Inter', sans-serif", background: "#faf7f0", color: "#26281f", outline: "none",
+  width: "100%", boxSizing: "border-box", padding: "10px 14px", border: "1.5px solid #e6e4de",
+  borderRadius: 8, fontSize: 14, fontFamily: "'Roboto',sans-serif", background: "#faf9f5", color: "#232422", outline: "none",
 };
-const labelStyle: React.CSSProperties = { display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "#a89f8f", textTransform: "uppercase", marginBottom: 6 };
+const labelStyle: React.CSSProperties = { display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "#9b9992", textTransform: "uppercase", marginBottom: 6 };
 
 // Shown when the app is opened from a password-reset email link
 // (?reset=1&email=…&token=…). On success, sends the user to the sign-in screen.
@@ -30,17 +30,17 @@ export default function ResetPassword({ email, token, onDone }: { email: string;
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f1ece1", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", padding: 16 }}>
-      <div style={{ background: "#fff", border: "1px solid #e7e0d2", borderRadius: 14, padding: "40px 44px", width: "min(380px, 100%)", boxSizing: "border-box", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+    <div style={{ minHeight: "100vh", background: "#f3f2ee", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Roboto',sans-serif", padding: 16 }}>
+      <div style={{ background: "#fff", border: "1px solid #e6e4de", borderRadius: 14, padding: "40px 44px", width: "min(380px, 100%)", boxSizing: "border-box", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
         <div style={{ marginBottom: 22, textAlign: "center" }}>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 400, color: "#26281f" }}>KPR <span style={{ fontWeight: 600 }}>OM</span> Database</div>
-          <div style={{ fontSize: 12, color: "#a89f8f", marginTop: 4 }}>Choose a new password{email ? ` for ${email}` : ""}</div>
+          <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 22, fontWeight: 400, color: "#232422" }}>KPR <span style={{ fontWeight: 600 }}>OM</span> Database</div>
+          <div style={{ fontSize: 12, color: "#9b9992", marginTop: 4 }}>Choose a new password{email ? ` for ${email}` : ""}</div>
         </div>
 
         {done ? (
           <>
             <div style={{ fontSize: 13, color: "#0f7a3d", background: "#eef7ee", border: "1px solid #cfe9c4", borderRadius: 8, padding: "11px 13px", marginBottom: 16 }}>✓ Password updated. You can sign in now.</div>
-            <button onClick={onDone} style={{ width: "100%", padding: "10px 0", background: "#26281f", color: "#f1ece1", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Go to sign in</button>
+            <button onClick={onDone} style={{ width: "100%", padding: "10px 0", background: "#232422", color: "#f3f2ee", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Go to sign in</button>
           </>
         ) : (
           <form onSubmit={submit}>
@@ -54,11 +54,11 @@ export default function ResetPassword({ email, token, onDone }: { email: string;
             </div>
             {error && <div style={{ fontSize: 12, color: "#dc2626", marginBottom: 12 }}>{error}</div>}
             <button type="submit" disabled={busy || !next || !confirm}
-              style={{ width: "100%", padding: "10px 0", background: "#26281f", color: "#f1ece1", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: busy ? "wait" : "pointer", opacity: (busy || !next || !confirm) ? 0.5 : 1 }}>
+              style={{ width: "100%", padding: "10px 0", background: "#232422", color: "#f3f2ee", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: busy ? "wait" : "pointer", opacity: (busy || !next || !confirm) ? 0.5 : 1 }}>
               {busy ? "Saving…" : "Reset password"}
             </button>
             <div style={{ marginTop: 14, textAlign: "center" }}>
-              <button type="button" onClick={onDone} style={{ background: "none", border: "none", color: "#a89f8f", cursor: "pointer", fontSize: 11.5, padding: 0 }}>Cancel</button>
+              <button type="button" onClick={onDone} style={{ background: "none", border: "none", color: "#9b9992", cursor: "pointer", fontSize: 11.5, padding: 0 }}>Cancel</button>
             </div>
           </form>
         )}

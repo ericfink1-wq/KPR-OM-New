@@ -40,9 +40,9 @@ export function getRecency(deal: Deal): { label: string; color: string; bg: stri
   if (!date) return null;
   const months = (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24 * 30);
   if (months < 2) return { label: "FRESH", color: "#0f9d63", bg: "#0f9d6318" };
-  if (months < 5) return { label: "RECENT", color: "#6dba43", bg: "#6dba4318" };
+  if (months < 5) return { label: "RECENT", color: "#5bba47", bg: "#6dba4318" };
   if (months < 10) return { label: "AGING", color: "#d9890c", bg: "#d9890c18" };
-  return { label: "STALE", color: "#a69e91", bg: "#a69e9118" };
+  return { label: "STALE", color: "#94928b", bg: "#a69e9118" };
 }
 
 export function classifyLocation(deal: Deal) {
@@ -61,14 +61,14 @@ export function classifyLocation(deal: Deal) {
   if (pop != null) {
     if (pop >= 150000) density = { tier: "Dense Urban", color: "#0d9488" };
     else if (pop >= 80000) density = { tier: "Urban", color: "#0f9d63" };
-    else if (pop >= 40000) density = { tier: "Suburban", color: "#6dba43" };
+    else if (pop >= 40000) density = { tier: "Suburban", color: "#5bba47" };
     else if (pop >= 15000) density = { tier: "Exurban", color: "#d9890c" };
-    else density = { tier: "Rural", color: "#a69e91" };
+    else density = { tier: "Rural", color: "#94928b" };
   }
   let income: { tier: string; color: string } | null = null;
   if (inc != null) {
     if (inc >= 150000) income = { tier: "Affluent", color: "#0f9d63" };
-    else if (inc >= 100000) income = { tier: "Upper-Middle", color: "#6dba43" };
+    else if (inc >= 100000) income = { tier: "Upper-Middle", color: "#5bba47" };
     else if (inc >= 70000) income = { tier: "Middle", color: "#d9890c" };
     else if (inc >= 50000) income = { tier: "Lower-Middle", color: "#b45309" };
     else income = { tier: "Low Income", color: "#dc2626" };
@@ -973,7 +973,7 @@ export function reimbursementFlag(text: string | null | undefined): ReimbFlag | 
   if (modGross) return { label: "MOD GROSS", method: "Modified Gross", warn: true, color: "#9a6a1e", bg: "#f6ecd6", tip: "Modified gross / base-year stop — tenant pays only expense INCREASES above a base-year amount (often capped); the landlord bears the base-year level and the capped growth. Not pro-rata NNN, and not a full gross lease." };
   if (grossLease && !net) return { label: "GROSS", method: "Gross", warn: true, color: "#b91c1c", bg: "#fdecea", tip: "Gross lease — landlord absorbs expense growth (no recovery)." };
   if (fixedCam) return { label: "FIXED CAM", method: "Fixed CAM", warn: true, color: "#b45309", bg: "#fbe6cf", tip: "Net lease, but CAM is a FIXED / escalating amount (not pro-rata) — the landlord bears CAM growth above the escalator. Taxes & insurance still pass through; not a gross lease and not the same as pro-rata NNN." };
-  if (net) return { label: "NNN", method: "NNN", warn: false, color: "#3f7a1f", bg: "#eef3e6", tip: "Net (NNN) — tenant reimburses CAM / taxes / insurance pro-rata. A cap on controllable CAM does not make it gross or fixed." };
+  if (net) return { label: "NNN", method: "NNN", warn: false, color: "#3e8a2f", bg: "#eef3e6", tip: "Net (NNN) — tenant reimburses CAM / taxes / insurance pro-rata. A cap on controllable CAM does not make it gross or fixed." };
   return null;
 }
 
@@ -996,7 +996,7 @@ export function statedReimbursementFlag(stated: string | null | undefined, lease
   if (kinds.every(k => k === "none")) {
     return { label: "GROSS", method: "Gross", warn: true, color: "#b91c1c", bg: "#fdecea", tip: "Gross lease — CAM, real estate taxes and insurance are all excluded. The landlord absorbs every expense and its growth; nothing is recovered from this tenant." };
   }
-  if (kinds.every(k => k === "prorata")) return legacy?.label === "NNN" ? legacy : { label: "NNN", method: "NNN", warn: false, color: "#3f7a1f", bg: "#eef3e6", tip: "Net (NNN) — tenant reimburses CAM / taxes / insurance pro-rata." };
+  if (kinds.every(k => k === "prorata")) return legacy?.label === "NNN" ? legacy : { label: "NNN", method: "NNN", warn: false, color: "#3e8a2f", bg: "#eef3e6", tip: "Net (NNN) — tenant reimburses CAM / taxes / insurance pro-rata." };
   if (kinds.some(k => k === "fixedPsf" || k === "fixedAnnual") && !kinds.includes("none")) return legacy?.label === "FIXED CAM" ? legacy : { label: "FIXED CAM", method: "Fixed CAM", warn: true, color: "#b45309", bg: "#fbe6cf", tip: "A fixed / escalating charge replaces the pro-rata share for at least one expense — the landlord bears that expense's growth above the escalator." };
   if (kinds.includes("none")) {
     const pays = named(k => k !== "none" && k !== "unknown");
