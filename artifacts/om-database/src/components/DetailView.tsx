@@ -52,6 +52,8 @@ import ClosingCostsCard from "./ClosingCostsCard";
 import DatexLiveCard from "./DatexLiveCard";
 import { OwnedAssetTab, OwnedFinancing, AcquisitionCard, useOwnedPricing, useOptionStatus } from "./OwnedAsset";
 import { DatexSalesCard } from "./AssetMgmt";
+import RosterScrubBand from "./RosterScrubBand";
+import { buildMarketIndex, scrubRoster } from "../lib/rosterScrub";
 import TaxReassessmentCard from "./TaxReassessmentCard";
 import PortfolioBenchmarksCard from "./PortfolioBenchmarksCard";
 import TenantSalesPanel from "./TenantSalesPanel";
@@ -104,7 +106,7 @@ const PAGE_TAB_LABEL: Record<string,string> = Object.fromEntries(PAGE_TABS.map((
 const TAB_SECTIONS: Record<string, Array<{ label: string; id: string }>> = {
   overview: [{label:"Cover photo",id:"section-cover"},{label:"Risks & upside",id:"section-signals"},{label:"Anchor comparison",id:"section-anchors"},{label:"Edit metrics",id:"section-metriceditor"},{label:"Key financials",id:"section-financials"},{label:"Portfolio benchmarks",id:"section-portfolio-benchmarks"},{label:"Your notes",id:"section-notes"}],
   ai: [{label:"Highlights",id:"section-highlights"},{label:"Our take",id:"section-review"},{label:"Deal score",id:"section-dealscore"},{label:"Upside",id:"section-upside"},{label:"Red flags",id:"section-redflags"},{label:"Key assumptions",id:"section-assumptions"}],
-  tenants: [{label:"Site plan",id:"section-site"},{label:"Tenant roster",id:"section-tenants"},{label:"Site agreements / REAs",id:"section-site-agreements"},{label:"Tenant sales",id:"section-tenant-sales"},{label:"Lease risk",id:"section-lease-risk"},{label:"Lease rollover & WALT",id:"section-rollover"}],
+  tenants: [{label:"Roster scrub",id:"section-roster-scrub"},{label:"Site plan",id:"section-site"},{label:"Tenant roster",id:"section-tenants"},{label:"Site agreements / REAs",id:"section-site-agreements"},{label:"Tenant sales",id:"section-tenant-sales"},{label:"Lease risk",id:"section-lease-risk"},{label:"Lease rollover & WALT",id:"section-rollover"}],
   transaction: [{label:"Transaction record",id:"section-acquisition"},{label:"Closing costs",id:"section-closing-costs"},{label:"Tax reassessment",id:"section-tax-reassessment"},{label:"Ownership structure",id:"section-ownership"}],
   financing: [{label:"Senior loan",id:"section-senior-loan"},{label:"Amortization",id:"section-amortization"},{label:"Prepay & swap",id:"section-prepay"},{label:"Preferred equity",id:"section-pref-equity"}],
   market: [{label:"Market sale",id:"section-market-sale"},{label:"Comp benchmark",id:"section-comp-benchmark"},{label:"Property info",id:"section-property-info"},{label:"Demographics",id:"section-demographics"},{label:"Trade-area demographics",id:"section-trade-area"}],
@@ -1830,6 +1832,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   // (premium / rollover risk) or below (favorable basis) the chain's median rent
   // across the database. Colors the roster's Rent/SF cell red/green.
   const brandRentPsfIndex = useMemo(() => buildBrandRentPsfIndex(allDeals), [allDeals]);
+  // OM ROSTER SCRUB — one deterministic pass the band, the roster's Flags / Market-rent
+  // columns and both standard exports all read. Proposed / unsigned excluded by default.
+  const [includeProposed, setIncludeProposed] = useState(false);
+  const marketIdx = useMemo(() => buildMarketIndex(allDeals), [allDeals]);
+  const scrub = useMemo(() => scrubRoster(d, marketIdx, { includeProposed }), [d, marketIdx, includeProposed]);
+  const scrubRowsMap = useMemo(() => new Map(scrub.rows.map(r => [r.key, r])), [scrub]);
   const rentFlags = useMemo(() => buildRentFlags(d, brandRentPsfIndex), [d, brandRentPsfIndex]);
   // Brand RENT medians across other deals — powers the renewal-option overhang flag
   // (below-market fixed options that lock away the mark-to-market upside).
@@ -3028,6 +3036,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
       {/* Site plan lives on Tenants & Sales only (it used to render on Summary too). */}
       {tab === "tenants" && (<>
+      <RosterScrubBand deal={d} scrub={scrub} includeProposed={includeProposed} onToggleProposed={() => setIncludeProposed(v => !v)} />
       {/* Site plan (all states wrapped in one jump anchor; rendered only when the
           image bundle has loaded so the menu entry tracks the visible section) */}
       {imgs != null && (
@@ -3251,6 +3260,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           onOpenAbstract={(name) => setAbstractModal({ mode: "view", tenantName: name })}
           optionStatus={optStatus.map}
           onSetOptionStatus={optStatus.set}
+          scrubRows={scrubRowsMap}
+          includeProposed={includeProposed}
+          onToggleProposed={() => setIncludeProposed(v => !v)}
         /></div>
       )}
 

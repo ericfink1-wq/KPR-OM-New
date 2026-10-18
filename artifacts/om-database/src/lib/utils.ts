@@ -1093,7 +1093,8 @@ export function recomputeRosterMetrics(
   const ref = parseLeaseDate(asOf) ?? new Date();
   const verified = (deal.verified || {}) as Record<string, unknown>;
   const out: { occupancy?: number; walt?: number; weightedAvgRentPSF?: number } = {};
-  const occ = tenants.filter(t => !isVacant(t.name) && !isNAPTenant(t as Parameters<typeof isNAPTenant>[0]));
+  // Proposed / unsigned leases (LOI, "[Unsigned]") are pipeline, not occupancy (Eric, 10/18/26).
+  const occ = tenants.filter(t => !isVacant(t.name) && !isNAPTenant(t as Parameters<typeof isNAPTenant>[0]) && !isProposedTenant(t as { name?: string | null; leaseType?: string | null; leaseStatus?: string | null }));
   const totalSF = nv(deal.totalSF);
 
   if (!verified.occupancy && totalSF && totalSF > 0) {
@@ -1138,6 +1139,13 @@ export function isNonGLA(t: { name?: string | null; sf?: number | string | null;
   if (/\blicen[cs]e\b/i.test(lt) || /\blicen[cs]e agreement\b/i.test(name)) return true;
   const sf = t.sf == null || t.sf === "" ? null : Number(t.sf);
   return isVacant(name) && sf != null && sf > 0 && sf < 150;
+}
+/** Not an executed lease: leaseStatus loi/proposed, or the broker's own marker in the name
+ *  or lease type ("Geico [Unsigned]", "(Proposed)", "LOI", "Prospective"). */
+export function isProposedTenant(t: { name?: string | null; leaseType?: string | null; leaseStatus?: string | null }): boolean {
+  if (t.leaseStatus === "loi" || t.leaseStatus === "proposed") return true;
+  const txt = `${t.name ?? ""} ${t.leaseType ?? ""}`;
+  return /\[(unsigned|proposed|loi)\]|\((unsigned|proposed|loi|prospective)\)|\bproposed\b|\bunsigned\b|\bLOI\b|\bprospective\b/i.test(txt);
 }
 /** An occupied lease whose expiry has passed but which is still on the roll — a holdover
  *  (month-to-month) tenancy, never a firm lease. */

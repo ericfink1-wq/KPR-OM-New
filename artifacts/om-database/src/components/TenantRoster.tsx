@@ -8,6 +8,7 @@ import type { SalesFlag } from "../lib/tenantSalesBenchmark";
 import type { RentFlag } from "../lib/tenantRentBenchmark";
 import { cinemaSalesRead, fmtPerScreen } from "../lib/theaterMetrics";
 import { tjxComboRead } from "../lib/tjxCombo";
+import { FLAG_META, FLAG_ORDER, isProposedTenant, nextRentStep, type ScrubRow, type FlagKey } from "../lib/rosterScrub";
 import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, isNonGLA, isHoldover, reimbursementChips, passedOptionNotices, tenantKey, toStepString, reimbursementFromAbstract, reimbursementFlag, statedReimbursementFlag, computeOccupancyCost, type RecoveryEntry } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { gradeOccupancyCost, type OccGrade } from "../lib/retailCategory";
@@ -75,6 +76,12 @@ interface Props {
   // "tenant|noticeDate"), and — for admins — a setter. Optional.
   optionStatus?: Map<string, string>;
   onSetOptionStatus?: (tenant: string, option: string, noticeDate: string, status: string) => void;
+  // OM roster scrub (rosterScrub.ts): per-tenant flags + market benchmark, keyed by tenantKey.
+  // When present the roster shows the Flags / Market-rent columns and the flag filters.
+  scrubRows?: Map<string, ScrubRow>;
+  /** Proposed / unsigned tenants are hidden (and out of the totals) unless this is on. */
+  includeProposed?: boolean;
+  onToggleProposed?: () => void;
 }
 
 function OccTip({ val, source, breakdown, grade }: { val: number; source: "stated" | "computed"; breakdown?: OccBreakdown | null; grade?: OccGrade | null }) {
@@ -331,7 +338,14 @@ function FlagTip({ content, children, color = "#6b9fd4" }: { content: string; ch
   );
 }
 
-export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, datexLive, estimatedRecoveries, recoveryNote, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags, salesFlags, rentFlags, kickoutByTenant, optionStatus, onSetOptionStatus }: Props) {
+const TONE: Record<"good" | "bad" | "warn" | "info", { fg: string; bg: string }> = {
+  good: { fg: "#2f7a22", bg: "#eaf6e5" }, bad: { fg: "#b3403f", bg: "#fdecec" }, warn: { fg: "#a8640f", bg: "#fff2e0" }, info: { fg: "#4b5563", bg: "#eef0f2" },
+};
+
+export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, tenantsAsOf, tenantsSource, omDate, datexLive, estimatedRecoveries, recoveryNote, latestSales, abstractsByTenant, abstractDiscrepancies, onOpenAbstract, onAddAbstract, sizeFlags, salesFlags, rentFlags, kickoutByTenant, optionStatus, onSetOptionStatus, scrubRows, includeProposed = false, onToggleProposed }: Props) {
+  const [flagFilter, setFlagFilter] = useState<FlagKey | null>(null);
+  const scrubOf = (t: Tenant) => scrubRows?.get(tenantKey(t.canonicalName || t.name));
+  const proposedCount = useMemo(() => tenants.filter(t => !isVacant(t.name) && isProposedTenant(t)).length, [tenants]);
   const watchMap = useWatchlist();
   const scrollRef = useTopScrollbar<HTMLDivElement>();
   const [q, setQ] = useState("");
@@ -364,6 +378,9 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   // render. Logic is unchanged.
   const rows = useMemo(() => {
     let rows = tenants.slice();
+    // Proposed / unsigned leases are pipeline, not in-place (Eric, 10/18/26) — hidden unless toggled on.
+    if (!includeProposed) rows = rows.filter(t => isVacant(t.name) || !isProposedTenant(t));
+    if (flagFilter) rows = rows.filter(t => scrubRows?.get(tenantKey(t.canonicalName || t.name))?.flags.includes(flagFilter));
     if (quick==="anchors") rows = rows.filter(t => t.isAnchor);
     else if (quick==="dark") rows = rows.filter(t => t.isDark);
     else if (quick==="expiring") rows = rows.filter(t => n(t.remainingTermYears) != null && n(t.remainingTermYears)! < 2);
@@ -390,7 +407,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
       return v == null ? -Infinity : v;
     };
     const ascending = (key: string): ((a: Tenant, b: Tenant) => number) | null => {
-      if (key === "abstract" || key === "kickout") return null;
+      if (key === "abstract" || key === "kickout" || key === "flags" || key === "bench") return null;
       if (key === "isAnchor") return (a, b) => (a.isAnchor ? 0 : 1) - (b.isAnchor ? 0 : 1);
       if (numKeys.has(key)) return (a, b) => sortVal(a, key) - sortVal(b, key);
       return (a, b) => String((a as any)[key] ?? "").toLowerCase().localeCompare(String((b as any)[key] ?? "").toLowerCase());
@@ -399,7 +416,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
       (a, b) => String(a.name ?? "").toLowerCase().localeCompare(String(b.name ?? "").toLowerCase()),
       (key, t) => key === "isAnchor" ? false : numKeys.has(key) ? sortVal(t, key) === -Infinity : isBlank((t as any)[key])));
     return rows;
-  }, [tenants, quick, q, sort.levels, latestSales, estimatedRecoveries]);
+  }, [tenants, quick, q, sort.levels, latestSales, estimatedRecoveries, includeProposed, flagFilter, scrubRows]);
 
   const setSort = (k: string, e?: React.MouseEvent) => sort.onHeaderClick(k, e);
   const arrow = (k: string) => sort.marker(k);
@@ -408,14 +425,37 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   );
 
   const cols: [string, string, boolean][] = [
-    ["name","Tenant",false],["abstract","Abstract",false],["suite","Suite",false],["sf","SF",true],["rentPerSF","Rent/SF",true],["annualRent","Ann. Rent",true],
+    ["name","Tenant",false],...(scrubRows ? [["flags","Flags",false] as [string, string, boolean]] : []),["abstract","",false],["suite","Suite",false],["sf","SF",true],["rentPerSF","Rent/SF",true],...(scrubRows ? [["bench","Mkt rent",true] as [string, string, boolean]] : []),["annualRent","Ann. Rent",true],
     ["leaseStart","Start",false],["leaseExpiry","Expiry",false],["reimbursementMethod","Reimb.",false],
     ["salesPSF","Sales",true],["occupancyCost","Occ Cost",true],
-    ["rentSchedule","Rent Steps",false],["renewalOptions","Options",false],["kickout","Kickout",false],
+    ["rentSchedule","Next step",false],["renewalOptions","Options",false],["kickout","Kickout",false],
     ["recentlyExercisedRenewal","Recent Renewal",false],["creditRating","Credit",false],
   ];
 
   const isVacantRow = (t: Tenant) => isVacant(t.name);
+  const NOSORT = new Set(["abstract", "kickout", "flags", "bench"]);
+  // Rent-schedule segments inside the current term (option-period steps excluded).
+  const MONTHS: Record<string, number> = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12 };
+  const afterExpiry = (seg: string, expiry: Date | null) => {
+    if (!expiry) return false;
+    const ey = expiry.getFullYear(), em = expiry.getMonth() + 1;
+    const m1 = seg.match(/^(\d{4})-(\d{2})/);
+    if (m1) { const sy = parseInt(m1[1], 10), sm = parseInt(m1[2], 10); return sy > ey || (sy === ey && sm >= em); }
+    const m2 = seg.match(/^([A-Za-z]{3})[- ](\d{4})/);
+    if (m2) { const sm = MONTHS[m2[1].toLowerCase()] ?? 0, sy = parseInt(m2[2], 10); return sy > ey || (sy === ey && sm >= em); }
+    return false;
+  };
+  const rentStepList = (t: Tenant): string[] => {
+    const sched = toStepString(t.rentSchedule) || toStepString(t.rentBumps);
+    if (!sched) return [];
+    const exp = t.leaseExpiry ? new Date(t.leaseExpiry) : null;
+    return sched.split(";").map(x => x.trim()).filter(Boolean).filter(seg => !/option/i.test(seg) && !afterExpiry(seg, exp));
+  };
+  const optionsAndSteps = (t: Tenant): { opts: string[]; optionSteps: string[] } => {
+    const o = toStepString(t.renewalOptions), rs = toStepString(t.rentSchedule) || toStepString(t.rentBumps);
+    const exp = t.leaseExpiry ? new Date(t.leaseExpiry) : null;
+    return { opts: o ? o.split(";").map(x => x.trim()).filter(Boolean) : [], optionSteps: rs ? rs.split(";").map(x => x.trim()).filter(Boolean).filter(seg => afterExpiry(seg, exp)) : [] };
+  };
 
   // The reimbursement / lease structure for one row: badge (NNN / Fixed CAM / Gross), the
   // compact chips (cap 5% · admin 15% · audit), and the full text + CAM/Tax/Insurance
@@ -446,7 +486,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   // tenant list changes (not on every keystroke / sort toggle). Logic unchanged.
   const { vacantCount, occupiedCount, totalRosterSF, vacantSF, darkSF, pctOccupied, pctVacant, pctVacantInclDark } = useMemo(() => {
     // A non-GLA sliver (a 90 SF utility closet) is not vacancy; its SF isn't GLA either.
-    const vacant = (t: Tenant) => isVacant(t.name) && !isNonGLA(t);
+    const vacant = (t: Tenant) => (isVacant(t.name) && !isNonGLA(t)) || (!includeProposed && isProposedTenant(t));
     const sfOf = (t: Tenant) => { if (isNonGLA(t)) return 0; const v = n(t.sf); return v != null && v > 0 ? v : 0; };
     const counted = tenants.filter(t => !(isNonGLA(t) && isVacant(t.name)));
     const vacantCount = counted.filter(vacant).length;
@@ -461,7 +501,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
     const pctVacant = totalRosterSF > 0 ? (vacantSF / totalRosterSF) * 100 : null;
     const pctVacantInclDark = totalRosterSF > 0 ? ((vacantSF + darkSF) / totalRosterSF) * 100 : null;
     return { vacantCount, occupiedCount, totalRosterSF, vacantSF, darkSF, pctOccupied, pctVacant, pctVacantInclDark };
-  }, [tenants]);
+  }, [tenants, includeProposed]);
   const fmtPct = (v: number) => `${(Math.round(v * 10) / 10).toFixed(1).replace(/\.0$/, "")}%`;
 
   // Totals / weighted averages for the rows currently shown (respects filters).
@@ -502,6 +542,27 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
             style={{ fontSize:12, padding:"5px 10px", border:"1px solid #e3dccd", borderRadius:7, color:"#383a37", background:"#fff", width:150, fontFamily:"'Inter',sans-serif" }}/>
         </div>
       </div>
+      {(scrubRows || proposedCount > 0) && (() => {
+        const counts = new Map<FlagKey, number>();
+        for (const sr of scrubRows?.values() ?? []) for (const f of sr.flags) counts.set(f, (counts.get(f) ?? 0) + 1);
+        return (
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center", marginBottom:10 }}>
+            <span style={{ fontFamily:"'Montserrat',sans-serif", fontSize:9.5, fontWeight:800, letterSpacing:"0.1em", color:"#676767", textTransform:"uppercase", marginRight:2 }}>Flags</span>
+            {FLAG_ORDER.filter(f => f !== "proposed" && counts.get(f)).map(f => {
+              const m = FLAG_META[f], on = flagFilter === f, c = TONE[m.tone];
+              return <button key={f} onClick={() => setFlagFilter(on ? null : f)} title={m.tip} aria-pressed={on}
+                style={{ display:"inline-flex", alignItems:"center", gap:4, background: on ? c.fg : c.bg, color: on ? "#fff" : c.fg, border:"none", borderRadius:14, padding:"3px 9px", fontSize:11, fontWeight:700, cursor:"pointer" }}>{m.icon} {m.label} <span style={{ opacity:0.8, fontWeight:600 }}>{counts.get(f)}</span></button>;
+            })}
+            {proposedCount > 0 && onToggleProposed && (
+              <button onClick={onToggleProposed} aria-pressed={includeProposed} title={FLAG_META.proposed.tip}
+                style={{ display:"inline-flex", alignItems:"center", gap:4, background: includeProposed ? "#a8640f" : "#fff2e0", color: includeProposed ? "#fff" : "#a8640f", border:"1px dashed #e8c48d", borderRadius:14, padding:"3px 9px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                ✎ {includeProposed ? "Hide" : "Show"} proposed / unsigned ({proposedCount})
+              </button>
+            )}
+            {flagFilter && <button onClick={() => setFlagFilter(null)} style={{ background:"none", border:"none", color:"#676767", fontSize:11, textDecoration:"underline", cursor:"pointer" }}>clear</button>}
+          </div>
+        );
+      })()}
       {recoveryNote && (
         <div style={{ fontSize:11.5, lineHeight:1.5, color:"#7a4a10", background:"#fdf4e7", border:"1px solid #f0d9b5", borderRadius:8, padding:"7px 10px", marginBottom:8 }}>
           ⚠ Occupancy cost: {recoveryNote}
@@ -521,17 +582,18 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
       <SortBar levels={sort.levels} setLevels={sort.setLevels} labels={ROSTER_SORT_LABELS}
         isDefault={sort.isDefault} onReset={sort.reset} defaultDir="asc" />
       <div ref={scrollRef} style={{ overflowX:"auto" }}>
-        <table style={{ borderCollapse:"collapse", fontSize:12, minWidth:1180, width:"100%" }}>
+        <style>{`.kpr-roster td{white-space:nowrap;height:38px;vertical-align:middle}.kpr-roster tbody tr.kpr-roster-row:hover td{background:#faf8f2}.kpr-roster thead th{position:sticky;top:0;background:#fff;z-index:2}`}</style>
+        <table className="kpr-roster" style={{ borderCollapse:"collapse", fontSize:12, minWidth:1180, width:"100%", fontVariantNumeric:"tabular-nums" }}>
           <thead>
             <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
               {cols.map(([k,label,right]) => (
-                <th key={k} title={k === "salesPSF" ? "Sales / SF (latest). Two markers may appear: ↗ / ↘ = year-over-year sales trend; ▲ / ▼ = this store vs the brand's median across your library (green = strong, red = weak)." : (k === "abstract" || k === "kickout") ? undefined : "Click to sort by this column · Shift-click to add it as a tiebreaker"} onClick={(k === "abstract" || k === "kickout") ? undefined : (e) => setSort(k, e)} className={k === "name" ? "freeze-col" : undefined} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: (k === "abstract" || k === "kickout") ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sort.isSorted(k)?"#383a37":"#a69e91", fontWeight:600, ...(k === "name" ? stickyFirstCol("#fff", true) : null) }}>{label}{(k === "abstract" || k === "kickout") ? null : arrow(k)}</th>
+                <th key={k} title={k === "salesPSF" ? "Sales / SF (latest). Two markers may appear: ↗ / ↘ = year-over-year sales trend; ▲ / ▼ = this store vs the brand's median across your library (green = strong, red = weak)." : NOSORT.has(k) ? undefined : "Click to sort by this column · Shift-click to add it as a tiebreaker"} onClick={NOSORT.has(k) ? undefined : (e) => setSort(k, e)} className={k === "name" ? "freeze-col" : undefined} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: NOSORT.has(k) ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sort.isSorted(k)?"#383a37":"#a69e91", fontWeight:600, ...(k === "name" ? stickyFirstCol("#fff", true) : null) }}>{label}{NOSORT.has(k) ? null : arrow(k)}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rows.map((t,i) => (
-              <tr key={i} style={{ borderTop:"1px solid #f1eadc", opacity: isNAPTenant(t) ? 0.7 : isVacantRow(t) ? 0.65 : 1, background: t.isDark && !isVacantRow(t) ? "#fbf1e4" : undefined }}>
+              <tr key={i} className="kpr-roster-row" onClick={e => { if ((e.target as HTMLElement).closest("button,input,select,a,[data-noprop]")) return; setExpandedReimb(i); }} style={{ cursor:"pointer", borderTop:"1px solid #f1eadc", opacity: isNAPTenant(t) ? 0.7 : isVacantRow(t) ? 0.65 : 1, background: t.isDark && !isVacantRow(t) ? "#fbf1e4" : undefined }}>
                 <td className="freeze-col" style={{ padding:"8px 10px", whiteSpace:"nowrap", ...stickyFirstCol(t.isDark && !isVacantRow(t) ? "#fbf1e4" : "#fff") }}>
                   {isVacantRow(t) ? (
                     isNonGLA(t)
@@ -539,7 +601,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                       : <span style={{ color:"#a69e91", fontStyle:"italic", fontWeight:400, fontSize:11 }}>Vacant</span>
                   ) : (
                     <div style={{ display:"flex", alignItems:"center", flexWrap:"nowrap", gap:4, minWidth:0 }}>
-                      <span
+                      <span data-noprop=""
                         onClick={onTenantClick && t.name ? () => onTenantClick(t.name!) : undefined}
                         title={onTenantClick && t.name ? `View ${t.name} across your portfolio` : undefined}
                         style={{ color: t.isDark ? "#9a5b12" : "#383a37", fontWeight:600, cursor:onTenantClick?"pointer":"default", textDecoration:onTenantClick?"underline":"none", textDecorationColor:"#d8cfbd", textUnderlineOffset:"2px", whiteSpace:"nowrap" }}>
@@ -579,7 +641,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                       {t.leaseStatus === "signed-not-open" && (
                         <span title="Lease executed but the store has not opened / rent has not commenced — confirm rent-commencement date." style={{ fontSize:9, color:"#1f4d8f", background:"#eaf1fb", border:"1px solid #c2d6f0", padding:"1px 6px", borderRadius:10, fontWeight:700, letterSpacing:"0.03em", whiteSpace:"nowrap" }}>SIGNED · NOT OPEN</span>
                       )}
-                      {t.name && isInvestmentGrade(t.name, t.creditRating) && <span style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 6px", borderRadius:4, fontWeight:700 }}>Investment Grade</span>}
+                      {t.name && isInvestmentGrade(t.name, t.creditRating) && <span title="Investment-grade credit" style={{ fontSize:9, color:"#3f7a1f", background:"#eef3e6", border:"1px solid #b8d49a", padding:"1px 5px", borderRadius:4, fontWeight:700 }}>IG</span>}
                       {(() => {
                         // "OVERAGE" pill: tenant's sales exceed its percentage-rent
                         // breakpoint, so it is paying (or near) overage rent — a sign
@@ -610,6 +672,18 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     </div>
                   )}
                 </td>
+                {scrubRows && (
+                  <td style={{ padding:"0 8px", whiteSpace:"nowrap" }}>
+                    {(() => {
+                      const sr = scrubOf(t);
+                      if (!sr || !sr.flags.length) return <span style={{ color:"#d6d0c4" }}>·</span>;
+                      return <span style={{ display:"inline-flex", gap:3 }}>{FLAG_ORDER.filter(f => sr.flags.includes(f)).map(f => {
+                        const m = FLAG_META[f], c = TONE[m.tone];
+                        return <span key={f} title={`${m.label} — ${m.tip}`} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", minWidth:18, height:18, padding:"0 3px", borderRadius:5, fontSize:10, fontWeight:800, color:c.fg, background:c.bg, lineHeight:1 }}>{m.icon}</span>;
+                      })}</span>;
+                    })()}
+                  </td>
+                )}
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap" }}>
                   {(() => {
                     if (isVacantRow(t) || !t.name || (!onOpenAbstract && !onAddAbstract)) return null;
@@ -622,8 +696,9 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                         <span
                           onClick={(e) => { e.stopPropagation(); onOpenAbstract(t.name!); }}
                           title={flagged ? `Roster disagrees with the lease — review:\n• ${disc!.join("\n• ")}` : "View the lease abstract on file"}
-                          style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:9, color: flagged ? "#9a3412" : "#1f4d8f", background: flagged ? "#fdecdc" : "#eaf1fb", border:`1px solid ${flagged ? "#f0c08a" : "#c2d6f0"}`, padding:"2px 8px", borderRadius:10, fontWeight:700, letterSpacing:"0.03em", cursor:"pointer", whiteSpace:"nowrap" }}>
-                          📄 ABSTRACT{flagged ? " ⚠" : ""}
+                          aria-label="Open the lease abstract"
+                          style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:22, height:20, fontSize:11, color: flagged ? "#9a3412" : "#1f4d8f", background: flagged ? "#fdecdc" : "#eaf1fb", border:`1px solid ${flagged ? "#f0c08a" : "#c2d6f0"}`, borderRadius:5, cursor:"pointer" }}>
+                          {flagged ? "⚠" : "📄"}
                         </span>
                       );
                     }
@@ -632,18 +707,16 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                         <span
                           onClick={(e) => { e.stopPropagation(); onAddAbstract(t.name!); }}
                           title="Add a lease abstract for this tenant"
-                          style={{ fontSize:9, color:"#a69e91", background:"transparent", border:"1px dashed #d8cfbd", padding:"2px 8px", borderRadius:10, fontWeight:600, letterSpacing:"0.03em", cursor:"pointer", whiteSpace:"nowrap" }}>
-                          + Abstract
+                          aria-label="Add a lease abstract"
+                          style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:22, height:20, fontSize:12, color:"#a69e91", border:"1px dashed #d8cfbd", borderRadius:5, cursor:"pointer" }}>
+                          +
                         </span>
                       );
                     }
                     // No abstract yet — the roster pill is view-only (uploading is now the
                     // single deal-level "⬆ Upload abstracts" button that auto-routes by name).
                     return (
-                      <span title="No lease abstract on file yet"
-                        style={{ fontSize:9, color:"#bdb6a8", background:"transparent", border:"1px dashed #e7e0d2", padding:"2px 8px", borderRadius:10, fontWeight:600, letterSpacing:"0.03em", whiteSpace:"nowrap" }}>
-                        no abstract
-                      </span>
+                      <span title="No lease abstract on file yet" style={{ color:"#d6d0c4", fontSize:11 }}>—</span>
                     );
                   })()}
                 </td>
@@ -675,26 +748,30 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     </td>
                   );
                 })()}
+                {scrubRows && (() => {
+                  const sr = scrubOf(t), b = sr?.bench;
+                  if (!b?.rentMedian) return <td style={{ padding:"0 10px", textAlign:"right", color:"#d6d0c4" }}>—</td>;
+                  return <td title={`Market: $${b.rentMedian.toFixed(2)}/SF median rent — ${b.basisLabel} (n=${b.rentN}).${b.salesMedian ? ` Chain median sales $${b.salesMedian}/SF (n=${b.salesN}).` : ""}`} style={{ padding:"0 10px", textAlign:"right", color:"#676767", whiteSpace:"nowrap", fontVariantNumeric:"tabular-nums" }}>${b.rentMedian.toFixed(2)}<span style={{ fontSize:9.5, color:"#a69e91", marginLeft:3 }}>{b.basis === "brand" ? "" : b.basis === "category" ? "cat" : "mkt"} n={b.rentN}</span></td>;
+                })()}
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{n(t.annualRent)!=null?`$${Math.round(n(t.annualRent)!).toLocaleString()}`:"—"}</td>
                 <td style={{ padding:"8px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{fmtLeaseDate(t.leaseStart)}</td>
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap", color:n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<2?"#dc2626":n(t.remainingTermYears)!=null&&n(t.remainingTermYears)!<4?"#c97a18":"#5c5f57" }}>{fmtLeaseDate(t.leaseExpiry)}</td>
                 <td
-                  onClick={() => { const r = reimbInfo(t); if (r && r.hasDetail) setExpandedReimb(i); }}
-                  style={{ padding:"8px 10px", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth:230, minWidth:100 }}
+                  style={{ padding:"0 10px", fontSize:11, cursor:"pointer", whiteSpace:"nowrap" }}
                 >
                   {(() => {
                     // Compact chips in the row (Eric, 10/18/26: the abstract's CAM prose made
                     // the roster unreadable); the full text opens in a side drawer.
+                    // ONE chip per row (Eric, 10/18/26 — rows were wrapping 3–4 lines); cap, admin,
+                    // audit etc. are in the tooltip and the tenant drawer.
                     const r = reimbInfo(t);
                     if (!r) return <span style={{ color:"#c4bbaa" }}>—</span>;
+                    const tip = [r.flag?.label, ...r.chips].filter(Boolean).join(" · ") + (r.fromAbstract ? " · from the lease abstract" : "") + (r.hasDetail ? " — click for the full terms" : "");
                     return (
-                      <span title={r.flag?.tip || (r.hasDetail ? "Open the full recovery terms" : "")} style={{ display:"inline-flex", alignItems:"center", gap:4, flexWrap:"wrap", color:r.textColor }}>
-                        {r.flag && <span style={{ fontSize:8.5, fontWeight:700, letterSpacing:"0.04em", color:r.flag.color, background:r.flag.bg, padding:"1px 6px", borderRadius:9 }}>{r.flag.label}</span>}
-                        {r.chips.slice(0, 3).map(c => <span key={c} style={{ fontSize:9, color:"#5c5f57", background:"#f3f1ea", border:"1px solid #e7e0d2", padding:"0 6px", borderRadius:9, whiteSpace:"nowrap" }}>{c}</span>)}
-                        {r.chips.length > 3 && <span style={{ fontSize:9, color:"#a69e91" }}>+{r.chips.length - 3}</span>}
-                        {r.fromAbstract && <span title="From the executed lease abstract — more authoritative than the OM / rent roll" style={{ fontSize:8.5, fontWeight:700, color:"#1f4d8f", background:"#eaf1fb", border:"1px solid #c2d6f0", padding:"0 6px", borderRadius:9 }}>ABSTRACT</span>}
-                        {!r.flag && !r.chips.length && <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:170 }}>{r.body}</span>}
-                        {r.hasDetail && <span style={{ fontSize:9, color:"#a69e91" }}>›</span>}
+                      <span title={tip} style={{ display:"inline-flex", alignItems:"center", gap:3, whiteSpace:"nowrap" }}>
+                        {r.flag ? <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.04em", color:r.flag.color, background:r.flag.bg, padding:"1px 6px", borderRadius:9 }}>{r.flag.label}</span>
+                          : <span style={{ color:r.textColor, overflow:"hidden", textOverflow:"ellipsis", maxWidth:110, display:"inline-block", verticalAlign:"bottom" }}>{r.body}</span>}
+                        {(r.chips.length > 0 || r.fromAbstract) && <span style={{ fontSize:9, color:"#a69e91" }}>{r.fromAbstract ? "◆" : ""}{r.chips.length ? `+${r.chips.length}` : ""}</span>}
                       </span>
                     );
                   })()}
@@ -826,126 +903,27 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     </td>
                   );
                 })()}
-                <td
-                  onClick={() => setExpandedRentStep(expandedRentStep === i ? null : i)}
-                  style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth: expandedRentStep === i ? 340 : 220, minWidth: 120 }}
-                >
+                <td style={{ padding:"0 10px", color:"#5c5f57", fontSize:11, whiteSpace:"nowrap", fontVariantNumeric:"tabular-nums" }}>
                   {(() => {
-                    const s = toStepString(t.rentSchedule) || toStepString(t.rentBumps);
-                    if (!s) return <span style={{ color:"#c4bbaa" }}>—</span>;
-                    const expiryDate = t.leaseExpiry ? new Date(t.leaseExpiry) : null;
-                    const MONTH_MAP: Record<string,number> = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12 };
-                    const filteredSteps = s.split(";").map((p: string) => p.trim()).filter(Boolean).filter((seg: string) => {
-                      if (/option/i.test(seg)) return false;
-                      if (expiryDate) {
-                        const ey = expiryDate.getFullYear(), em = expiryDate.getMonth() + 1;
-                        // YYYY-MM format
-                        const m1 = seg.match(/^(\d{4})-(\d{2})/);
-                        if (m1) {
-                          const sy = parseInt(m1[1], 10), sm = parseInt(m1[2], 10);
-                          if (sy > ey || (sy === ey && sm >= em)) return false;
-                        }
-                        // Mon-YYYY format (e.g. "Oct-2035: $12.54")
-                        const m2 = seg.match(/^([A-Za-z]{3})[- ](\d{4})/);
-                        if (m2) {
-                          const sm = MONTH_MAP[m2[1].toLowerCase()] ?? 0;
-                          const sy = parseInt(m2[2], 10);
-                          if (sy > ey || (sy === ey && sm >= em)) return false;
-                        }
-                      }
-                      return true;
-                    });
-                    if (filteredSteps.length === 0) return <span style={{ color:"#c4bbaa", fontStyle:"italic" }}>Flat</span>;
-                    const joined = filteredSteps.join("; ");
-                    if (expandedRentStep !== i) {
-                      return (
-                        <span title="Click to expand rent steps" style={{ display:"flex", alignItems:"center", gap:4 }}>
-                          <span style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:180, display:"inline-block" }}>
-                            {joined.length > 60 ? joined.slice(0,60)+"…" : joined}
-                          </span>
-                          {joined.length > 60 && <span style={{ fontSize:9, color:"#a69e91", flexShrink:0 }}>▼</span>}
-                        </span>
-                      );
-                    }
-                    return (
-                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                        {filteredSteps.map((step: string, si: number) => (
-                          <div key={si} style={{ display:"flex", alignItems:"flex-start", gap:6, padding:"3px 0", borderBottom: si < filteredSteps.length-1 ? "1px solid #f1eadc" : "none" }}>
-                            <span style={{ color:"#c4bbaa", fontSize:9, marginTop:1, flexShrink:0 }}>▸</span>
-                            <span style={{ whiteSpace:"normal", lineHeight:1.5, fontSize:11 }}>{step}</span>
-                          </div>
-                        ))}
-                        <span style={{ fontSize:9, color:"#a69e91", marginTop:2 }}>▲ click to collapse</span>
-                      </div>
-                    );
+                    // Only the NEXT future step, compactly ("→ $27.00 Jan-27"); the full schedule is in the drawer.
+                    const steps = rentStepList(t);
+                    if (!steps.length) return <span style={{ color:"#c4bbaa" }}>{toStepString(t.rentSchedule) || toStepString(t.rentBumps) ? "Flat" : "—"}</span>;
+                    const nx = nextRentStep(t);
+                    if (!nx && steps.every(x => /^flat\b/i.test(x) || !/\d{4}/.test(x))) return <span style={{ color:"#a69e91" }} title={steps.join("\n")}>Flat</span>;
+                    return <span title={steps.join("\n")}>{nx ? nx.label : <span style={{ color:"#a69e91" }}>no future step</span>}{steps.length > 1 && <span style={{ color:"#a69e91", marginLeft:4 }}>+{steps.length - 1}</span>}</span>;
                   })()}
                 </td>
-                <td
-                  onClick={() => setExpandedOption(expandedOption === i ? null : i)}
-                  style={{ padding:"8px 10px", color:"#837c6e", fontSize:11, cursor:"pointer", verticalAlign:"top", maxWidth: expandedOption === i ? 340 : 220, minWidth: 120 }}
-                >
-                  {!isVacantRow(t) && passedOptionNotices(t, abstractsByTenant?.get((t.name || "").trim().toLowerCase())).map(pn => {
-                    const key = `${(t.name || "").trim().toLowerCase()}|${pn.noticeDate}`, st = optionStatus?.get(key);
-                    return (
-                      <div key={key} onClick={e => e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:5, flexWrap:"wrap", marginBottom:4 }}>
-                        <span title={`${pn.option} notice was due ${fmtLeaseDate(pn.noticeDate)} (${pn.source === "abstract" ? "lease abstract" : "rent roll"}). Record whether it was exercised.`} style={{ fontSize:9, fontWeight:700, color: st === "Exercised" ? "#3e8a2f" : st === "Lapsed" ? "#b3403f" : "#b3711a", background: st === "Exercised" ? "#eef7eb" : st === "Lapsed" ? "#fdecec" : "#fff2e0", padding:"1px 6px", borderRadius:9, whiteSpace:"nowrap" }}>NOTICE PASSED {fmtLeaseDate(pn.noticeDate)}</span>
-                        {onSetOptionStatus ? (
-                          <select aria-label="Option status" value={st ?? ""} onChange={e => e.target.value && onSetOptionStatus(t.name || "", pn.option, pn.noticeDate, e.target.value)} style={{ fontSize:10.5, border:"1px solid #e0d8c8", borderRadius:6, padding:"1px 4px", background:"#fff", color:"#383a37" }}>
-                            <option value="">status?</option><option>Exercised</option><option>Pending</option><option>Lapsed</option>
-                          </select>
-                        ) : <span style={{ fontSize:10.5, color:"#6f6a5f" }}>{st ?? "status not recorded"}</span>}
-                      </div>
-                    );
-                  })}
+                <td style={{ padding:"0 10px", color:"#5c5f57", fontSize:11, whiteSpace:"nowrap" }}>
                   {(() => {
-                    const s = toStepString(t.renewalOptions);
-                    const rs = toStepString(t.rentSchedule) || toStepString(t.rentBumps);
-                    const expiryDate = t.leaseExpiry ? new Date(t.leaseExpiry) : null;
-                    const MONTH_MAP2: Record<string,number> = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12 };
-                    // Pull rent steps that are AFTER lease expiry (i.e. option period steps)
-                    const optionSteps = rs ? rs.split(";").map((p: string) => p.trim()).filter(Boolean).filter((seg: string) => {
-                      if (!expiryDate) return false;
-                      const ey = expiryDate.getFullYear(), em = expiryDate.getMonth() + 1;
-                      const m1 = seg.match(/^(\d{4})-(\d{2})/);
-                      if (m1) { const sy = parseInt(m1[1],10), sm = parseInt(m1[2],10); return sy > ey || (sy === ey && sm >= em); }
-                      const m2 = seg.match(/^([A-Za-z]{3})[- ](\d{4})/);
-                      if (m2) { const sm = MONTH_MAP2[m2[1].toLowerCase()] ?? 0; const sy = parseInt(m2[2],10); return sy > ey || (sy === ey && sm >= em); }
-                      return false;
-                    }) : [];
-                    if (!s && optionSteps.length === 0) return <span style={{ color:"#c4bbaa" }}>—</span>;
-                    const opts = s ? s.split(";").map((p: string) => p.trim()).filter(Boolean) : [];
-                    const summary = opts.join("; ");
-                    if (expandedOption !== i) {
-                      return (
-                        <span title="Click to expand options" style={{ display:"flex", alignItems:"center", gap:4 }}>
-                          <span style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:180, display:"inline-block" }}>
-                            {summary.length > 60 ? summary.slice(0,60)+"…" : summary || `${optionSteps.length} rent step${optionSteps.length !== 1 ? "s" : ""}`}
-                          </span>
-                          {(summary.length > 60 || optionSteps.length > 0) && <span style={{ fontSize:9, color:"#a69e91", flexShrink:0 }}>▼</span>}
-                        </span>
-                      );
-                    }
+                    const notices = isVacantRow(t) ? [] : passedOptionNotices(t, abstractsByTenant?.get((t.name || "").trim().toLowerCase()));
+                    const pending = notices.filter(pn => optionStatus?.get(`${(t.name || "").trim().toLowerCase()}|${pn.noticeDate}`) == null);
+                    const { opts, optionSteps } = optionsAndSteps(t);
+                    const summary = opts.join("; ") || (optionSteps.length ? `${optionSteps.length} option rent step${optionSteps.length !== 1 ? "s" : ""}` : "");
                     return (
-                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                        {opts.map((opt: string, oi: number) => (
-                          <div key={oi} style={{ display:"flex", alignItems:"flex-start", gap:6, padding:"3px 0", borderBottom:"1px solid #f1eadc" }}>
-                            <span style={{ color:"#c4bbaa", fontSize:9, marginTop:1, flexShrink:0 }}>▸</span>
-                            <span style={{ whiteSpace:"normal", lineHeight:1.5, fontSize:11 }}>{opt}</span>
-                          </div>
-                        ))}
-                        {optionSteps.length > 0 && (
-                          <>
-                            <div style={{ fontSize:9, fontWeight:700, color:"#a69e91", letterSpacing:"0.06em", marginTop:opts.length>0?6:0, paddingTop:opts.length>0?4:0, borderTop:opts.length>0?"1px solid #ecdfc8":"none" }}>OPTION RENT STEPS</div>
-                            {optionSteps.map((step: string, si: number) => (
-                              <div key={si} style={{ display:"flex", alignItems:"flex-start", gap:6, padding:"3px 0", borderBottom: si < optionSteps.length-1 ? "1px solid #f1eadc" : "none" }}>
-                                <span style={{ color:"#b8a98c", fontSize:9, marginTop:1, flexShrink:0 }}>▸</span>
-                                <span style={{ whiteSpace:"normal", lineHeight:1.5, fontSize:11, color:"#837c6e" }}>{step}</span>
-                              </div>
-                            ))}
-                          </>
-                        )}
-                        <span style={{ fontSize:9, color:"#a69e91", marginTop:2 }}>▲ click to collapse</span>
-                      </div>
+                      <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}>
+                        {notices.length > 0 && <span title={`Option notice date passed (${notices.map(pn => fmtLeaseDate(pn.noticeDate)).join(", ")}) — ${pending.length ? "status not recorded; open the tenant to record it" : "status recorded"}`} style={{ fontSize:9, fontWeight:700, color: pending.length ? "#a8640f" : "#3e8a2f", background: pending.length ? "#fff2e0" : "#eef7eb", padding:"1px 5px", borderRadius:5 }}>{pending.length ? "⚠ notice" : "✓ notice"}</span>}
+                        {summary ? <span title={summary} style={{ overflow:"hidden", textOverflow:"ellipsis", maxWidth:150, display:"inline-block", verticalAlign:"bottom" }}>{summary}</span> : !notices.length && <span style={{ color:"#c4bbaa" }}>—</span>}
+                      </span>
                     );
                   })()}
                 </td>
@@ -1015,32 +993,84 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           )}
         </table>
         {expandedReimb != null && rows[expandedReimb] && (() => {
-          const t = rows[expandedReimb], r = reimbInfo(t);
-          if (!r) return null;
+          // TENANT DRAWER — everything the one-line row leaves out: recovery terms, the full
+          // rent schedule, options + option rent, passed notices (status), flags, benchmark, notes.
+          const t = rows[expandedReimb], r = reimbInfo(t), sr = scrubOf(t);
+          const { opts, optionSteps } = optionsAndSteps(t), steps = rentStepList(t);
+          const notices = isVacantRow(t) ? [] : passedOptionNotices(t, abstractsByTenant?.get((t.name || "").trim().toLowerCase()));
+          const kick = kickoutByTenant?.get(tenantKey(t.canonicalName || t.name));
+          const H = ({ children }: { children: React.ReactNode }) => <div style={{ fontFamily:"'Montserrat',sans-serif", fontSize:10.5, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:"#383A37", marginTop:16, marginBottom:5 }}>{children}</div>;
+          const fact = (l: string, v: React.ReactNode) => <div><div style={{ fontSize:10, color:"#8b8578", textTransform:"uppercase", letterSpacing:"0.06em" }}>{l}</div><div style={{ fontSize:13.5, color:"#232422", fontVariantNumeric:"tabular-nums" }}>{v ?? "—"}</div></div>;
           return (
             <>
               <div onClick={() => setExpandedReimb(null)} style={{ position:"fixed", inset:0, zIndex:1300, background:"rgba(35,36,34,0.32)" }} />
-              <aside role="dialog" aria-label={`Recovery terms — ${t.name}`} style={{ position:"fixed", top:0, right:0, bottom:0, width:"min(440px, 100vw)", zIndex:1301, background:"#fff", boxShadow:"-12px 0 40px rgba(35,36,34,0.22)", padding:"18px 18px 28px", overflowY:"auto", boxSizing:"border-box", fontFamily:"'Inter',sans-serif" }}>
+              <aside role="dialog" aria-label={`Tenant detail — ${t.name}`} style={{ position:"fixed", top:0, right:0, bottom:0, width:"min(480px, 100vw)", zIndex:1301, background:"#fff", boxShadow:"-12px 0 40px rgba(35,36,34,0.22)", padding:"18px 18px 32px", overflowY:"auto", boxSizing:"border-box", fontFamily:"'Roboto',sans-serif" }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
-                  <div>
-                    <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"#a69e91", fontWeight:700 }}>Recovery terms</div>
-                    <div style={{ fontFamily:"'Lora',serif", fontSize:19, color:"#232422", marginTop:2 }}>{t.name}</div>
+                  <div style={{ minWidth:0 }}>
+                    <div style={{ fontFamily:"'Montserrat',sans-serif", fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"#a69e91", fontWeight:700 }}>Tenant{t.suite ? ` · suite ${t.suite}` : ""}</div>
+                    <div style={{ fontFamily:"'Lora',serif", fontSize:21, color:"#232422", marginTop:2 }}>{t.name}</div>
                   </div>
                   <button onClick={() => setExpandedReimb(null)} aria-label="Close" style={{ background:"#fff", border:"1px solid #e0d8c8", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontSize:14 }}>✕</button>
                 </div>
-                <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginTop:10 }}>
-                  {r.flag && <span style={{ fontSize:10, fontWeight:700, color:r.flag.color, background:r.flag.bg, padding:"2px 8px", borderRadius:9 }}>{r.flag.label}</span>}
-                  {r.chips.map(c => <span key={c} style={{ fontSize:10.5, color:"#5c5f57", background:"#f3f1ea", border:"1px solid #e7e0d2", padding:"1px 8px", borderRadius:9 }}>{c}</span>)}
-                </div>
-                {r.flag?.tip && <div style={{ fontSize:12, color:"#6f6a5f", marginTop:8, lineHeight:1.5 }}>{r.flag.tip}</div>}
-                {r.body && <div style={{ fontSize:13, color:"#383a37", marginTop:12, lineHeight:1.6, whiteSpace:"pre-wrap" }}>{r.body}</div>}
-                {r.breakdown.map(([k, v]) => (
-                  <div key={k} style={{ marginTop:12 }}>
-                    <div style={{ fontSize:10.5, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:"#383a37" }}>{k}</div>
-                    <div style={{ fontSize:13, color:"#383a37", lineHeight:1.6, whiteSpace:"pre-wrap" }}>{v}</div>
+                {sr && sr.flags.length > 0 && (
+                  <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginTop:10 }}>
+                    {FLAG_ORDER.filter(f => sr.flags.includes(f)).map(f => { const m = FLAG_META[f], c = TONE[m.tone]; return <span key={f} title={m.tip} style={{ fontSize:10.5, fontWeight:700, color:c.fg, background:c.bg, padding:"2px 8px", borderRadius:9 }}>{m.icon} {m.label}</span>; })}
                   </div>
-                ))}
-                <div style={{ fontSize:11, color:"#a69e91", marginTop:16 }}>{r.fromAbstract ? "From the executed lease abstract." : "From the rent roll / OM."}</div>
+                )}
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(3, minmax(0,1fr))", gap:"10px 12px", marginTop:14 }}>
+                  {fact("SF", n(t.sf) != null ? n(t.sf)!.toLocaleString() : null)}
+                  {fact("Rent / SF", n(t.rentPerSF) != null ? `$${n(t.rentPerSF)!.toFixed(2)}` : null)}
+                  {fact("Base rent", n(t.annualRent) != null ? `$${Math.round(n(t.annualRent)!).toLocaleString()}` : null)}
+                  {fact("Start", fmtLeaseDate(t.leaseStart))}
+                  {fact("Expiry", fmtLeaseDate(t.leaseExpiry))}
+                  {fact("Credit", t.creditRating || (isInvestmentGrade(t.name || "", t.creditRating) ? "Investment grade" : null))}
+                  {fact("Sales", n(t.salesPSF) != null ? fmtTenantSales(n(t.salesPSF), t.sf) : null)}
+                  {fact("Occ. cost", n(t.occupancyCost) != null ? `${n(t.occupancyCost)!.toFixed(1)}%` : null)}
+                  {fact("Lease type", t.leaseType)}
+                </div>
+                {sr?.bench.rentMedian != null && (<>
+                  <H>Market benchmark</H>
+                  <div style={{ fontSize:13, color:"#383A37", lineHeight:1.55 }}>
+                    ${sr.bench.rentMedian.toFixed(2)}/SF median rent — {sr.bench.basisLabel} (n={sr.bench.rentN}).
+                    {sr.mtm != null && n(t.sf) ? ` In-place is ${sr.mtm >= 0 ? `$${Math.round(sr.mtm).toLocaleString()}/yr below` : `$${Math.round(-sr.mtm).toLocaleString()}/yr above`} that.` : ""}
+                    {sr.bench.salesMedian != null ? ` Chain median sales $${sr.bench.salesMedian}/SF (n=${sr.bench.salesN}).` : ""}
+                  </div>
+                </>)}
+                {r && (<>
+                  <H>Recovery terms</H>
+                  <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+                    {r.flag && <span style={{ fontSize:10, fontWeight:700, color:r.flag.color, background:r.flag.bg, padding:"2px 8px", borderRadius:9 }}>{r.flag.label}</span>}
+                    {r.chips.map(c => <span key={c} style={{ fontSize:10.5, color:"#5c5f57", background:"#f3f1ea", border:"1px solid #e7e0d2", padding:"1px 8px", borderRadius:9 }}>{c}</span>)}
+                    {r.fromAbstract && <span style={{ fontSize:10, color:"#1f4d8f" }}>from the lease abstract</span>}
+                  </div>
+                  {r.body && <div style={{ fontSize:13, color:"#383a37", marginTop:8, lineHeight:1.6, whiteSpace:"pre-wrap" }}>{r.body}</div>}
+                  {r.breakdown.map(([k, v]) => <div key={k} style={{ marginTop:8, fontSize:13, lineHeight:1.55 }}><b>{k}:</b> {v}</div>)}
+                </>)}
+                {steps.length > 0 && (<>
+                  <H>Rent schedule</H>
+                  {steps.map((x, k) => <div key={k} style={{ fontSize:13, padding:"3px 0", borderBottom:"1px solid #f3f2ee", fontVariantNumeric:"tabular-nums" }}>{x}</div>)}
+                </>)}
+                {(opts.length > 0 || optionSteps.length > 0 || notices.length > 0) && (<>
+                  <H>Renewal options</H>
+                  {opts.map((x, k) => <div key={k} style={{ fontSize:13, padding:"3px 0" }}>{x}</div>)}
+                  {optionSteps.length > 0 && <div style={{ fontSize:12, color:"#676767", marginTop:4 }}>Option rent: {optionSteps.join("; ")}</div>}
+                  {notices.map(pn => {
+                    const key = `${(t.name || "").trim().toLowerCase()}|${pn.noticeDate}`, st = optionStatus?.get(key);
+                    return (
+                      <div key={key} style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginTop:8, background:"#fff8ec", borderRadius:8, padding:"6px 8px" }}>
+                        <span style={{ fontSize:12.5 }}>{pn.option} notice was due <b>{fmtLeaseDate(pn.noticeDate)}</b></span>
+                        {onSetOptionStatus ? (
+                          <select aria-label="Option status" value={st ?? ""} onChange={e => e.target.value && onSetOptionStatus(t.name || "", pn.option, pn.noticeDate, e.target.value)} style={{ fontSize:12, border:"1px solid #e0d8c8", borderRadius:6, padding:"3px 6px", background:"#fff" }}>
+                            <option value="">status?</option><option>Exercised</option><option>Pending</option><option>Lapsed</option>
+                          </select>
+                        ) : <span style={{ fontSize:12, color:"#6f6a5f" }}>{st ?? "status not recorded"}</span>}
+                      </div>
+                    );
+                  })}
+                </>)}
+                {kick && (<><H>Kickout / co-tenancy</H><div style={{ fontSize:13, lineHeight:1.55 }}>{kick.tip}</div></>)}
+                {(t.assumptionNote || t.salesNotes) && (<><H>Notes</H>{t.assumptionNote && <div style={{ fontSize:13, lineHeight:1.55 }}>{t.assumptionNote}</div>}{t.salesNotes && <div style={{ fontSize:13, lineHeight:1.55, marginTop:6 }}>{t.salesNotes}</div>}</>)}
+                {onTenantClick && t.name && !isVacantRow(t) && <button onClick={() => { setExpandedReimb(null); onTenantClick(t.name!); }} style={{ marginTop:18, background:"#383A37", color:"#fff", border:"none", borderRadius:8, padding:"8px 14px", fontSize:12.5, fontWeight:700, cursor:"pointer" }}>{t.name} across the library →</button>}
               </aside>
             </>
           );
