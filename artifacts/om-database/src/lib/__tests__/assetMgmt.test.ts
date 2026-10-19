@@ -135,7 +135,7 @@ describe("labels, pending swaps, preferred equity", () => {
   it("preferred equity stays out of total debt and the weighted rate", () => {
     const tot = debtTotals(rows, buildSwapRows(records, new Map(), rates, TODAY));
     expect(tot.totalDebt).toBe(50e6);
-    expect(prefTotals(buildPrefRows(records, deals, TODAY))).toEqual({ total: 17e6, count: 2, weightedRatePct: 9.25 });
+    expect(prefTotals(buildPrefRows(records, deals, TODAY))).toMatchObject({ total: 17e6, count: 2, weightedRatePct: 9.25 });
   });
 });
 

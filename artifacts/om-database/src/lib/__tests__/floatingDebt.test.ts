@@ -111,3 +111,20 @@ describe("credit watch headlines by location", () => {
     expect(rows[0].brand).toMatch(/^pnc bank$/i); expect(rows[0].status).toBe("OK"); expect(rows[0].newsDropped).toBe(1);
   });
 });
+
+import { buildPrefRows, prefTotals } from "../assetMgmt";
+describe("preferred equity current pay vs all-in", () => {
+  it("per-year dollars from amount × rate; missing current pay stays null, not 0; debt rate untouched", () => {
+    const ds = [{ id: "r", propertyName: "Rockaway" }] as unknown as Deal[];
+    const rows = buildPrefRows([
+      rec("p1", "pref", "r", { investor: "Kimco", loanLabel: "Town Plaza", amount: 10_000_000, ratePct: 9.25, currentPayPct: 8.25, accruedPct: 1.0, redemptionDate: "2028-07-10" }),
+      rec("p2", "pref", "r", { investor: "X", amount: 4_000_000, ratePct: 10, accrualPct: 1.5 }),
+    ], ds, today);
+    const a = rows.find(r => r.record.id === "p1")!, b = rows.find(r => r.record.id === "p2")!;
+    expect([a.annualCurrentPay, a.annualAccrual]).toEqual([825_000, 100_000]);
+    expect([b.currentPayPct, b.annualCurrentPay, b.accruedPct, b.annualAccrual]).toEqual([null, null, 1.5, 60_000]);
+    const t = prefTotals(rows);
+    expect([t.annualCurrentPay, t.annualAccrual, t.currentPayCovered]).toEqual([825_000, 160_000, 1]);
+    expect(debtTotals(buildDebtRows([], ds, rates, today), []).weightedRatePct).toBeNull();
+  });
+});

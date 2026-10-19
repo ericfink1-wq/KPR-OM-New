@@ -163,7 +163,7 @@ export interface SwapRec {
 }
 /** Preferred equity — capital, not debt: kept OUT of total debt and the weighted rate. */
 export interface PrefRec {
-  investor?: string; loanLabel?: string; amount?: number; ratePct?: number; currentPayPct?: number; accrualPct?: number;
+  investor?: string; loanLabel?: string; amount?: number; ratePct?: number; currentPayPct?: number; accruedPct?: number; stepNote?: string; redemptionDate?: string;
   fundingDate?: string; maturityDate?: string; redemption?: string; notes?: string; openQuestions?: string; confidence?: string;
 }
 export interface DateRec { date?: string; type?: string; tenant?: string; description?: string; owner?: string; noticeDays?: number }
@@ -216,7 +216,11 @@ export function sanitizePref(r: Record<string, unknown>): PrefRec {
   return prune({
     investor: str(r.investor ?? r.provider ?? r.lender ?? r.counterparty), loanLabel: str(r.loanLabel ?? r.label, 120),
     amount: num(r.amount ?? r.originalBalance ?? r.currentBalance ?? r.balance, 0, 5e9),
-    ratePct: pct(r.ratePct ?? r.prefRatePct ?? r.allInRatePct ?? r.fixedRatePct ?? r.rate), currentPayPct: pct(r.currentPayPct), accrualPct: pct(r.accrualPct),
+    // ratePct = ALL-IN; currentPayPct = cash pay; accruedPct = the deferred / compounding part
+    // (Eric, 10/19/26). "accrualPct" (the old name) is read as an alias.
+    ratePct: pct(r.ratePct ?? r.allInPct ?? r.allIn ?? r.prefRatePct ?? r.allInRatePct ?? r.fixedRatePct ?? r.rate),
+    currentPayPct: pct(r.currentPayPct ?? r.currentPay ?? r.cashPayPct), accruedPct: pct(r.accruedPct ?? r.accrualPct ?? r.accrued ?? r.accrual),
+    stepNote: text(r.stepNote ?? r.rateSteps ?? r.steps, 600), redemptionDate: isoDate(r.redemptionDate),
     fundingDate: isoDate(r.fundingDate ?? r.originationDate), maturityDate: isoDate(r.maturityDate ?? r.maturity),
     redemption: text(r.redemption ?? r.prepayment), notes: text(r.notes), openQuestions: text(r.openQuestions), confidence: str(r.confidence, 60),
   });
@@ -229,7 +233,7 @@ export function sanitizeDate(r: Record<string, unknown>): DateRec {
 const META_KEYS = new Set(["kind", "id", "dealId", "bldgId", "BLDGID", "property", "propertyName", "source", "sourceNote"]);
 const ALIAS_KEYS = new Set(["spread", "spreadPct", "spread_bps", "originalAmount", "balance", "name", "fixedRate", "allInRate", "startDate", "maturity",
   "dscr", "debtYieldCovenant", "swapRate", "allIn", "terminationDate", "floatingIndex", "label", "prepaymentTerms", "prepay", "provider",
-  "prefRatePct", "rate", "price", "closingDate", "noiAtClose", "goingInCap", "capRate", "kpOwnershipPct", "kpPercent", "jv", "partner"]);
+  "prefRatePct", "rate", "allInPct", "currentPay", "cashPayPct", "accrualPct", "accrued", "accrual", "rateSteps", "steps", "price", "closingDate", "noiAtClose", "goingInCap", "capRate", "kpOwnershipPct", "kpPercent", "jv", "partner"]);
 function withExtras(raw: Record<string, unknown>, clean: Record<string, unknown>): Record<string, unknown> {
   let kept = 0;
   for (const [k, v] of Object.entries(raw)) {
@@ -467,6 +471,13 @@ export function identityCandidates(kind: string, dealId: string, d: Record<strin
     const l = normLabel(d.loanLabel);
     return l ? same.filter(e => !normLabel(e.data.swapLabel) && normLabel(e.data.loanLabel) === l) : null;
   }
+  if (kind === "pref") {
+    // Property + label (Rockaway "Town Plaza"), else property + investor (Eric, 10/19/26).
+    const l = normLabel(d.loanLabel);
+    if (l) return same.filter(e => normLabel(e.data.loanLabel) === l);
+    const inv = normLabel(d.investor);
+    return inv ? same.filter(e => !normLabel(e.data.loanLabel) && normLabel(e.data.investor) === inv) : null;
+  }
   if (kind === "covenant") {
     if (!d.type) return null;
     let c = same.filter(e => e.data.type === d.type);
@@ -485,7 +496,8 @@ const FIELD_LABEL: Record<string, string> = {
   originationDate: "origination", extensionOptions: "extensions", ioUntil: "IO until", amortization: "amortization", amortYears: "amort years",
   counterparty: "counterparty", notional: "notional", fixedSwapRatePct: "swap rate %", allInFixedPct: "all-in fixed %", effectiveDate: "effective date",
   tradeDate: "trade date", threshold: "threshold", sweepBelow: "sweep below", testFrequency: "test frequency", firstTestDate: "first test",
-  triggerDate: "trigger date", type: "type", loanLabel: "loan label", swapLabel: "swap label", linkedTenant: "tenant", termsPending: "terms pending",
+  triggerDate: "trigger date", type: "type", investor: "investor", amount: "amount", ratePct: "all-in rate %", currentPayPct: "current pay %",
+  accruedPct: "accrued %", stepNote: "rate steps", redemptionDate: "redemption date", loanLabel: "loan label", swapLabel: "swap label", linkedTenant: "tenant", termsPending: "terms pending",
 };
 const SKIP_DIFF = new Set(["amortizationText", "sourceDocs"]);
 export function fieldChanges(before: Record<string, unknown>, incoming: Record<string, unknown>): ImportFieldChange[] {
@@ -506,8 +518,6 @@ export function planImport(text: string, owned: OwnedDealRef[], existingIds: Set
     const deal = resolveDeal(r.raw, owned);
     if ("problem" in deal) { rejected.push({ row: i + 1, problem: deal.problem }); return; }
     const data = SANITIZE[r.kind](r.raw);
-    const bad = validateRecord(r.kind, data);
-    if (bad) { rejected.push({ row: i + 1, problem: bad }); return; }
     const explicitId = str(r.raw.id, 120);
     let id = explicitId ?? recordId(r.kind, deal.dealId, data);
     let matchNote: string | undefined;
@@ -534,6 +544,10 @@ export function planImport(text: string, owned: OwnedDealRef[], existingIds: Set
     // An update MERGES: a field the import doesn't carry keeps its saved value.
     let merged = prev ? { ...prev.data, ...data } : data;
     if (r.kind === "swap") merged = withTermsPending(merged);
+    // Validated AFTER the merge: an update only has to carry what changed (a pref row that
+    // just adds currentPayPct keeps its saved amount).
+    const bad = validateRecord(r.kind, merged);
+    if (bad) { rejected.push({ row: i + 1, problem: bad }); return; }
     out.push({ kind: r.kind, id, dealId: deal.dealId, property: owned.find(d => d.id === deal.dealId)!.name, data: merged,
       sourceNote: str(r.raw.source ?? r.raw.sourceNote, 300) ?? prev?.sourceNote ?? null, action: isUpdate ? "update" : "create",
       changes: prev ? fieldChanges(prev.data, data) : undefined, matchNote });

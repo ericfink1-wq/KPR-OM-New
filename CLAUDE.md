@@ -22,6 +22,10 @@ Persistent context for this repo. Read this fully at the start of every session.
 - Occupancy write-up check (analysisGuardrails.ts): only labelled center occupancy (not "occupancy cost", "leased to",
   shares, market/submarket), ±1 pt, q ≥ 20. Ids stable (field + quoted); a question no longer raised is RESOLVED
   (auto-triage, with reason), never deleted or re-opened. `ANSWERED_RECOURSE` (recordedSales.ts) = Eric's answers.
+- Preferred equity: `ratePct` = ALL-IN, `currentPayPct` = cash pay, `accruedPct` (old `accrualPct` read as alias) =
+  deferred part, `stepNote`, `redemptionDate`. Per-year $ = amount × rate; missing rate → "—", never 0. Still never in
+  debt totals / weighted debt rate. Import matches pref on property + loanLabel, else investor; import validation runs on
+  the MERGED row so an update only needs the changed fields.
 - `useAmData` resolves records / rates / abstracts independently (the hero waited on the slowest); hero caches last debt
   figures in localStorage. Fixed-position panels use `100%` not `100vw` (100vw read 409px on a 390px phone).
 

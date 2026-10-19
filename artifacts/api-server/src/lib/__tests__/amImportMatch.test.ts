@@ -73,3 +73,23 @@ describe("swap terms pending is derived, never sticky", () => {
     expect(withTermsPending({ notional: 1e6, fixedSwapRatePct: 3, maturityDate: "2030-01-01", termsPending: true }).termsPending).toBeUndefined();
   });
 });
+
+describe("preferred equity import (Eric, 10/19/26)", () => {
+  const pref = rec("pref:tp", "pref", "chili", { investor: "Kimco", loanLabel: "Town Plaza", amount: 12_000_000, ratePct: 9.25, notes: "keep" });
+  it("matches on property + label and updates in place; an update need not resend the amount", () => {
+    const p = plan({ preferredEquity: [{ dealId: "chili", loanLabel: "Town Plaza", currentPayPct: 8.25, accruedPct: 1.0, stepNote: "8.25% current / 1.00% accrued through 7/10/28, then 8.00% / 1.25%", redemptionDate: "2029-07-10" }] }, [pref]);
+    expect(p.rejected).toEqual([]);
+    expect([p.rows[0].action, p.rows[0].id]).toEqual(["update", "pref:tp"]);
+    expect(p.rows[0].data).toMatchObject({ amount: 12_000_000, ratePct: 9.25, currentPayPct: 8.25, accruedPct: 1, redemptionDate: "2029-07-10", notes: "keep" });
+    expect(p.rows[0].changes!.map(c => c.label)).toEqual(expect.arrayContaining(["current pay %", "accrued %", "rate steps", "redemption date"]));
+  });
+  it("falls back to property + investor when there's no label; old accrualPct name still read", () => {
+    const noLbl = rec("pref:x", "pref", "chili", { investor: "Kimco Realty", amount: 5e6 });
+    const p = plan({ prefs: [{ dealId: "chili", investor: "kimco realty", accrualPct: 1.25, allInPct: 9.5 }] }, [noLbl]);
+    expect(p.rows[0].id).toBe("pref:x");
+    expect(p.rows[0].data).toMatchObject({ accruedPct: 1.25, ratePct: 9.5 });
+  });
+  it("a brand-new pref still needs an amount", () => {
+    expect(plan({ preferredEquity: [{ dealId: "chili", loanLabel: "New", ratePct: 9 }] }, []).rejected[0].problem).toMatch(/amount/);
+  });
+});

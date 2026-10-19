@@ -107,8 +107,9 @@ const FIELDS: Record<"loan" | "swap" | "date" | "pref" | "covenant" | "acquisiti
   swap: [["counterparty", "Counterparty", "text"], ["notional", "Notional ($)", "number"], ["fixedSwapRatePct", "Fixed swap rate (%)", "number"], ["spreadBps", "Loan spread (bps)", "number"],
     ["allInFixedPct", "All-in fixed (%) — if stated", "number"], ["effectiveDate", "Effective", "date"], ["maturityDate", "Maturity", "date"], ["index", "Index", "text"], ["loanLabel", "Loan label", "text"],
     ["notes", "Notes", "text"], ["openQuestions", "Open questions", "text"], ["confidence", "Confidence", "text"]],
-  pref: [["investor", "Investor", "text"], ["loanLabel", "Label (e.g. Town Plaza)", "text"], ["amount", "Amount ($)", "number"], ["ratePct", "Pref rate (%)", "number"],
-    ["currentPayPct", "Current pay (%)", "number"], ["accrualPct", "Accrual (%)", "number"], ["fundingDate", "Funded", "date"], ["maturityDate", "Maturity / redemption date", "date"],
+  pref: [["investor", "Investor", "text"], ["loanLabel", "Label (e.g. Town Plaza)", "text"], ["amount", "Amount ($)", "number"], ["ratePct", "All-in pref rate (%)", "number"],
+    ["currentPayPct", "Current pay (%) — cash", "number"], ["accruedPct", "Accrued (%) — deferred / compounding", "number"], ["stepNote", "Scheduled rate changes", "text"],
+    ["fundingDate", "Funded", "date"], ["redemptionDate", "Redemption date", "date"], ["maturityDate", "Maturity", "date"],
     ["redemption", "Redemption terms", "text"], ["notes", "Notes", "text"], ["openQuestions", "Open questions", "text"], ["confidence", "Confidence", "text"]],
   covenant: [["type", "Type (DSCR / DY / LTV / cash sweep / cash trap / other)", "text"], ["threshold", "Threshold (x for DSCR, % for DY/LTV)", "number"], ["sweepBelow", "Cash sweep below (x)", "number"],
     ["testFrequency", "Test frequency (quarterly / annual)", "text"], ["firstTestDate", "First test date", "date"], ["testMonthDay", "Annual test day (MM-DD)", "text"], ["amortYears", "Test amortization (years)", "number"],
@@ -237,6 +238,34 @@ function LoanDrawer({ r, isAdmin, onClose, onEdit, onDelete, onOpenDeal }: { r: 
     </SideDrawer>
   );
 }
+function PrefDrawer({ p, isAdmin, onClose, onEdit, onDelete, onOpenDeal }: { p: PrefRow; isAdmin: boolean; onClose: () => void; onEdit: () => void; onDelete: () => void; onOpenDeal: (id: string) => void }) {
+  const d = p.record.data;
+  const known = new Set(["investor", "loanLabel", "amount", "ratePct", "currentPayPct", "accruedPct", "accrualPct", "stepNote", "fundingDate", "redemptionDate", "maturityDate", "redemption", "notes", "openQuestions", "confidence"]);
+  const extras = Object.entries(d).filter(([k, v]) => !known.has(k) && v != null && typeof v !== "object" && String(v).trim() !== "");
+  return (
+    <SideDrawer title={`${p.property}${p.loanLabel ? ` · ${p.loanLabel}` : ""} — preferred equity`} onClose={onClose}>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+        <button style={btn()} onClick={() => onOpenDeal(p.dealId)}>Open deal</button>
+        {isAdmin && <><button style={btn()} onClick={onEdit}>Edit</button><button style={btn()} onClick={onDelete}>Delete</button></>}
+      </div>
+      <Field k="Investor" v={p.investor} />
+      <Field k="Amount" v={p.amount != null ? fmtM(p.amount) : null} />
+      <Field k="All-in rate" v={p.ratePct != null ? fmtPct(p.ratePct, 2) : "— (not on file)"} />
+      <Field k="Current pay (cash)" v={p.currentPayPct != null ? `${fmtPct(p.currentPayPct, 2)}${p.annualCurrentPay != null ? ` · ${fmtM(p.annualCurrentPay)}/yr` : ""}` : "— (not on file)"} />
+      <Field k="Accrued (deferred / compounding)" v={p.accruedPct != null ? `+${fmtPct(p.accruedPct, 2)} accrues${p.annualAccrual != null ? ` · ${fmtM(p.annualAccrual)}/yr` : ""}` : null} />
+      <Field k="Scheduled rate changes" v={p.stepNote} />
+      <Field k="Funded" v={d.fundingDate ? fmtDate(String(d.fundingDate)) : null} />
+      <Field k="Redemption date" v={p.redemptionDate ? fmtDate(p.redemptionDate) : null} />
+      <Field k="Maturity" v={p.maturity ? fmtDate(p.maturity) : null} />
+      <Field k="Redemption terms" v={s(d.redemption)} />
+      <Field k="Notes" v={s(d.notes)} />
+      <Field k="Open questions" v={s(d.openQuestions)} />
+      <Field k="Confidence" v={s(d.confidence)} />
+      {extras.map(([k, v]) => <Field key={k} k={k.replace(/([a-z])([A-Z])/g, "$1 $2")} v={String(v)} />)}
+      <Src>Preferred equity is capital, not debt — kept out of total debt and the weighted debt rate. Source: {p.record.sourceNote ?? "none noted"}{p.record.updatedBy ? ` · last saved by ${p.record.updatedBy}` : ""}</Src>
+    </SideDrawer>
+  );
+}
 function ImportBox({ onDone, onClose }: { onDone: () => void; onClose: () => void }) {
   const [text, setText] = useState("");
   const [plan, setPlan] = useState<AmImportResult | null>(null);
@@ -278,7 +307,7 @@ function ImportBox({ onDone, onClose }: { onDone: () => void; onClose: () => voi
 // ── Debt tab ──────────────────────────────────────────────────────────────────
 const LOAN_COLS = ["Property", "Lender", "Balance", "Rate", "All-in", "Maturity", "Extension", "Recourse"];
 const SWAP_COLS = ["Property", "Counterparty", "Notional", "Fixed swap", "All-in fixed", "Effective", "Maturity", "Market (remaining term)", "Mark-to-market", "Source", ""];
-const PREF_COLS = ["Property", "Investor", "Amount", "Pref rate", "Maturity", "Source", ""];
+const PREF_COLS = ["Property", "Investor", "Amount", "Current pay", "All-in", "Current pay / yr", "Accrues / yr", "Redemption"];
 const s = (v: unknown): string | null => (v == null || String(v).trim() === "" ? null : String(v));
 export function Clamp({ children }: { children: ReactNode }) {
   return <div style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontSize: 12.5 }}>{children}</div>;
@@ -318,6 +347,7 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
   const [edit, setEdit] = useState<{ kind: "loan" | "swap" | "pref"; rec: AmRecord | null } | null>(null);
   const [imp, setImp] = useState(false);
   const [drawer, setDrawer] = useState<string | null>(null);
+  const [prefDrawer, setPrefDrawer] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const maxWall = Math.max(1, ...tot.wall.map(w => w.amount));
   const curveAsOf = rates?.termSwapCurve?.asOf ?? null;
@@ -424,25 +454,39 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
           <SectionTitle right={isAdmin ? <button style={btn()} onClick={() => setEdit({ kind: "pref", rec: null })}>Add preferred equity</button> : undefined}>Preferred equity</SectionTitle>
           {!prefs.length ? <div style={{ ...card, padding: 14, fontSize: 13.5, color: K.gray }}>None entered. Preferred equity is capital, not debt, so it is kept out of total debt and the weighted rate above.</div> : (
             <>
-              <div style={{ fontSize: 13, color: K.gray, marginBottom: 8 }}>{fmtM(pt.total)} across {pt.count} position{pt.count === 1 ? "" : "s"}{pt.weightedRatePct != null ? ` · weighted pref rate ${fmtPct(pt.weightedRatePct, 2)}` : ""} — kept out of total debt and the weighted rate above.</div>
-              <Table minWidth={900}>
-                <thead><tr>{PREF_COLS.map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
-                <tbody>{prefs.map((p: PrefRow) => {
-                  const d = p.record.data, isOpen = open.has(p.record.id);
-                  return [
-                    <tr key={p.record.id}>
-                      <td style={td}><button onClick={() => onOpenDeal(p.dealId)} style={linkBtn}>{p.property}</button>{p.loanLabel && <span style={{ color: K.charcoal, fontWeight: 600 }}> · {p.loanLabel}</span>}</td>
-                      <td style={td}>{p.investor ?? "—"}</td>
-                      <td style={num}>{fmtM(p.amount)}</td>
-                      <td style={num}>{fmtPct(p.ratePct, 2)}{d.currentPayPct != null || d.accrualPct != null ? <Src>{[d.currentPayPct != null ? `${d.currentPayPct}% current` : null, d.accrualPct != null ? `${d.accrualPct}% accrues` : null].filter(Boolean).join(" · ")}</Src> : null}</td>
-                      <td style={td}>{fmtDate(p.maturity)} {daysPill(p.daysToMaturity)}</td>
-                      <td style={{ ...td, fontSize: 11.5, color: K.gray, maxWidth: 220 }}>{p.record.sourceNote ?? "—"}</td>
-                      <td style={td}><RowActions isOpen={isOpen} onToggle={() => toggle(p.record.id)} isAdmin={isAdmin} onEdit={() => setEdit({ kind: "pref", rec: p.record })} onDelete={() => del(p.record.id)} /></td>
-                    </tr>,
-                    isOpen && <DetailRow key={p.record.id + ":d"} cols={PREF_COLS.length} rec={p.record} items={[["Redemption", s(d.redemption)], ["Funded", d.fundingDate ? fmtDate(String(d.fundingDate)) : null], ["Notes", s(d.notes)], ["Open questions", s(d.openQuestions)], ["Confidence", s(d.confidence)]]} />,
-                  ];
-                })}</tbody>
-              </Table>
+              <div style={{ fontSize: 13, color: K.gray, marginBottom: 8 }}>{fmtM(pt.total)} across {pt.count} position{pt.count === 1 ? "" : "s"}{pt.weightedRatePct != null ? ` · weighted all-in ${fmtPct(pt.weightedRatePct, 2)}` : ""}{pt.annualCurrentPay != null ? ` · ${fmtM(pt.annualCurrentPay)}/yr current pay${pt.currentPayCovered < pt.count ? ` (${pt.currentPayCovered} of ${pt.count} with a current-pay rate)` : ""}` : ""}{pt.annualAccrual != null ? ` · ${fmtM(pt.annualAccrual)}/yr accrues` : ""} — kept out of total debt and the weighted rate above.</div>
+              {isMobile ? (
+                <div style={{ ...card, overflow: "hidden" }}>
+                  {prefs.map((p, k) => (
+                    <button key={p.record.id} onClick={() => setPrefDrawer(p.record.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: "2px 10px", width: "100%", textAlign: "left", background: "#fff", border: "none", borderTop: k ? "1px solid #f3f2ee" : "none", padding: "11px 14px", cursor: "pointer", fontFamily: "inherit" }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.property}{p.loanLabel ? <span style={{ color: K.gray, fontWeight: 400 }}> · {p.loanLabel}</span> : null}</span>
+                      <span style={{ fontSize: 13.5, color: K.ink, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{fmtM(p.amount)}</span>
+                      <span style={{ fontSize: 12, color: K.gray, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.investor ?? "—"} · current {fmtPct(p.currentPayPct, 2)}{p.accruedPct != null ? ` +${p.accruedPct.toFixed(2)}% accrues` : ""}</span>
+                      <span style={{ fontSize: 12, color: K.gray, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>all-in {fmtPct(p.ratePct, 2)}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+              <div style={{ ...card, overflowX: "auto" }}>
+                <table className="kpr-table" style={{ width: "100%", minWidth: 900, borderCollapse: "collapse" }}>
+                  <thead><tr>{PREF_COLS.map(h => <th key={h} style={{ ...th, position: "static" }}>{h}</th>)}</tr></thead>
+                  <tbody>{prefs.map((p: PrefRow) => (
+                    <tr key={p.record.id} onClick={() => setPrefDrawer(p.record.id)} tabIndex={0} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPrefDrawer(p.record.id); } }} style={{ cursor: "pointer", height: 42 }} title="Click for every field">
+                      <td style={ell}><span style={{ fontWeight: 600 }}>{p.property}</span>{p.loanLabel && <span style={{ color: K.gray }}> · {p.loanLabel}</span>}</td>
+                      <td style={ell}>{p.investor ?? "—"}</td>
+                      <td style={{ ...num, verticalAlign: "middle" }}>{fmtM(p.amount)}</td>
+                      <td style={{ ...num, verticalAlign: "middle" }}>{fmtPct(p.currentPayPct, 2)}{p.accruedPct != null && <span style={{ color: K.gray, fontSize: 11.5 }}> +{p.accruedPct.toFixed(2)}% accrues</span>}</td>
+                      <td style={{ ...num, verticalAlign: "middle" }}>{fmtPct(p.ratePct, 2)}</td>
+                      <td style={{ ...num, verticalAlign: "middle" }}>{fmtM(p.annualCurrentPay)}</td>
+                      <td style={{ ...num, verticalAlign: "middle" }}>{fmtM(p.annualAccrual)}</td>
+                      <td style={ell}>{fmtDate(p.redemptionDate ?? p.maturity)} {daysPill(p.daysToMaturity)}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+              )}
+              <Src>All-in = the full pref rate; current pay = the part paid in cash now; accrues = the deferred / compounding part. Per-year dollars = amount × rate. "—" = that rate isn't on file. Tap a row for every field, including scheduled rate changes.</Src>
+              {(() => { const p = prefs.find(x => x.record.id === prefDrawer); return p ? <PrefDrawer p={p} isAdmin={isAdmin} onClose={() => setPrefDrawer(null)} onEdit={() => { setPrefDrawer(null); setEdit({ kind: "pref", rec: p.record }); }} onDelete={() => { setPrefDrawer(null); void del(p.record.id); }} onOpenDeal={onOpenDeal} /> : null; })()}
             </>
           )}
         </>
@@ -950,7 +994,7 @@ export function OwnedDealPanel({ deal, onOpenDeal }: { deal: Deal; onOpenDeal: (
               ))}
               {prefs.map(p => (
                 <div key={p.record.id} style={{ fontSize: 13, marginTop: 8 }}>
-                  <b>Preferred equity</b>{p.investor ? ` · ${p.investor}` : ""}{p.loanLabel ? ` (${p.loanLabel})` : ""} · {fmtM(p.amount)}{p.ratePct != null ? ` at ${fmtPct(p.ratePct, 2)}` : ""}
+                  <b>Preferred equity</b>{p.investor ? ` · ${p.investor}` : ""}{p.loanLabel ? ` (${p.loanLabel})` : ""} · {fmtM(p.amount)}{p.ratePct != null ? ` at ${fmtPct(p.ratePct, 2)} all-in` : ""}{p.currentPayPct != null ? ` (${fmtPct(p.currentPayPct, 2)} current pay${p.accruedPct != null ? ` + ${fmtPct(p.accruedPct, 2)} accrues` : ""})` : ""}
                   <Src>not debt — excluded from loan totals · {p.record.sourceNote ?? "no source noted"}</Src>
                 </div>
               ))}

@@ -237,19 +237,31 @@ export function debtTotals(rows: DebtRow[], swaps: SwapRow[]): DebtTotals {
 }
 
 // ── Preferred equity — capital, NOT debt: never in total debt or the weighted rate ──
-export interface PrefRow { record: AmRecord; dealId: string; property: string; loanLabel: string | null; investor: string | null; amount: number | null; ratePct: number | null; maturity: string | null; daysToMaturity: number | null }
+export interface PrefRow { record: AmRecord; dealId: string; property: string; loanLabel: string | null; investor: string | null; amount: number | null;
+  /** ALL-IN pref rate. */ ratePct: number | null;
+  /** Cash-pay rate and the deferred / compounding part (Eric, 10/19/26). Null = not on file — never 0. */
+  currentPayPct: number | null; accruedPct: number | null;
+  /** Amount × rate, per year. Null when the rate isn't on file. */
+  annualCurrentPay: number | null; annualAccrual: number | null;
+  stepNote: string | null; redemptionDate: string | null; maturity: string | null; daysToMaturity: number | null }
 export function buildPrefRows(records: AmRecord[], deals: Deal[], today: Date): PrefRow[] {
   const names = new Map(deals.map(d => [d.id, d.propertyName || "Untitled"]));
   return records.filter(r => r.kind === "pref" && r.dealId && names.has(r.dealId)).map(r => {
-    const d = r.data, maturity = s(d.maturityDate);
-    return { record: r, dealId: r.dealId!, property: names.get(r.dealId!)!, loanLabel: s(d.loanLabel), investor: s(d.investor), amount: n(d.amount), ratePct: n(d.ratePct), maturity, daysToMaturity: daysUntil(maturity, today) };
+    const d = r.data, maturity = s(d.maturityDate), amount = n(d.amount);
+    const cp = n(d.currentPayPct), acc = n(d.accruedPct) ?? n(d.accrualPct);
+    const perYr = (pct: number | null) => amount != null && pct != null ? Math.round(amount * pct / 100) : null;
+    return { record: r, dealId: r.dealId!, property: names.get(r.dealId!)!, loanLabel: s(d.loanLabel), investor: s(d.investor), amount, ratePct: n(d.ratePct),
+      currentPayPct: cp, accruedPct: acc, annualCurrentPay: perYr(cp), annualAccrual: perYr(acc), stepNote: s(d.stepNote), redemptionDate: s(d.redemptionDate),
+      maturity, daysToMaturity: daysUntil(s(d.redemptionDate) ?? maturity, today) };
   }).sort((a, b) => a.property.localeCompare(b.property) || (a.loanLabel ?? "").localeCompare(b.loanLabel ?? ""));
 }
-export function prefTotals(rows: PrefRow[]): { total: number; weightedRatePct: number | null; count: number } {
+export function prefTotals(rows: PrefRow[]): { total: number; weightedRatePct: number | null; count: number; annualCurrentPay: number | null; annualAccrual: number | null; currentPayCovered: number } {
   const withAmt = rows.filter(r => r.amount != null);
   const total = withAmt.reduce((t, r) => t + r.amount!, 0);
   const priced = withAmt.filter(r => r.ratePct != null), pb = priced.reduce((t, r) => t + r.amount!, 0);
-  return { total, count: rows.length, weightedRatePct: pb > 0 ? Math.round((priced.reduce((t, r) => t + r.amount! * r.ratePct!, 0) / pb) * 1000) / 1000 : null };
+  const cp = rows.filter(r => r.annualCurrentPay != null), ac = rows.filter(r => r.annualAccrual != null);
+  return { total, count: rows.length, weightedRatePct: pb > 0 ? Math.round((priced.reduce((t, r) => t + r.amount! * r.ratePct!, 0) / pb) * 1000) / 1000 : null,
+    annualCurrentPay: cp.length ? cp.reduce((t, r) => t + r.annualCurrentPay!, 0) : null, annualAccrual: ac.length ? ac.reduce((t, r) => t + r.annualAccrual!, 0) : null, currentPayCovered: cp.length };
 }
 
 // ── Live tenant list (Datex first, OM roster as fallback) ────────────────────
