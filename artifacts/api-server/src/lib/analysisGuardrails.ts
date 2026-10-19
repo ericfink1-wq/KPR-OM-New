@@ -89,15 +89,25 @@ export function checkQuotedFigures(deal: Record<string, unknown>, texts: string[
 
   for (const text of texts) {
     const t = text.replace(/\s+/g, " ");
-    // Occupancy: "88.93% occupied", "occupancy of 88.9%", "88.9% leased".
+    // Occupancy — ONLY a figure explicitly labelled as the center's occupancy (10/19/26: 441
+    // false positives, e.g. "1.7%" from "occupancy cost of 1.7%", "8.5% occupancy cost",
+    // "100% leased to Walmart", a tenant's "share of GLA"). Accepted: "88.9% occupied",
+    // "88.9% occupancy" (not "occupancy cost"), "occupancy of/at/is 88.9%", "88.9% leased"
+    // (not "leased to/by…"). Tolerance 1 point (leased vs occupied rounding).
     if (occ != null) {
-      const re = /(\d{1,3}(?:\.\d+)?)\s?%[\s-]*(?:occupied|occupancy|leased)\b|\b(?:occupancy|occupied|leased)\s*(?:of|at|is|was|:)?\s*(\d{1,3}(?:\.\d+)?)\s?%/gi;
+      const re = /(\d{1,3}(?:\.\d+)?)\s?%[\s-]*(occupied|occupancy|leased)\b([\s-]*\w+)?|\b(occupancy|occupied|leased)(?:\s+rate)?\s*(?:of|at|is|was|stands at|:)\s*(\d{1,3}(?:\.\d+)?)\s?%/gi;
       for (let m; (m = re.exec(t)); ) {
-        const q = Number(m[1] ?? m[2]);
-        // Skip forward-looking / hypothetical statements ("could fall below 85%").
+        const q = Number(m[1] ?? m[5]);
+        const word = (m[2] ?? m[4] ?? "").toLowerCase();
+        const next = (m[3] ?? "").trim().toLowerCase().replace(/^-/, "");
+        if (m[1] != null && /^(cost|costs|ratio|ratios|expense|expenses|to|by|from|through|under|until|for)$/.test(next)) continue;
         const before = t.slice(Math.max(0, m.index - 40), m.index).toLowerCase();
-        if (/\b(below|above|under|over|fall|drop|reach|target|stabiliz|pro ?forma|if|could|would|threshold|trigger|covenant|than)\b/.test(before)) continue;
-        if (q > 0 && q <= 100 && Math.abs(q - occ) > 0.5) add({ field: "occupancy", quoted: q, stored: occ, excerpt: t.slice(Math.max(0, m.index - 50), m.index + m[0].length + 20).trim() });
+        // A tenant's own figure ("Ross's occupancy cost", "the anchor is 100% leased") or a
+        // share/cost metric is not the center's occupancy.
+        if (/\b(cost|costs|share|of gla|of the gla|of sf|of rent|tenant'?s|anchor'?s)\b[^%]*$/.test(before) && word !== "occupied") continue;
+        // Skip forward-looking / hypothetical statements ("could fall below 85%").
+        if (/\b(below|above|under|over|fall|drop|reach|target|stabiliz|pro ?forma|if|could|would|threshold|trigger|covenant|than|historical|peak|prior|previous|market|submarket|trade area|national|average)\b/.test(before)) continue;
+        if (q >= 20 && q <= 100 && Math.abs(q - occ) > 1) add({ field: "occupancy", quoted: q, stored: occ, excerpt: t.slice(Math.max(0, m.index - 50), m.index + m[0].length + 20).trim() });
       }
     }
     // A named tenant's share of base rent: "IWG … 39% of base rent".
@@ -154,8 +164,9 @@ export function checkQuotedFigures(deal: Record<string, unknown>, texts: string[
 
 /** Review questions for the mismatches — the person decides which figure is right. */
 export function figureMismatchQuestions(ms: FigureMismatch[]): Array<Record<string, unknown>> {
-  return ms.map((m, i) => ({
-    id: `ai-figure-${m.field.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${i}`,
+  return ms.map((m) => ({
+    // Stable per field + quoted figure, so a re-run recognises a question it already raised.
+    id: `ai-figure-${m.field.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${Number.isNaN(m.quoted) ? "x" : String(m.quoted).replace(".", "_")}`,
     source: "check", severity: "medium", field: m.field,
     question: Number.isNaN(m.quoted)
       ? `The AI write-up calls ${m.field.replace(/ lease status$/, "")}'s lease expired or in holdover, but it hasn't expired yet.`
@@ -173,8 +184,20 @@ export function applyAnalysisGuardrails(deal: Record<string, unknown>, analysis:
   }
   const mism = checkQuotedFigures({ ...deal, ...analysis }, analysisTexts(analysis));
   const prior = Array.isArray(deal.reviewQuestions) ? (deal.reviewQuestions as Array<Record<string, unknown>>) : [];
-  const kept = prior.filter(q => !String(q?.id ?? "").startsWith("ai-figure-"));
+  const isFig = (q: Record<string, unknown>) => String(q?.id ?? "").startsWith("ai-figure-");
+  const kept = prior.filter(q => !isFig(q));
   const fresh = figureMismatchQuestions(mism);
-  if (fresh.length || kept.length !== prior.length) analysis.reviewQuestions = [...kept, ...fresh];
+  const freshIds = new Set(fresh.map(q => String(q.id)));
+  const priorById = new Map(prior.filter(isFig).map(q => [String(q.id), q]));
+  // A question still raised keeps its prior state (a resolved one is not re-opened). One no
+  // longer raised is RESOLVED, never deleted, with the reason — auditable like auto-triage.
+  const merged = fresh.map(q => priorById.get(String(q.id)) ?? q);
+  const now = new Date().toISOString();
+  for (const q of prior.filter(isFig)) {
+    if (freshIds.has(String(q.id))) continue;
+    merged.push(q.resolvedAt ? q : { ...q, resolvedAt: now, resolvedBy: "auto-triage",
+      resolution: "No longer flagged: the write-up figure isn't the center's occupancy / share as labelled (check tightened 10/19/26 — only explicitly labelled figures, ±1 pt), or the write-up now matches." });
+  }
+  if (JSON.stringify(merged) !== JSON.stringify(prior.filter(isFig))) analysis.reviewQuestions = [...kept, ...merged];
   return analysis;
 }

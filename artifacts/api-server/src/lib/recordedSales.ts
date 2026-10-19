@@ -123,3 +123,34 @@ export async function applySingleTenantProperties(): Promise<number> {
   }
   return n;
 }
+
+// ANSWERED REVIEW QUESTIONS (Eric, 10/19/26): "AI capture — Recourse" on these three owned
+// deals is answered by the loan documents. Open recourse questions are RESOLVED (never deleted)
+// with the answer, and a blank debtRecourse is filled. Matched by property name.
+export const ANSWERED_RECOURSE: Array<{ name: RegExp; answer: string }> = [
+  { name: /mattatuck/i, answer: "Non-recourse with a carve-out (bad-boy) guaranty by Katz / Kaufthal, per the loan documents." },
+  { name: /concordia/i, answer: "Non-recourse with a carve-out (bad-boy) guaranty by Katz / Kaufthal, per the loan documents." },
+  { name: /providence/i, answer: "Non-recourse with a carve-out (bad-boy) guaranty by Katz / Kaufthal, per the loan documents." },
+];
+export function resolveRecourseQuestions(data: Record<string, unknown>, answer: string, now = new Date().toISOString()): Record<string, unknown> | null {
+  const qs = Array.isArray(data.reviewQuestions) ? (data.reviewQuestions as Array<Record<string, unknown>>) : [];
+  let hit = 0;
+  const next = qs.map(q => {
+    if (q?.resolvedAt || !/recourse/i.test(`${q?.field ?? ""}`)) return q;
+    hit++;
+    return { ...q, resolvedAt: now, resolvedBy: "Eric (10/19/26)", resolution: answer };
+  });
+  const fill = !String(data.debtRecourse ?? "").trim();
+  if (!hit && !fill) return null;
+  return { reviewQuestions: next, ...(fill ? { debtRecourse: answer } : {}) };
+}
+export async function applyAnsweredRecourse(): Promise<number> {
+  const rows = await db.select().from(dealsTable).where(sql`${dealsTable.data}->>'status' = 'Owned' AND ${dealsTable.data}->>'trashedAt' IS NULL`);
+  let n = 0;
+  for (const r of rows) {
+    const name = String((r.data as Record<string, unknown>).propertyName ?? "");
+    const a = ANSWERED_RECOURSE.find(x => x.name.test(name));
+    if (a && await updateDealSafely(r.id, fresh => resolveRecourseQuestions(fresh, a.answer))) n++;
+  }
+  return n;
+}

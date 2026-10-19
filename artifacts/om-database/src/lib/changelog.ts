@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-19-occupancy-check",
+    date: "2026-10-19",
+    category: "fixed",
+    title: "Far fewer false \"write-up vs stored occupancy\" questions",
+    detail: "The check that compares the AI write-up's occupancy to the deal's stored occupancy now reads only figures explicitly labelled as the center's occupancy (not an occupancy cost, a tenant's share, or \"leased to\"), within one point. The several hundred questions it raised by mistake are marked resolved with the reason, not deleted. The recourse questions on Mattatuck, Concordia and Providence are answered: a carve-out (bad-boy) guaranty by Katz / Kaufthal, per the loan documents.",
+    where: "Portfolio Analytics → Feedback & trends; each deal's review questions",
+  },
+  {
     id: "2026-10-19-credit-watch",
     date: "2026-10-19",
     category: "improved",

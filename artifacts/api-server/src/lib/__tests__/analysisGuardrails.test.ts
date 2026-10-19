@@ -62,3 +62,26 @@ describe("quoted figures must match the stored deal", () => {
     expect(r.some(m => m.field.startsWith("Hair Expressions"))).toBe(false);
   });
 });
+
+describe("occupancy tie-out only reads labelled occupancy (10/19/26)", () => {
+  it("ignores occupancy cost, tenant shares and 'leased to'", async () => {
+    const { checkQuotedFigures } = await import("../analysisGuardrails");
+    const deal = { occupancy: 100, tenants: [] };
+    for (const t of ["Ross runs a healthy 8.5% occupancy cost.", "Walmart's occupancy cost of 1.7% is low.", "The box is 100% leased to Walmart and 1.7% leased by inline.", "Submarket occupancy of 94% is tight.", "Occupancy 99.5% occupied."])
+      expect(checkQuotedFigures(deal, [t]).filter(m => m.field === "occupancy")).toEqual([]);
+    expect(checkQuotedFigures(deal, ["The center is 88.9% occupied."]).map(m => m.quoted)).toEqual([88.9]);
+    expect(checkQuotedFigures(deal, ["Occupancy of 92% reflects the Big Lots box."]).map(m => m.quoted)).toEqual([92]);
+  });
+  it("a question no longer raised is resolved, not deleted, and not re-opened", async () => {
+    const { applyAnalysisGuardrails } = await import("../analysisGuardrails");
+    const deal: Record<string, unknown> = { occupancy: 100, tenants: [], notes: "Occupancy cost of 1.7% is low.",
+      reviewQuestions: [{ id: "ai-figure-occupancy-0", field: "occupancy", question: "The AI write-up says 1.7% …" }, { id: "x", question: "keep" }] };
+    const out = applyAnalysisGuardrails(deal, { ...deal });
+    const qs = out.reviewQuestions as Array<Record<string, unknown>>;
+    expect(qs.find(q => q.id === "x")).toBeTruthy();
+    const r = qs.find(q => q.id === "ai-figure-occupancy-0")!;
+    expect(r.resolvedBy).toBe("auto-triage");
+    const again = applyAnalysisGuardrails({ ...deal, reviewQuestions: qs }, { ...deal, reviewQuestions: qs });
+    expect(again.reviewQuestions ?? qs).toEqual(qs);
+  });
+});
