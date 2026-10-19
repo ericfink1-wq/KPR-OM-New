@@ -61,31 +61,39 @@ export function SectionTitle({ children, right }: { children: ReactNode; right?:
 // One shared fetch for the whole app: the Asset Mgmt page, the owned deal page's Asset,
 // Financing and Transaction tabs and the home card all read the same records, so they share
 // a promise (kept 60 s) instead of each calling the server. reload() refreshes it for all.
-type AmBundle = { records: AmRecord[]; rates: RatesPayload | null; abstracts: LeaseAbstract[]; error: string | null };
-let amCache: { at: number; p: Promise<AmBundle> } | null = null;
+// Each part resolves on its own (10/19/26): the records are one quick query, but the rates
+// call can refresh the DTCC curve and the abstracts list is large — the home hero's debt tiles
+// used to sit on "loading" until the slowest of the three finished.
+type AmParts = { at: number; rec: Promise<{ records: AmRecord[]; error: string | null }>; rates: Promise<RatesPayload | null>; abs: Promise<LeaseAbstract[]> };
+let amCache: AmParts | null = null;
 const amListeners = new Set<() => void>();
-function loadAm(force = false): Promise<AmBundle> {
-  if (!force && amCache && Date.now() - amCache.at < 60_000) return amCache.p;
-  const p = (async () => {
-    const [rec, rates, abs] = await Promise.allSettled([apiAmRecords(), apiGetRates(), apiListAllLeaseAbstracts()]);
-    return { records: rec.status === "fulfilled" ? rec.value : [], error: rec.status === "rejected" ? String((rec.reason as Error)?.message ?? rec.reason) : null,
-      rates: rates.status === "fulfilled" ? rates.value : null, abstracts: abs.status === "fulfilled" ? abs.value : [] };
-  })();
-  amCache = { at: Date.now(), p };
-  return p;
+function loadParts(force = false): AmParts {
+  if (!force && amCache && Date.now() - amCache.at < 60_000) return amCache;
+  amCache = {
+    at: Date.now(),
+    rec: apiAmRecords().then(records => ({ records, error: null }), e => ({ records: [], error: String((e as Error)?.message ?? e) })),
+    rates: apiGetRates().catch(() => null),
+    abs: apiListAllLeaseAbstracts().catch(() => [] as LeaseAbstract[]),
+  };
+  return amCache;
 }
 export function reloadAm() { amCache = null; amListeners.forEach(f => f()); }
 export function useAmData(enabled = true) {
-  const [b, setB] = useState<AmBundle | null>(null);
+  const [rec, setRec] = useState<{ records: AmRecord[]; error: string | null } | null>(null);
+  const [rates, setRates] = useState<RatesPayload | null>(null);
+  const [abstracts, setAbs] = useState<LeaseAbstract[]>([]);
   const [nonce, setNonce] = useState(0);
   useEffect(() => { const f = () => setNonce(n => n + 1); amListeners.add(f); return () => { amListeners.delete(f); }; }, []);
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
-    loadAm().then(x => alive && setB(x));
+    const p = loadParts();
+    p.rec.then(x => alive && setRec(x));
+    p.rates.then(x => alive && setRates(x));
+    p.abs.then(x => alive && setAbs(x));
     return () => { alive = false; };
   }, [enabled, nonce]);
-  return { records: b?.records ?? null, rates: b?.rates ?? null, abstracts: b?.abstracts ?? [], error: b?.error ?? null, reload: reloadAm };
+  return { records: rec?.records ?? null, rates, abstracts, error: rec?.error ?? null, reload: reloadAm };
 }
 
 // ── record editor (admin) ─────────────────────────────────────────────────────
@@ -173,7 +181,7 @@ export function SideDrawer({ title, onClose, children }: { title: string; onClos
   return (
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9500, background: "rgba(35,36,34,.32)" }} />
-      <aside role="dialog" aria-label={title} style={{ position: "fixed", zIndex: 9501, top: 0, right: 0, bottom: 0, width: "min(520px, 100vw)", overflowY: "auto", background: "#fff", padding: "16px 18px 28px", boxShadow: "-12px 0 40px rgba(35,36,34,.22)", boxSizing: "border-box" }}>
+      <aside role="dialog" aria-label={title} style={{ position: "fixed", zIndex: 9501, top: 0, right: 0, bottom: 0, width: "min(520px, 100%)", overflowY: "auto", overflowX: "hidden", background: "#fff", padding: "16px 18px 28px", boxShadow: "-12px 0 40px rgba(35,36,34,.22)", boxSizing: "border-box" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
           <div style={{ fontFamily: "'Lora',serif", fontSize: 19, fontWeight: 600, color: K.ink, minWidth: 0, overflowWrap: "anywhere" }}>{title}</div>
           <button onClick={onClose} aria-label="Close" style={{ ...btn(), padding: "4px 10px", flex: "none" }}>✕</button>
@@ -310,6 +318,7 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
   const [edit, setEdit] = useState<{ kind: "loan" | "swap" | "pref"; rec: AmRecord | null } | null>(null);
   const [imp, setImp] = useState(false);
   const [drawer, setDrawer] = useState<string | null>(null);
+  const isMobile = useIsMobile();
   const maxWall = Math.max(1, ...tot.wall.map(w => w.amount));
   const curveAsOf = rates?.termSwapCurve?.asOf ?? null;
   const del = async (id: string) => { if (window.confirm("Delete this record?")) { await apiAmDeleteRecord(id); reload(); } };
@@ -343,9 +352,21 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
             ))}
           </div>
           <SectionTitle>Loans</SectionTitle>
+          {isMobile ? (
+            <div style={{ ...card, overflow: "hidden" }}>
+              {rows.map((r, k) => (
+                <button key={r.record.id} onClick={() => setDrawer(r.record.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: "2px 10px", width: "100%", textAlign: "left", background: "#fff", border: "none", borderTop: k ? "1px solid #f3f2ee" : "none", padding: "11px 14px", cursor: "pointer", opacity: r.superseded ? 0.5 : 1, fontFamily: "inherit" }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.property}{r.loanLabel ? <span style={{ color: K.gray, fontWeight: 400 }}> · {r.loanLabel}</span> : null}</span>
+                  <span style={{ fontSize: 13.5, color: K.ink, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{fmtM(r.balance)}{r.balanceIsOriginal ? "*" : ""}</span>
+                  <span style={{ fontSize: 12, color: K.gray, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.lender ?? "—"} · {r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType ?? "—"} · {fmtDate(r.maturity)}</span>
+                  <span style={{ fontSize: 12, color: K.gray, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtPct(r.allInPct, 2)}{r.estimated ? <span style={{ color: K.amber }}>~</span> : null}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
           <div style={{ ...card, overflowX: "auto" }}>
             <table className="kpr-table" style={{ width: "100%", minWidth: 860, borderCollapse: "collapse", tableLayout: "fixed" }}>
-              <colgroup><col style={{ width: "22%" }} /><col style={{ width: "13%" }} /><col style={{ width: 92 }} /><col style={{ width: "12%" }} /><col style={{ width: 82 }} /><col style={{ width: 150 }} /><col style={{ width: "12%" }} /><col style={{ width: "14%" }} /></colgroup>
+              <colgroup><col style={{ width: "21%" }} /><col style={{ width: "12%" }} /><col style={{ width: 92 }} /><col style={{ width: "15%" }} /><col style={{ width: 82 }} /><col style={{ width: 150 }} /><col style={{ width: "12%" }} /><col style={{ width: "14%" }} /></colgroup>
               <thead><tr>{LOAN_COLS.map(h => <th key={h} style={{ ...th, position: "static" }}>{h}</th>)}</tr></thead>
               <tbody>{rows.map((r: DebtRow) => {
                 const d = r.record.data;
@@ -365,6 +386,7 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
               })}</tbody>
             </table>
           </div>
+          )}
           <Src>One line per loan — tap a row for every field (covenants, prepayment, caps, notes, source). <span style={{ color: K.amber }}>~</span> = floating all-in estimated from today's 1M Term SOFR (max of the curve and the loan's index floor, plus spread; a live rate cap limits it). * = original balance (no current balance on file).</Src>
           {(() => { const r = rows.find(x => x.record.id === drawer); return r ? <LoanDrawer r={r} isAdmin={isAdmin} onClose={() => setDrawer(null)} onEdit={() => { setDrawer(null); setEdit({ kind: "loan", rec: r.record }); }} onDelete={() => { setDrawer(null); void del(r.record.id); }} onOpenDeal={onOpenDeal} /> : null; })()}
         </>
@@ -536,6 +558,7 @@ function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin:
   const [autoOpen, setAutoOpen] = useState(false);
   useEffect(() => { apiAmDatexMap().then(setMap).catch(() => setMap([])); }, []);
   const { records, reload } = useAmData();
+  const isMobile = useIsMobile();
   const recs = records ?? [];
   const saveOwner = async (d: Deal) => {
     const acq = recs.find(r => r.kind === "acquisition" && r.dealId === d.id);
@@ -567,22 +590,44 @@ function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin:
       <SectionTitle>Today from Datex</SectionTitle>
       {(() => { const bases = rows.map(r => r.nvb?.basis).filter(Boolean); const cash = bases.filter(b => b === "Cash").length, accr = bases.filter(b => b === "Accrual").length;
         return cash && accr ? <div style={{ fontSize: 12.5, color: K.gray, margin: "0 0 8px" }}>Mixed ledger basis: {cash} propert{cash === 1 ? "y" : "ies"} on cash, {accr} on accrual — NOI-vs-budget variances aren't directly comparable across the two. Partial-year budgets (a property bought mid-year) are shown but not coloured.</div> : null; })()}
-      <Table minWidth={1050}>
-        <thead><tr>{["Property", "Datex as of", "Occupancy", "In-place base rent", "NOI YTD vs budget", "A/R > 60 / > 90", "Asset manager"].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
-        <tbody>{rows.map(({ d, dx, tie, ar, rent, bldgs, mapNote, nvb, owner, ownerEntered }) => (
-          <tr key={d.id}>
-            <td style={td}><button onClick={() => onOpenDeal(d.id)} style={linkBtn}>{d.propertyName}</button><Src>{bldgs.length ? bldgs.join(", ") : mapNote ? <span title={mapNote}>{/single-tenant/i.test(mapNote) ? "single-tenant · not in Datex" : /not (set up|in) datex/i.test(mapNote) ? "not in Datex yet" : "not mapped to Datex"}</span> : "not mapped to Datex"}</Src></td>
-            <td style={td}>{dx ? fmtDate(String(dx.asOf)) : <span style={{ color: K.gray }}>no snapshot</span>}</td>
-            <td style={num}>{dx?.occupancyPct != null ? fmtPct(Number(dx.occupancyPct), 1) : "—"}{tie?.level === "warn" && <Src><span style={{ color: K.red }} title={tie.adjustments.length ? `After: ${tie.adjustments.join("; ")}` : undefined}>⚠ roster GLA {tie.rosterGLA.toLocaleString()} SF is {tie.diffPct}% off Occupancy's</span></Src>}</td>
-            <td style={num}>{fmtM(rent)}</td>
-            <td style={num}>{nvb?.actual != null ? fmtM(nvb.actual) : "—"}{nvb?.budget != null && <Src><span title={nvb.partialNote ?? BASIS_TIP}>budget {fmtM(nvb.budget)}{nvb.partial
+      {(() => {
+        const cells = ({ d, dx, tie, ar, rent, bldgs, mapNote, nvb, owner, ownerEntered }: typeof rows[number]) => ({
+          prop: <><button onClick={() => onOpenDeal(d.id)} style={linkBtn}>{d.propertyName}</button><Src>{bldgs.length ? bldgs.join(", ") : mapNote ? <span title={mapNote}>{/single-tenant/i.test(mapNote) ? "single-tenant · not in Datex" : /not (set up|in) datex/i.test(mapNote) ? "not in Datex yet" : "not mapped to Datex"}</span> : "not mapped to Datex"}</Src></>,
+          asOf: dx ? fmtDate(String(dx.asOf)) : <span style={{ color: K.gray }}>no snapshot</span>,
+          occ: <>{dx?.occupancyPct != null ? fmtPct(Number(dx.occupancyPct), 1) : "—"}{tie?.level === "warn" && <Src><span style={{ color: K.red }} title={tie.adjustments.length ? `After: ${tie.adjustments.join("; ")}` : undefined}>⚠ roster GLA {tie.rosterGLA.toLocaleString()} SF is {tie.diffPct}% off Occupancy's</span></Src>}</>,
+          rent: fmtM(rent),
+          noi: <>{nvb?.actual != null ? fmtM(nvb.actual) : "—"}{nvb?.budget != null && <Src><span title={nvb.partialNote ?? BASIS_TIP}>budget {fmtM(nvb.budget)}{nvb.partial
               ? <> · <span style={{ color: K.gray, fontStyle: "italic" }}>{/mis-entered/.test(nvb.partialNote ?? "") ? "budget not comparable" : "partial-year budget"}</span></>
-              : nvb.variancePct != null ? <> · <span style={{ color: nvb.colour === "green" ? "#3e8a2f" : nvb.colour === "red" ? K.red : K.gray, fontWeight: nvb.colour ? 700 : 400 }}>{nvb.variancePct > 0 ? "+" : ""}{nvb.variancePct.toFixed(1)}%</span></> : null} · to {nvb.period ?? ""} · {nvb.basis ? `${nvb.basis === "mixed" ? "mixed cash/accrual" : nvb.basis + " basis"}` : "basis not stated"} ⓘ</span></Src>}</td>
-            <td style={num}>{ar ? <ArCell ar={ar} /> : "—"}</td>
-            <td style={td}>{owner ?? <span style={{ color: K.gray }}>no owner on file</span>}{owner && !ownerEntered && <Src>from Datex</Src>}{isAdmin && <div><button style={{ ...miniBtn, marginTop: 4 }} onClick={() => saveOwner(d)}>{owner ? "Change" : "Set owner"}</button></div>}</td>
-          </tr>
-        ))}</tbody>
-      </Table>
+              : nvb.variancePct != null ? <> · <span style={{ color: nvb.colour === "green" ? "#3e8a2f" : nvb.colour === "red" ? K.red : K.gray, fontWeight: nvb.colour ? 700 : 400 }}>{nvb.variancePct > 0 ? "+" : ""}{nvb.variancePct.toFixed(1)}%</span></> : null} · to {nvb.period ?? ""} · {nvb.basis ? `${nvb.basis === "mixed" ? "mixed cash/accrual" : nvb.basis + " basis"}` : "basis not stated"} ⓘ</span></Src>}</>,
+          ar: ar ? <ArCell ar={ar} /> : "—",
+          owner: <>{owner ?? <span style={{ color: K.gray }}>no owner on file</span>}{owner && !ownerEntered && <Src>from Datex</Src>}{isAdmin && <div><button style={{ ...miniBtn, marginTop: 4 }} onClick={() => saveOwner(d)}>{owner ? "Change" : "Set owner"}</button></div>}</>,
+        });
+        const HEAD = ["Property", "Datex as of", "Occupancy", "In-place base rent", "NOI YTD vs budget", "A/R > 60 / > 90", "Asset manager"];
+        if (isMobile) return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {rows.map(r => { const c = cells(r); return (
+              <div key={r.d.id} style={{ ...card, padding: "12px 14px" }}>
+                <div style={{ fontSize: 14.5 }}>{c.prop}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: "10px 14px", marginTop: 8 }}>
+                  {([["Datex as of", c.asOf], ["Occupancy", c.occ], ["Base rent", c.rent], ["NOI YTD", c.noi], ["A/R > 60 / > 90", c.ar], ["Asset manager", c.owner]] as Array<[string, ReactNode]>).map(([k, v]) => (
+                    <div key={k} style={{ minWidth: 0, overflowWrap: "anywhere" }}><div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: K.gray }}>{k}</div><div style={{ fontSize: 13, color: K.ink }}>{v}</div></div>
+                  ))}
+                </div>
+              </div>
+            ); })}
+          </div>
+        );
+        return (
+          <Table minWidth={1050}>
+            <thead><tr>{HEAD.map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+            <tbody>{rows.map(r => { const c = cells(r); return (
+              <tr key={r.d.id}>
+                <td style={td}>{c.prop}</td><td style={td}>{c.asOf}</td><td style={num}>{c.occ}</td><td style={num}>{c.rent}</td><td style={num}>{c.noi}</td><td style={num}>{c.ar}</td><td style={td}>{c.owner}</td>
+              </tr>
+            ); })}</tbody>
+          </Table>
+        );
+      })()}
       <Src>Each owned deal page has the full live panel: rent roll, Underwritten vs Today, leasing activity, and tenant sales & occupancy cost. Datex can't be read by the server directly — a scheduled Claude task posts the changes with an auto-refresh token, and a full snapshot can still be imported by hand (Portfolio Analytics → Maintenance → Import Datex snapshot).</Src>
       {autoOpen && <AutoRefreshTokens onClose={() => setAutoOpen(false)} />}
       {editMap && map && <DatexMapEditor deals={deals} rows={map} onClose={() => setEditMap(false)} onSaved={() => apiAmDatexMap().then(setMap)} />}
@@ -743,6 +788,7 @@ function CreditTab({ deals, abstracts, onOpenDeal }: { deals: Deal[]; abstracts:
   // Default: only brands that are flagged (watchlist, distress, or a headline that touches a
   // state we're in). "Show all brands" lists every tenant brand.
   const [showAll, setShowAll] = useState(false);
+  const isMobile = useIsMobile();
   const flagged = rows.filter(r => r.status !== "OK" || !!r.news?.headline);
   const list = showAll ? rows : flagged;
   const summarize = async (brand: string) => { setSummary(m => ({ ...m, [brand]: "…" })); try { const s = await apiAmSummarizeNews(brand); setSummary(m => ({ ...m, [brand]: s })); } catch (e) { setSummary(m => ({ ...m, [brand]: e instanceof Error ? e.message : "failed" })); } };
@@ -753,6 +799,30 @@ function CreditTab({ deals, abstracts, onOpenDeal }: { deals: Deal[]; abstracts:
         {([[false, `Flagged (${flagged.length})`], [true, `All brands (${rows.length})`]] as const).map(([v, l]) => <button key={String(v)} role="radio" aria-checked={showAll === v} onClick={() => setShowAll(v)} style={{ padding: "7px 12px", minHeight: 34, border: "none", background: showAll === v ? K.charcoal : "#fff", color: showAll === v ? "#fff" : K.charcoal, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{l}</button>)}
       </div>
       {!showAll && !flagged.length && <div style={{ ...card, padding: 14, fontSize: 13.5, color: K.gray, marginBottom: 10 }}>No brand is on the watchlist or has a distress headline touching a state we're in. Switch to “All brands” for the full list.</div>}
+      {isMobile ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {list.map(r => (
+            <div key={r.key} style={{ ...card, padding: "12px 14px", minWidth: 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+                <button onClick={() => setOpen(o => o === r.key ? null : r.key)} style={{ ...linkBtn, fontSize: 14.5 }} aria-expanded={open === r.key}>{r.brand}</button>
+                <Pill flag={flag(r.status)}>{r.status}</Pill>
+              </div>
+              <div style={{ fontSize: 12.5, color: K.gray, marginTop: 3 }}>{r.locations.length} location{r.locations.length === 1 ? "" : "s"} · {fmtM(r.rent)} · {r.pctOfRent.toFixed(2)}% of rent{r.ig ? " · IG" : ""}</div>
+              <Src>{r.statusSource}</Src>
+              {r.news?.headline && <div style={{ fontSize: 12.5, marginTop: 6, overflowWrap: "anywhere" }}><a href={r.news.url ?? "#"} target="_blank" rel="noreferrer" style={{ color: K.ink }}>{r.news.headline}</a></div>}
+              {r.newsDropped ? <Src>{r.newsDropped} headline{r.newsDropped === 1 ? "" : "s"} about states where we have no {r.brand} hidden</Src> : null}
+              {r.news?.scannedAt && <button style={{ ...miniBtn, marginTop: 6 }} onClick={() => summarize(r.brand)}>Summarize</button>}
+              {summary[r.brand] && <div style={{ marginTop: 4, fontSize: 12.5, color: K.charcoal }}>{summary[r.brand]}</div>}
+              {open === r.key && r.locations.map(l => (
+                <div key={l.dealId + l.tenant} style={{ fontSize: 12.5, padding: "5px 0", borderTop: "1px solid #f3f2ee", marginTop: 6 }}>
+                  <button onClick={() => onOpenDeal(l.dealId)} style={linkBtn}>{l.property}</button> · {fmtM(l.rent)}{l.isAnchor ? " · anchor" : ""}
+                  {l.coTenancyTenants > 0 && <div><Pill flag="red">trips co-tenancy for {l.coTenancyTenants} · {fmtM(l.coTenancyRentAtRisk)}</Pill></div>}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : (
       <Table minWidth={900}>
         <thead><tr>{["Brand", "Our locations", "Annual base rent", "% of rent", "IG", "Status", "Latest distress headline", ""].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
         <tbody>{list.map(r => (
@@ -783,6 +853,7 @@ function CreditTab({ deals, abstracts, onOpenDeal }: { deals: Deal[]; abstracts:
           </Fragment>
         ))}</tbody>
       </Table>
+      )}
       <Src>{source}. Status: the retailer watchlist first, then a free daily headline check (Google News: bankruptcy, Chapter 11, store closures, downgrades) — a headline is a prompt to confirm, never a verdict. A headline that names only states where we have no location for that brand is left out. "Summarize" makes one AI call for that brand only. Co-tenancy exposure uses each deal's lease-risk read: rent that trips if this anchor alone goes dark.</Src>
     </>
   );

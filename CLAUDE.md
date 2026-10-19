@@ -2,6 +2,29 @@
 
 Persistent context for this repo. Read this fully at the start of every session.
 
+## OVERNIGHT AUDIT BATCH (10/19/26) — Asset Mgmt
+- Floating loans: `loanSpreadBps` / `loanFloorPct` / `loanRateCaps` (om-database lib/assetMgmt.ts) read spread, index floor
+  and rate caps from fields OR the loan's own text (index / covenants / notes). All-in = max(1M Term SOFR spot, floor) +
+  spread, capped at the highest LIVE strike; `estimated:true` (shown "~"). `rateClass` fixed/swapped/capped/floating →
+  `debtTotals.byClass`; a live cap counts as hedged. Swap `termsPending` is DERIVED from the terms everywhere
+  (`withTermsPending` on sanitize, import merge, upsert, read; startup heal) — never trust a stored flag.
+- Dates: `keyDebtDeadlines` (cap expiries grouped across loans, extension-notice WINDOWS parsed from text, maturities ≤12 mo)
+  pinned above the window; `collapsePortfolioCovenants` (same type+date+description on ≥3 properties → one
+  "<Name> portfolio (N properties)" row, name from `portfolioName`). Owner = acquisition row `assetManager` → Datex.
+- Properties: `noiVsBudget` — close date in the budget year (or budget <½ / >2× actual) = "partial-year budget", not coloured;
+  basis per row + a mixed-basis note. Phone = cards.
+- Providence Town Center is NOT in Datex Buildings (searched name/id/city/all PA, 10/19/26) — labelled "not in Datex yet";
+  Fred Meyer Bend = `SINGLE_TENANT_NOT_IN_DATEX` (map note + 1-row roster, nothing invented). Map rows' `note` drives the label.
+- Brands: `stripStoreSuffix` (tenantCredit.ts, BOTH copies) feeds brandFamilyKey / brandDisplayName / tenantLabel.
+  OwnedRiskCards uses `liveTenants` (Datex-first) like Credit Watch, so totals agree.
+- Credit Watch: default = flagged only; server stores every distress `hits` headline; `headlineAffectsUs` drops ones naming
+  only states with no location for that brand (full state names only).
+- Occupancy write-up check (analysisGuardrails.ts): only labelled center occupancy (not "occupancy cost", "leased to",
+  shares, market/submarket), ±1 pt, q ≥ 20. Ids stable (field + quoted); a question no longer raised is RESOLVED
+  (auto-triage, with reason), never deleted or re-opened. `ANSWERED_RECOURSE` (recordedSales.ts) = Eric's answers.
+- `useAmData` resolves records / rates / abstracts independently (the hero waited on the slowest); hero caches last debt
+  figures in localStorage. Fixed-position panels use `100%` not `100vw` (100vw read 409px on a 390px phone).
+
 ## ROSTER SCRUB + DESIGN SYSTEM (10/18/26)
 - `om-database lib/rosterScrub.ts` (`scrubRoster`, `buildMarketIndex`, `benchmarkFor`, `nextRentStep`): ONE
   standard scrub for every OM — summary band (`RosterScrubBand.tsx`, top of Tenants tab), per-tenant flags +

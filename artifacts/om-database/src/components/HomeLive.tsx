@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import type { Deal } from "../lib/idb";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
 import { buildDebtRows, buildSwapRows, debtTotals } from "../lib/assetMgmt";
@@ -27,6 +27,11 @@ export function heroDatexKpis(owned: Deal[]): { occPct: number | null; occN: num
   return { occPct: gla > 0 ? Math.round((occ / gla) * 1000) / 10 : null, occN, noiTtm: noiN ? ttm : null, noiBudget: bud || null, ytdVarPct: ytdB ? Math.round((ytdA / ytdB - 1) * 1000) / 10 : null, noiN };
 }
 
+const HERO_DEBT_KEY = "kpr_hero_debt_v1";
+type HeroDebt = { total: number; rate: number | null; ratePending: boolean; next: { maturity: string; property: string; balance: number | null } | null };
+function readCachedDebt(): HeroDebt | null {
+  try { const v = JSON.parse(localStorage.getItem(HERO_DEBT_KEY) || "null"); return v && typeof v.total === "number" ? v as HeroDebt : null; } catch { return null; }
+}
 function Tile({ v, l, s }: { v: string; l: string; s?: string }) {
   return (
     <div className="kpr-stat dark" style={{ padding: "12px 14px" }}>
@@ -42,13 +47,17 @@ export default function HomeHeroKpis({ deals }: { deals: Deal[] }) {
   const { records, rates } = useAmData(owned.length > 0);
   const today = useMemo(() => new Date(), []);
   const dx = useMemo(() => heroDatexKpis(owned), [owned]);
-  const debt = useMemo(() => {
+  const fresh = useMemo(() => {
     if (!records) return null;
     const rows = buildDebtRows(records, owned, rates, today);
     const t = debtTotals(rows, buildSwapRows(records, new Map(), rates, today));
     const next = rows.filter(r => !r.superseded && r.maturity && (r.daysToMaturity ?? -1) >= 0).sort((a, b) => a.maturity!.localeCompare(b.maturity!))[0] ?? null;
-    return { t, next };
+    return { total: t.totalDebt, rate: rates ? t.weightedRatePct : null, ratePending: !rates, next: next ? { maturity: next.maturity!, property: next.property, balance: next.balance } : null };
   }, [records, owned, rates, today]);
+  // Last-known figures paint instantly (per browser, a convenience only); the live values
+  // replace them as soon as the debt records arrive.
+  useEffect(() => { if (fresh && !fresh.ratePending) try { localStorage.setItem(HERO_DEBT_KEY, JSON.stringify(fresh)); } catch { /* storage off */ } }, [fresh]);
+  const debt = fresh ?? readCachedDebt();
   if (!owned.length) return null;
   return (
     <div className="kpr-hero-panel" aria-label="Owned portfolio, live">
@@ -56,7 +65,7 @@ export default function HomeHeroKpis({ deals }: { deals: Deal[] }) {
       <div className="kpr-rule-grid kpr-rule-grid-dark" style={{ gridTemplateColumns: "repeat(2,minmax(0,1fr))" }}>
         <Tile v={dx.occPct != null ? `${dx.occPct.toFixed(1)}%` : "—"} l="Occupancy" s={dx.occN ? `Datex · ${dx.occN} propert${dx.occN === 1 ? "y" : "ies"}` : "no Datex snapshot yet"} />
         <Tile v={dx.noiTtm != null ? fmtM(dx.noiTtm) : "—"} l="NOI trailing 12" s={dx.ytdVarPct != null ? `${dx.ytdVarPct >= 0 ? "+" : ""}${dx.ytdVarPct}% vs budget YTD` : dx.noiN ? "Datex" : "needs Datex financials"} />
-        <Tile v={debt ? fmtM(debt.t.totalDebt) : "…"} l="Total debt" s={debt?.t.weightedRatePct != null ? `${debt.t.weightedRatePct.toFixed(2)}% weighted all-in` : debt ? "rates not on file" : "loading"} />
+        <Tile v={debt ? fmtM(debt.total) : "…"} l="Total debt" s={debt?.rate != null ? `${debt.rate.toFixed(2)}% weighted all-in` : debt?.ratePending ? "rate loading…" : debt ? "rates not on file" : "loading"} />
         <Tile v={debt?.next ? fmtD(debt.next.maturity!) : debt ? "—" : "…"} l="Next maturity" s={debt?.next ? `${debt.next.property}${debt.next.balance ? ` · ${fmtM(debt.next.balance)}` : ""}` : undefined} />
       </div>
     </div>
