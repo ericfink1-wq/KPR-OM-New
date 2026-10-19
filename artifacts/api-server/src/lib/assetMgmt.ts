@@ -302,6 +302,9 @@ export function sanitizeAcquisition(r: Record<string, unknown>): Record<string, 
     noiAtPurchase: num(r.noiAtPurchase ?? r.noiAtClose, -1e9, 1e9), goingInCapPct: pct(r.goingInCapPct ?? r.goingInCap ?? r.capRate),
     budgetNoi: num(r.budgetNoi ?? (budgetKey ? r[budgetKey] : undefined), -1e9, 1e9),
     budgetYear: num(r.budgetYear, 2000, 2100) ?? (budgetKey ? Number(/(20\d\d)/.exec(budgetKey)![1]) : undefined),
+    // The property's asset manager / owner (Eric, 10/19/26) — the Dates tab and the weekly
+    // digest use it instead of "no owner on file". One acquisition row per property holds it.
+    assetManager: str(r.assetManager ?? r.owner ?? r.assetMgr, 120),
     notes: text(r.notes),
   } as Record<string, unknown>);
 }
@@ -348,7 +351,7 @@ export function validateRecord(kind: EntryKind, d: Record<string, unknown>): str
   if (kind === "pref" && d.amount == null) return "preferred equity needs an amount";
   if (kind === "covenant" && !d.type) return "a covenant needs a type (DSCR, DY, LTV, cash sweep, cash trap or other)";
   if (kind === "covenant" && d.threshold == null && !d.trigger && !d.linkedTenant && !d.description) return "a covenant needs a threshold or a described trigger";
-  if (kind === "acquisition" && d.purchasePrice == null && !d.closeDate) return "an acquisition row needs a purchase price or a close date";
+  if (kind === "acquisition" && d.purchasePrice == null && !d.closeDate && !d.assetManager) return "an acquisition row needs a purchase price, a close date or an asset manager";
   if (kind === "optstatus" && (!d.tenant || !d.status)) return "an option status needs a tenant and a status (Exercised, Pending or Lapsed)";
   if (kind === "date" && (!d.date || !d.type)) return "a critical date needs a date and a type";
   return null;

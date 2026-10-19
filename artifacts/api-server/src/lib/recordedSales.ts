@@ -96,3 +96,30 @@ export async function addMissingProperties(): Promise<number> {
   }
   return n;
 }
+
+// SINGLE-TENANT OWNED PROPERTIES NOT IN DATEX (Eric, 10/19/26). Fred Meyer Bend has no Datex
+// building, so the Properties tab says "single-tenant · not in Datex" instead of "not mapped",
+// and it gets a one-row roster (the tenant only — no SF, rent or dates are invented; those
+// stay blank until a lease or rent roll is uploaded). Applied once: only fills an EMPTY roster.
+export const SINGLE_TENANT_NOT_IN_DATEX: Array<{ id: string; tenant: Record<string, unknown>; mapNote: string }> = [
+  { id: "kpr-owned-fred-meyer-bend", mapNote: "Single-tenant (Fred Meyer) — not in Datex",
+    tenant: { name: "Fred Meyer", parentCompany: "Kroger", isAnchor: true, notes: "Single tenant (per Eric, 10/19/26). SF, rent and lease dates not on file yet — upload the lease or a rent roll." } },
+];
+export async function applySingleTenantProperties(): Promise<number> {
+  let n = 0;
+  for (const p of SINGLE_TENANT_NOT_IN_DATEX) {
+    const [row] = await db.select().from(dealsTable).where(sql`${dealsTable.id} = ${p.id}`).limit(1);
+    if (!row) continue;
+    const name = String((row.data as Record<string, unknown>).propertyName ?? "");
+    await db.execute(sql`INSERT INTO datex_building_map (deal_id, property_name, bldg_ids, note, updated_by)
+      VALUES (${p.id}, ${name}, '[]'::jsonb, ${p.mapNote}, 'seed: single-tenant')
+      ON CONFLICT (deal_id) DO UPDATE SET note = EXCLUDED.note WHERE jsonb_array_length(datex_building_map.bldg_ids) = 0 AND (datex_building_map.note IS NULL OR datex_building_map.note NOT LIKE 'Single-tenant%')`);
+    const wrote = await updateDealSafely(p.id, fresh => {
+      if (Array.isArray(fresh.tenants) && fresh.tenants.length) return null;
+      return { tenants: [{ ...p.tenant, sf: (fresh.totalSF as number) ?? null, annualRent: null, rentSchedule: "not on file" }], occupancy: 100, centerType: fresh.centerType ?? "Single-Tenant",
+        tenantsSource: "single-tenant (entered by KPR)", tenantsManual: true, tenantsAsOf: new Date().toISOString().slice(0, 10) };
+    });
+    if (wrote) n++;
+  }
+  return n;
+}

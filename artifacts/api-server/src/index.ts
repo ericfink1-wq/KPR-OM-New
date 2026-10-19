@@ -16,7 +16,7 @@ import { ensureTraceTables } from "./lib/traceTables";
 import { ensureHouseViewTable } from "./lib/houseView";
 import { ensureMcpKeysTable } from "./lib/mcpKeys";
 import { startSelfImproveScheduler } from "./lib/selfImprove";
-import { applyRecordedSales, addMissingProperties } from "./lib/recordedSales";
+import { applyRecordedSales, addMissingProperties, applySingleTenantProperties } from "./lib/recordedSales";
 import { purgePendingSaleData } from "./lib/pendingSale";
 import { runFailedUploadCleanup } from "./lib/failedUploadCleanup";
 import { retireSupersededOms } from "./lib/supersededOms";
@@ -80,6 +80,7 @@ const server = app.listen(port, (err) => {
     { name: "property history", run: () => sweepPropertyHistory() },
     { name: "pending-sale purge", run: () => purgePendingSaleData().then(log("Deleted stored pending-sale data")) },
     { name: "missing properties", run: () => addMissingProperties().then(log("Added missing owned/sold properties")) },
+    { name: "single-tenant owned properties", run: () => applySingleTenantProperties().then(log("Filled single-tenant rosters")) },
     { name: "recorded sales", run: () => applyRecordedSales().then(log("Recorded confirmed sale closings")) },
     // SOFR swap curves from DTCC (newest day + 12 month-ends for the sparkline). Last, and
     // time-boxed: it downloads public files, so it never holds up the jobs above.

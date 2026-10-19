@@ -9,7 +9,7 @@ import {
 import {
   buildDebtRows, buildSwapRows, debtTotals, buildPrefRows, prefTotals, buildCriticalDates, buildCreditWatch, buildSalesRows, omVsToday, liveTenants,
   type AmRecord, type DebtRow, type SwapRow, type PrefRow, type CriticalDate, type CreditRow, type NewsSignal, type DateType,
-  datexGlaTieOut, splitArAging,
+  datexGlaTieOut, splitArAging, noiVsBudget, propertyOwner, collapsePortfolioCovenants, keyDebtDeadlines,
 } from "../lib/assetMgmt";
 import { useWatchlist } from "../lib/useWatchlist";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -107,7 +107,7 @@ const FIELDS: Record<"loan" | "swap" | "date" | "pref" | "covenant" | "acquisiti
     ["testRatePct", "Test rate (%) — if not the loan rate", "number"], ["linkedTenant", "Linked tenant", "text"], ["triggerDate", "Trigger date", "date"], ["trigger", "Trigger / remedy", "text"], ["loanLabel", "Loan label", "text"], ["notes", "Notes", "text"]],
   acquisition: [["purchasePrice", "Purchase price ($)", "number"], ["closeDate", "Close date", "date"], ["seller", "Seller", "text"], ["kpPct", "KP ownership (%)", "number"], ["jvPartner", "JV partner", "text"],
     ["mzlEquity", "MZL equity ($)", "number"], ["kpMemberEquity", "KP member equity ($)", "number"], ["totalEquity", "Total equity ($)", "number"], ["noiAtPurchase", "NOI at purchase ($)", "number"],
-    ["goingInCapPct", "Going-in cap (%)", "number"], ["budgetNoi", "Budget NOI ($)", "number"], ["budgetYear", "Budget year", "number"], ["notes", "Notes", "text"]],
+    ["goingInCapPct", "Going-in cap (%)", "number"], ["budgetNoi", "Budget NOI ($)", "number"], ["budgetYear", "Budget year", "number"], ["assetManager", "Asset manager", "text"], ["notes", "Notes", "text"]],
   date: [["date", "Date", "date"], ["type", "Type (Option notice / Kick-out / Co-tenancy / Termination / Other)", "text"], ["tenant", "Tenant", "text"], ["description", "What it is", "text"], ["owner", "Owner", "text"]],
 };
 export function RecordEditor({ kind, deals, initial, onClose, onSaved, preset }: { kind: "loan" | "swap" | "date" | "pref" | "covenant" | "acquisition"; preset?: Record<string, unknown>; deals: Deal[]; initial?: AmRecord | null; onClose: () => void; onSaved: () => void }) {
@@ -447,7 +447,7 @@ export function DatesList({ items, onOpenDeal, compact = false }: { items: Criti
           {!isMobile && !compact && <div><Pill flag="gray">{i.type}</Pill></div>}
           <div style={{ minWidth: 0 }}>
             {isMobile && <div style={{ fontSize: 12, color: K.gray }}>{fmtDate(i.date)} · {i.type}</div>}
-            <div style={{ fontSize: 13.5, color: K.ink }}><button onClick={() => onOpenDeal(i.dealId)} style={linkBtn}>{i.property}</button>{i.tenant ? ` · ${i.tenant}` : ""}{compact && !isMobile ? ` · ${i.type}` : ""}</div>
+            <div style={{ fontSize: 13.5, color: K.ink }}><button onClick={() => onOpenDeal(i.dealId)} style={linkBtn} title={(i as { properties?: string[] }).properties?.join(", ")}>{i.property}</button>{i.tenant ? ` · ${i.tenant}` : ""}{compact && !isMobile ? ` · ${i.type}` : ""}</div>
             {i.description && <div style={{ fontSize: 12.5, color: K.gray }}>{i.description}</div>}
             {!compact && <Src>{i.source}</Src>}
           </div>
@@ -462,7 +462,8 @@ function DatesTab({ deals, records, abstracts, isAdmin, reload, onOpenDeal }: { 
   const { items, undatedRights } = useMemo(() => buildCriticalDates(deals, records, abstracts, today), [deals, records, abstracts, today]);
   const [prop, setProp] = useState("all"), [type, setType] = useState("all"), [hz, setHz] = useState(90);
   const [add, setAdd] = useState(false);
-  const shown = items.filter(i => (prop === "all" || i.dealId === prop) && (type === "all" || i.type === type) && i.days <= hz && i.days >= 0);
+  const shown = collapsePortfolioCovenants(items.filter(i => (prop === "all" || i.dealId === prop) && (type === "all" || i.type === type) && i.days <= hz && i.days >= 0), records, deals);
+  const keyDebt = useMemo(() => keyDebtDeadlines(deals, records, today).filter(x => prop === "all" || x.dealIds.includes(prop)), [deals, records, today, prop]);
   const undated = [...undatedRights.entries()].filter(([id]) => prop === "all" || id === prop);
   return (
     <>
@@ -474,6 +475,26 @@ function DatesTab({ deals, records, abstracts, isAdmin, reload, onOpenDeal }: { 
         </div>
         {isAdmin && <button style={btn()} onClick={() => setAdd(true)}>Add date</button>}
       </div>
+      {keyDebt.length > 0 && (
+        <>
+          <SectionTitle>Key debt deadlines</SectionTitle>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(250px,1fr))", gap: 10 }}>
+            {keyDebt.map((x, k) => (
+              <div key={k} style={{ ...card, padding: "10px 12px", borderLeft: `4px solid ${x.days < 90 ? K.red : x.days < 180 ? K.amber : "#d9d8d2"}`, minWidth: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+                  <span style={{ fontFamily: "'Montserrat',sans-serif", fontSize: 10.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: K.gray }}>{x.kind}</span>
+                  {daysPill(x.days)}
+                </div>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, marginTop: 3, overflowWrap: "anywhere" }}>
+                  {x.dealIds.length === 1 ? <button onClick={() => onOpenDeal(x.dealIds[0])} style={linkBtn}>{x.title}</button> : <span title={x.properties.join(", ")}>{x.title}</span>}
+                </div>
+                <div style={{ fontSize: 12.5, color: K.gray, marginTop: 2 }}>{x.endDate ? x.detail : `${fmtDate(x.date)} · ${x.detail}`}</div>
+              </div>
+            ))}
+          </div>
+          <Src>Always shown, whatever the window: rate-cap expirations, extension-notice windows and loans maturing within 12 months — read from the Debt records (loan fields and their covenant / notes text).</Src>
+        </>
+      )}
       <SectionTitle>{shown.length} date{shown.length === 1 ? "" : "s"} in the next {hz} days</SectionTitle>
       <DatesList items={shown} onOpenDeal={onOpenDeal} />
       <Src>Lease expiries come from Datex (Tenants) where a snapshot is loaded, else the OM roster. Option notice dates come from the lease abstracts — Datex's option table is empty through the connector. Loan, extension and swap dates come from the Debt records.</Src>
@@ -514,6 +535,16 @@ function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin:
   const [editMap, setEditMap] = useState(false);
   const [autoOpen, setAutoOpen] = useState(false);
   useEffect(() => { apiAmDatexMap().then(setMap).catch(() => setMap([])); }, []);
+  const { records, reload } = useAmData();
+  const recs = records ?? [];
+  const saveOwner = async (d: Deal) => {
+    const acq = recs.find(r => r.kind === "acquisition" && r.dealId === d.id);
+    const cur = propertyOwner(d, recs) ?? "";
+    const v = window.prompt(`Asset manager for ${d.propertyName}`, cur);
+    if (v == null || v.trim() === cur) return;
+    await apiAmSaveRecord({ id: acq?.id, kind: "acquisition", dealId: d.id, data: { ...(acq?.data ?? {}), assetManager: v.trim() || null } }).catch(e => window.alert((e as Error).message));
+    reload();
+  };
   const rows = deals.map(d => {
     const dx = (d as unknown as { datexLive?: Record<string, unknown> }).datexLive;
     const lt = liveTenants(d);
@@ -521,7 +552,10 @@ function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin:
     const fin = dx?.financials as Record<string, number | string> | undefined;
     const ar = splitArAging(dx);
     const rent = lt.source === "Datex" ? lt.tenants.reduce((t, x) => t + (x.annualRent ?? 0), 0) : null;
-    return { d, dx, tie, fin, ar, rent, bldgs: map?.find(m => m.dealId === d.id)?.bldgIds ?? [] };
+    const mrow = map?.find(m => m.dealId === d.id);
+    const acq = recs.find(r => r.kind === "acquisition" && r.dealId === d.id);
+    const close = s(acq?.data.closeDate) ?? s((d as unknown as { txnCloseDate?: string }).txnCloseDate);
+    return { d, dx, tie, fin, ar, rent, bldgs: mrow?.bldgIds ?? [], mapNote: mrow?.note ?? null, nvb: noiVsBudget(fin as Record<string, unknown> | undefined, close), owner: propertyOwner(d, recs), ownerEntered: !!s(acq?.data.assetManager) };
   });
   return (
     <>
@@ -531,17 +565,21 @@ function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin:
       </div>
       <AutoRefreshStatus />
       <SectionTitle>Today from Datex</SectionTitle>
+      {(() => { const bases = rows.map(r => r.nvb?.basis).filter(Boolean); const cash = bases.filter(b => b === "Cash").length, accr = bases.filter(b => b === "Accrual").length;
+        return cash && accr ? <div style={{ fontSize: 12.5, color: K.gray, margin: "0 0 8px" }}>Mixed ledger basis: {cash} propert{cash === 1 ? "y" : "ies"} on cash, {accr} on accrual — NOI-vs-budget variances aren't directly comparable across the two. Partial-year budgets (a property bought mid-year) are shown but not coloured.</div> : null; })()}
       <Table minWidth={1050}>
         <thead><tr>{["Property", "Datex as of", "Occupancy", "In-place base rent", "NOI YTD vs budget", "A/R > 60 / > 90", "Asset manager"].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
-        <tbody>{rows.map(({ d, dx, tie, fin, ar, rent, bldgs }) => (
+        <tbody>{rows.map(({ d, dx, tie, ar, rent, bldgs, mapNote, nvb, owner, ownerEntered }) => (
           <tr key={d.id}>
-            <td style={td}><button onClick={() => onOpenDeal(d.id)} style={linkBtn}>{d.propertyName}</button><Src>{bldgs.length ? bldgs.join(", ") : "not mapped to Datex"}</Src></td>
+            <td style={td}><button onClick={() => onOpenDeal(d.id)} style={linkBtn}>{d.propertyName}</button><Src>{bldgs.length ? bldgs.join(", ") : mapNote ? <span title={mapNote}>{/single-tenant/i.test(mapNote) ? "single-tenant · not in Datex" : /not (set up|in) datex/i.test(mapNote) ? "not in Datex yet" : "not mapped to Datex"}</span> : "not mapped to Datex"}</Src></td>
             <td style={td}>{dx ? fmtDate(String(dx.asOf)) : <span style={{ color: K.gray }}>no snapshot</span>}</td>
             <td style={num}>{dx?.occupancyPct != null ? fmtPct(Number(dx.occupancyPct), 1) : "—"}{tie?.level === "warn" && <Src><span style={{ color: K.red }} title={tie.adjustments.length ? `After: ${tie.adjustments.join("; ")}` : undefined}>⚠ roster GLA {tie.rosterGLA.toLocaleString()} SF is {tie.diffPct}% off Occupancy's</span></Src>}</td>
             <td style={num}>{fmtM(rent)}</td>
-            <td style={num}>{fin?.noiYtdActual != null ? fmtM(Number(fin.noiYtdActual)) : "—"}{fin?.noiYtdBudget != null && <Src><span title={BASIS_TIP}>budget {fmtM(Number(fin.noiYtdBudget))} · {fin.noiYtdActual != null ? `${(((Number(fin.noiYtdActual) - Number(fin.noiYtdBudget)) / Math.abs(Number(fin.noiYtdBudget))) * 100).toFixed(1)}%` : ""} · to {String(fin.period ?? "")} · {basisLabel(fin)} ⓘ</span></Src>}</td>
+            <td style={num}>{nvb?.actual != null ? fmtM(nvb.actual) : "—"}{nvb?.budget != null && <Src><span title={nvb.partialNote ?? BASIS_TIP}>budget {fmtM(nvb.budget)}{nvb.partial
+              ? <> · <span style={{ color: K.gray, fontStyle: "italic" }}>{/mis-entered/.test(nvb.partialNote ?? "") ? "budget not comparable" : "partial-year budget"}</span></>
+              : nvb.variancePct != null ? <> · <span style={{ color: nvb.colour === "green" ? "#3e8a2f" : nvb.colour === "red" ? K.red : K.gray, fontWeight: nvb.colour ? 700 : 400 }}>{nvb.variancePct > 0 ? "+" : ""}{nvb.variancePct.toFixed(1)}%</span></> : null} · to {nvb.period ?? ""} · {nvb.basis ? `${nvb.basis === "mixed" ? "mixed cash/accrual" : nvb.basis + " basis"}` : "basis not stated"} ⓘ</span></Src>}</td>
             <td style={num}>{ar ? <ArCell ar={ar} /> : "—"}</td>
-            <td style={td}>{String(dx?.assetManager ?? "—")}</td>
+            <td style={td}>{owner ?? <span style={{ color: K.gray }}>no owner on file</span>}{owner && !ownerEntered && <Src>from Datex</Src>}{isAdmin && <div><button style={{ ...miniBtn, marginTop: 4 }} onClick={() => saveOwner(d)}>{owner ? "Change" : "Set owner"}</button></div>}</td>
           </tr>
         ))}</tbody>
       </Table>
@@ -900,7 +938,7 @@ export function ThisWeekCard({ deals, onOpenDeal, onSeeAll }: { deals: Deal[]; o
   const { records, abstracts } = useAmData(owned.length > 0);
   const today = useMemo(() => new Date(), []);
   const monday = useMemo(() => { const m = new Date(today); m.setDate(m.getDate() - ((m.getDay() + 6) % 7)); return m; }, [today]);
-  const items = useMemo(() => records == null ? [] : buildCriticalDates(owned, records, abstracts, today, 90).items.filter(i => i.days >= 0), [owned, records, abstracts, today]);
+  const items = useMemo(() => records == null ? [] : collapsePortfolioCovenants(buildCriticalDates(owned, records, abstracts, today, 90).items.filter(i => i.days >= 0), records, owned), [owned, records, abstracts, today]);
   if (!owned.length) return null;
   if (records == null) return <div className="kpr-skel" style={{ height: 120, borderRadius: 12 }} aria-hidden />;
   const thisWeek = items.filter(i => i.days <= 7).length;

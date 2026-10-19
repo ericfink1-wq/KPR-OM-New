@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-19-am-dates-properties",
+    date: "2026-10-19",
+    category: "improved",
+    title: "Key debt deadlines, one row per portfolio covenant, and an owner for every property",
+    detail: "The Dates tab now pins rate-cap expirations, extension-notice windows and loans maturing within a year at the top, whatever window you pick. A covenant tested across a whole portfolio loan (Cedar's debt-yield test) shows once instead of on every property. Each property can carry an asset manager, which the Dates tab and the home \"This week\" card use. On Properties, a budget for a property bought mid-year is labelled \"partial-year budget\" and no longer coloured red or green, the ledger basis is shown on every row, and properties that aren't in Datex say so (Fred Meyer Bend is single-tenant; Providence isn't set up in Datex yet).",
+    where: "Asset Mgmt → Dates and Properties",
+  },
+  {
     id: "2026-10-19-debt-floating",
     date: "2026-10-19",
     category: "improved",

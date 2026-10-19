@@ -293,9 +293,15 @@ export function optionLabel(o: { number?: unknown; ordinal?: unknown; length?: u
   const rate = n(o.ratePSF);
   return `${name}${s(o.length) ? ` · ${s(o.length)}` : ""}${rate != null && rate > 0 ? ` · $${rate.toFixed(2)}/SF` : ""}`;
 }
+/** A property's asset manager: the one entered on Asset Mgmt → Properties (kept on its
+ *  acquisition row), else Datex's assetManager, else null ("no owner on file"). */
+export function propertyOwner(deal: Deal, records: AmRecord[]): string | null {
+  const acq = records.find(r => r.kind === "acquisition" && r.dealId === deal.id);
+  return s(acq?.data.assetManager) ?? s((deal as unknown as { datexLive?: { assetManager?: string } }).datexLive?.assetManager);
+}
 export function buildCriticalDates(deals: Deal[], records: AmRecord[], abstracts: LeaseAbstract[], today: Date, horizonDays = 3650): { items: CriticalDate[]; undatedRights: Map<string, number> } {
   const owned = new Map(deals.map(d => [d.id, d]));
-  const owner = (d: Deal | undefined) => s((d as unknown as { datexLive?: { assetManager?: string } } | undefined)?.datexLive?.assetManager);
+  const owner = (d: Deal | undefined) => d ? propertyOwner(d, records) : null;
   const out: CriticalDate[] = [];
   const push = (x: Omit<CriticalDate, "days">) => { const days = daysUntil(x.date, today); if (days != null && days >= -30 && days <= horizonDays) out.push({ ...x, days }); };
   for (const d of deals) {
@@ -661,3 +667,115 @@ export function splitArAging(dx: Record<string, unknown> | null | undefined): Ar
   return { over60: o60, over90: o90, current60: o60 == null ? null : Math.max(0, o60 - f60), current90: o90 == null ? null : Math.max(0, o90 - f90), former60: f60, former90: f90,
     former: former.map(x => ({ name: x.name, over60: n(x.over60), over90: n(x.over90) })), currentTop: cur.map(x => ({ name: x.name, over60: n(x.over60), over90: n(x.over90) })) };
 }
+
+// ── NOI YTD vs budget (Properties tab) — partial-year budgets + ledger basis ────────────
+// A property bought mid-year carries a budget for only the months KPR owned it (Westwood's
+// $94K, Rockaway), so a raw variance against it reads as a huge miss/beat. That row is labelled
+// "partial-year budget" and NOT coloured; the same when the budget is wildly out of line with
+// the actual (likely partial or mis-entered). Basis is labelled per row, and a portfolio mixing
+// cash and accrual says so — those variances aren't comparable across properties.
+export interface NoiVsBudget {
+  actual: number | null; budget: number | null; variancePct: number | null; period: string | null;
+  basis: "Cash" | "Accrual" | "mixed" | null; partial: boolean; partialNote: string | null;
+  /** Colour the variance only when it is like-for-like. */
+  colour: "green" | "red" | null;
+}
+const periodYM = (p: unknown): { y: number; m: number } | null => {
+  const t = String(p ?? "").trim(); let m = /^(\d{4})(\d{2})$/.exec(t) ?? /^(\d{4})-(\d{2})/.exec(t);
+  return m ? { y: Number(m[1]), m: Number(m[2]) } : null;
+};
+export function finBasis(fin: Record<string, unknown> | null | undefined): NoiVsBudget["basis"] {
+  const b = String(fin?.basis ?? "").trim().toLowerCase();
+  return b === "c" || b.startsWith("cash") ? "Cash" : b === "a" || b.startsWith("accr") ? "Accrual" : b === "mixed" ? "mixed" : null;
+}
+export function noiVsBudget(fin: Record<string, unknown> | null | undefined, closeDate: string | null | undefined): NoiVsBudget | null {
+  if (!fin) return null;
+  const actual = n(fin.noiYtdActual), budget = n(fin.noiYtdBudget), per = periodYM(fin.period);
+  const basis = finBasis(fin);
+  let partial = false, partialNote: string | null = null;
+  const close = closeDate && /^\d{4}-\d{2}-\d{2}/.test(closeDate) ? { y: Number(closeDate.slice(0, 4)), m: Number(closeDate.slice(5, 7)) } : null;
+  if (per && close && close.y === per.y && close.m > 1) {
+    partial = true;
+    const months = per.m - close.m + 1;
+    partialNote = `partial-year budget — owned since ${closeDate!.slice(0, 7)} (${Math.max(0, months)} of ${per.m} months)`;
+  } else if (actual != null && budget != null && budget > 0 && actual > 0 && (budget / actual < 0.5 || budget / actual > 2)) {
+    partial = true;
+    partialNote = "budget looks partial-year or mis-entered — not compared";
+  }
+  const variancePct = actual != null && budget != null && budget !== 0 ? Math.round(((actual - budget) / Math.abs(budget)) * 1000) / 10 : null;
+  const colour = partial || basis === "mixed" || variancePct == null ? null : variancePct >= 0 ? "green" : variancePct <= -5 ? "red" : null;
+  return { actual, budget, variancePct: partial ? null : variancePct, period: fin.period != null ? String(fin.period) : null, basis, partial, partialNote, colour };
+}
+
+// ── Dates tab: portfolio covenants collapsed + key debt deadlines (Eric, 10/19/26) ──────
+/** One covenant tested across a whole portfolio loan (Cedar's 7.5% debt yield, repeated on 13
+ *  properties) collapses to ONE row "Cedar portfolio (13 properties)". Same type + date +
+ *  description on ≥3 properties is a portfolio test; anything else is left alone. */
+export function collapsePortfolioCovenants(items: CriticalDate[], records: AmRecord[], deals: Deal[]): Array<CriticalDate & { properties?: string[] }> {
+  const isCov = (i: CriticalDate) => i.type === "Covenant test" || i.type === "Covenant trigger";
+  const groups = new Map<string, CriticalDate[]>();
+  for (const i of items) if (isCov(i) && !i.tenant) { const k = `${i.type}|${i.date}|${i.description.toLowerCase().replace(/\s+/g, " ")}`; groups.set(k, [...(groups.get(k) ?? []), i]); }
+  const out: Array<CriticalDate & { properties?: string[] }> = [];
+  const done = new Set<string>();
+  for (const i of items) {
+    if (!isCov(i) || i.tenant) { out.push(i); continue; }
+    const k = `${i.type}|${i.date}|${i.description.toLowerCase().replace(/\s+/g, " ")}`;
+    const g = groups.get(k)!;
+    const props = [...new Set(g.map(x => x.dealId))];
+    if (props.length < 3) { out.push(i); continue; }
+    if (done.has(k)) continue;
+    done.add(k);
+    out.push({ ...i, property: `${portfolioName(props, records)} portfolio (${props.length} properties)`, properties: props.map(id => deals.find(d => d.id === id)?.propertyName ?? id),
+      owner: [...new Set(g.map(x => x.owner).filter(Boolean))].length === 1 ? g[0].owner : null });
+  }
+  return out;
+}
+/** A portfolio's name: the word its loans share (label, then lender) — "Cedar" — else "Loan". */
+export function portfolioName(dealIds: string[], records: AmRecord[]): string {
+  const rows = records.filter(r => (r.kind === "loan" || r.kind === "covenant") && r.dealId && dealIds.includes(r.dealId));
+  for (const f of ["portfolio", "loanLabel", "loanName", "lender"]) {
+    const vals = rows.map(r => s(r.data[f])).filter((v): v is string => !!v);
+    if (!vals.length) continue;
+    const words = vals.map(v => new Set(v.split(/[^A-Za-z0-9&]+/).filter(w => w.length > 2 && !/^(loan|senior|mortgage|the|and|portfolio|cap|rate)$/i.test(w))));
+    const common = [...words[0]].filter(w => words.every(ws => ws.has(w)));
+    if (common.length && vals.length >= Math.ceil(dealIds.length / 2)) return common[0];
+  }
+  return "Loan";
+}
+export interface DebtDeadline { date: string; endDate?: string | null; days: number; kind: "Rate cap expires" | "Extension notice window" | "Extension notice" | "Loan maturity"; title: string; detail: string; dealIds: string[]; properties: string[] }
+const isoIn = (t: string): string[] => {
+  const out: string[] = [];
+  const re = /(\d{4}-\d{2}-\d{2})|(\d{1,2})\/(\d{1,2})\/(\d{2,4})/g; let m: RegExpExecArray | null;
+  while ((m = re.exec(t))) out.push(m[1] ?? `${m[4].length === 2 ? 2000 + Number(m[4]) : m[4]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`);
+  return out;
+};
+/** Debt deadlines pinned above the 90-day list regardless of window: rate-cap expirations,
+ *  extension-notice windows, and maturities inside 12 months — derived from the loan records. */
+export function keyDebtDeadlines(deals: Deal[], records: AmRecord[], today: Date): DebtDeadline[] {
+  const names = new Map(deals.map(d => [d.id, d.propertyName || "—"]));
+  const loans = records.filter(r => r.kind === "loan" && r.dealId && names.has(r.dealId) && !r.id.startsWith("datex-loan:"));
+  const out: DebtDeadline[] = [];
+  const caps = new Map<string, { cap: RateCap; ids: Set<string> }>();
+  for (const r of loans) {
+    const d = r.data, name = names.get(r.dealId!)!;
+    for (const c of loanRateCaps(d)) if (c.expiry) {
+      const k = `${c.strikePct}|${c.notional ?? ""}|${c.expiry}`;
+      const e = caps.get(k) ?? { cap: c, ids: new Set<string>() }; e.ids.add(r.dealId!); caps.set(k, e);
+    }
+    // Extension-notice WINDOW written in the text ("notice between 11/19/26 and 1/3/27"), else the deadline field.
+    const txt = [s(d.extensionOptions), s(d.notes), s(d.covenants), s(d.extensionNotice)].filter(Boolean).join("\n");
+    const seg = txt.split(/\n|(?<=\.)\s+/).find(x => /notice/i.test(x) && /exten/i.test(x + " " + (s(d.extensionOptions) ?? "")) && isoIn(x).length >= 2);
+    const win = seg ? isoIn(seg).slice(0, 2).sort() : null;
+    if (win) out.push({ date: win[0], endDate: win[1], days: daysUntil(win[1], today)!, kind: "Extension notice window", title: `${name} — extension notice window`, detail: `${fmtD(win[0])} – ${fmtD(win[1])}${s(d.extensionOptions) ? ` · ${s(d.extensionOptions)}` : ""}`, dealIds: [r.dealId!], properties: [name] });
+    else if (s(d.extensionNoticeDate)) out.push({ date: String(d.extensionNoticeDate), days: daysUntil(String(d.extensionNoticeDate), today)!, kind: "Extension notice", title: `${name} — extension notice due`, detail: s(d.extensionOptions) ?? `${s(d.lender) ?? "Loan"} extension`, dealIds: [r.dealId!], properties: [name] });
+    const mat = s(d.maturityDate), md = daysUntil(mat, today);
+    if (mat && md != null && md >= 0 && md <= 365) out.push({ date: mat, days: md, kind: "Loan maturity", title: `${name} — loan matures`, detail: `${s(d.lender) ?? "Loan"}${n(d.currentBalance ?? d.originalBalance) ? ` · $${(n(d.currentBalance ?? d.originalBalance)! / 1e6).toFixed(2)}M` : ""}${s(d.extensionOptions) ? ` · ext: ${s(d.extensionOptions)}` : ""}`, dealIds: [r.dealId!], properties: [name] });
+  }
+  for (const { cap, ids } of caps.values()) {
+    const props = [...ids].map(id => names.get(id)!);
+    const label = props.length >= 3 ? `${portfolioName([...ids], records)} portfolio (${props.length} properties)` : props.join(", ");
+    out.push({ date: cap.expiry!, days: daysUntil(cap.expiry, today)!, kind: "Rate cap expires", title: `${label} — rate cap expires`, detail: `${cap.notional ? `$${(cap.notional / 1e6).toFixed(1)}M ` : ""}cap @ ${cap.strikePct.toFixed(2)}%`, dealIds: [...ids], properties: props });
+  }
+  return out.filter(x => x.days != null && x.days >= 0 && x.days <= 730).sort((a, b) => a.date.localeCompare(b.date));
+}
+const fmtD = (iso: string) => { const [y, m, d] = iso.split("-"); return `${Number(m)}/${Number(d)}/${y.slice(2)}`; };
