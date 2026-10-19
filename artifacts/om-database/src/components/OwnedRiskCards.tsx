@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
 import { useWatchlist, lookupWatch } from "../lib/useWatchlist";
-import { isVacant, isNAPTenant, tenantLabel } from "../lib/utils";
+import { tenantLabel } from "../lib/utils";
+import { liveTenants } from "../lib/assetMgmt";
+import { brandFamilyKey, brandDisplayName } from "../lib/tenantCredit";
 import { resolveTenantRisk, computeExposure, anchorsReferenced, anchorLabel } from "../lib/leaseRisk";
 import { apiListAllLeaseAbstracts } from "../lib/api";
 
@@ -21,19 +23,22 @@ export default function OwnedRiskCards({ deals, onOpenDeal, onNav }: { deals: De
   const [abstracts, setAbstracts] = useState<LeaseAbstract[] | null>(null);
   useEffect(() => { apiListAllLeaseAbstracts().then(setAbstracts).catch(() => setAbstracts([])); }, []);
 
+  // Same tenants and brand grouping as Asset Mgmt → Credit Watch (Datex where a snapshot is
+  // loaded, else the OM roster; one row per brand family, store numbers stripped) so the two
+  // never show different rent for the same brand (AMC $283K vs $437K, 10/19/26).
   const watchRollup = useMemo(() => {
     let total = 0, onWatch = 0;
     const byBrand = new Map<string, { brand: string; status: string; rent: number; centers: Set<string> }>();
     for (const d of owned) {
-      for (const t of d.tenants || []) {
-        if (!t?.name || isVacant(t.name) || isNAPTenant(t)) continue;
+      for (const t of liveTenants(d).tenants) {
         const rent = Number(t.annualRent) || 0;
         total += rent;
-        const w = lookupWatch(watch, t.name);
+        const nm = t.nationalTenant || t.name;
+        const w = lookupWatch(watch, nm) ?? lookupWatch(watch, t.name);
         if (!w) continue;
         onWatch += rent;
-        const key = tenantLabel(t.name).toLowerCase();
-        const row = byBrand.get(key) ?? { brand: tenantLabel(t.name), status: w.status, rent: 0, centers: new Set<string>() };
+        const key = brandFamilyKey(nm);
+        const row = byBrand.get(key) ?? { brand: brandDisplayName(tenantLabel(nm)), status: w.status, rent: 0, centers: new Set<string>() };
         row.rent += rent; row.centers.add(d.id);
         byBrand.set(key, row);
       }

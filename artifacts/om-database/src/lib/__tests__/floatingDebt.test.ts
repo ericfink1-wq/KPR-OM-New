@@ -82,3 +82,32 @@ describe("Dates tab debt deadlines", () => {
     expect(out).toHaveLength(1); expect(out[0].property).toBe("Cedar portfolio (13 properties)");
   });
 });
+
+import { stripStoreSuffix, brandFamilyKey } from "../tenantCredit";
+describe("store numbers stripped", () => {
+  it("one brand = one row", () => {
+    expect(stripStoreSuffix("Walgreens #5282")).toBe("Walgreens");
+    expect(stripStoreSuffix("Sleep Number #11194")).toBe("Sleep Number");
+    expect(stripStoreSuffix("CVS Store 1234")).toBe("CVS");
+    expect(stripStoreSuffix("Ulta - 512")).toBe("Ulta");
+    expect(stripStoreSuffix("Dollar Tree 04516")).toBe("Dollar Tree");
+    expect(stripStoreSuffix("Regal 14")).toBe("Regal 14");
+    expect(stripStoreSuffix("Five Below")).toBe("Five Below");
+    expect(brandFamilyKey("WALGREENS #5282")).toBe(brandFamilyKey("Walgreens"));
+  });
+});
+
+import { headlineAffectsUs, buildCreditWatch } from "../assetMgmt";
+describe("credit watch headlines by location", () => {
+  it("drops a headline naming only states we're not in", () => {
+    expect(headlineAffectsUs("PNC to close 12 Colorado branches", new Set(["PA", "OH"]))).toBe(false);
+    expect(headlineAffectsUs("PNC to close Pennsylvania branches", new Set(["PA"]))).toBe(true);
+    expect(headlineAffectsUs("Big Lots files for Chapter 11", new Set(["PA"]))).toBe(true);
+    expect(headlineAffectsUs("Store closures across West Virginia", new Set(["VA"]))).toBe(false);
+  });
+  it("flags the brand only on a relevant headline", () => {
+    const d = [{ id: "a", propertyName: "A", state: "PA", tenants: [{ name: "PNC Bank #12", annualRent: 50000 }] }] as unknown as Deal[];
+    const { rows } = buildCreditWatch(d, [], [], [{ brand: "PNC Bank", level: "distressed", headline: "PNC store closures in Colorado", scannedAt: "x", hits: [{ level: "distressed", headline: "PNC store closures in Colorado" }] }]);
+    expect(rows[0].brand).toMatch(/^pnc bank$/i); expect(rows[0].status).toBe("OK"); expect(rows[0].newsDropped).toBe(1);
+  });
+});

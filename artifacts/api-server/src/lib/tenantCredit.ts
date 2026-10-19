@@ -123,8 +123,24 @@ const GENERIC_SUFFIXES = [
   "food stores", "food store", "food markets", "food market", "supermarkets", "supermarket",
   "markets", "market", "stores", "store", "food", "inc", "llc", "corp", "corporation", "company", "co",
 ];
+/** Strip a store number / unit suffix from a tenant name so one brand = one row everywhere:
+ *  "Walgreens #5282", "Sleep Number #11194", "CVS Store 1234", "Ulta - 512", "Chase Ste 4B2". A
+ *  trailing 1–2 digit number stays (a cinema's screen count: "Regal 14"). */
+export function stripStoreSuffix(name: string): string {
+  let s = String(name ?? "").trim();
+  for (let guard = 0; guard < 3; guard++) {
+    const before = s;
+    s = s.replace(/\s*#\s*[a-z0-9][\w-]*\s*$/i, "")
+      .replace(/[\s,(-]*\b(?:store|str|unit|ste|suite|location|loc|no\.?|number)\s*#?\s*[a-z]?\d[\w-]*\)?\s*$/i, "")
+      .replace(/\s+[-–]\s*\d+[a-z]?\s*$/i, "")
+      .replace(/\s+\d{3,}[a-z]?\s*$/i, "")
+      .trim();
+    if (s === before) break;
+  }
+  return s || String(name ?? "").trim();
+}
 export function brandFamilyKey(name: string | null | undefined): string {
-  let s = String(name || "").toLowerCase()
+  let s = stripStoreSuffix(String(name || "")).toLowerCase()
     .replace(/\(.*?\)/g, " ")
     .replace(/#\s*[\w-]+/g, " ")
     .replace(/&/g, " and ")
@@ -144,7 +160,7 @@ export function brandFamilyKey(name: string | null | undefined): string {
 
 /** A readable label: keep the roster's own casing unless it is SHOUTED, then title-case it. */
 export function brandDisplayName(name: string): string {
-  const n = String(name || "").trim();
+  const n = stripStoreSuffix(String(name || "").trim());
   if (!n || /[a-z]/.test(n)) return n;
   return n.toLowerCase().replace(/\b([a-z])/g, c => c.toUpperCase()).replace(/'S\b/g, "'s");
 }

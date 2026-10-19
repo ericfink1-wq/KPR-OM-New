@@ -502,11 +502,36 @@ export function driveLinks(rec: AmRecord): Array<{ url: string; name: string }> 
 // ── Credit watch ─────────────────────────────────────────────────────────────
 export type CreditStatus = "Bankruptcy" | "Store closures announced" | "Watch" | "OK";
 export interface WatchEntry { brand: string; status: string; note?: string | null }
-export interface NewsSignal { brand: string; level: string | null; headline?: string | null; url?: string | null; at?: string | null; scannedAt?: string | null }
+export interface NewsHit { level: string | null; headline: string; url?: string | null; at?: string | null }
+export interface NewsSignal { brand: string; level: string | null; headline?: string | null; url?: string | null; at?: string | null; scannedAt?: string | null; hits?: NewsHit[] }
+const US_STATES: Array<[string, string]> = [["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],["FL","Florida"],["GA","Georgia"],["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],["KS","Kansas"],["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],["NM","New Mexico"],["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],["OK","Oklahoma"],["OR","Oregon"],["PA","Pennsylvania"],["RI","Rhode Island"],["SC","South Carolina"],["SD","South Dakota"],["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"],["DC","District of Columbia"]];
+/** States a headline names (full names only — "IN"/"OR"/"ME" as words are too ambiguous).
+ *  "Washington" alone is skipped (usually D.C. politics, not the state). */
+export function headlineStates(headline: string): string[] {
+  const h = headline.replace(/West Virginia/gi, "@WV@").replace(/\bNew York City\b/gi, "New York");
+  const out = new Set<string>();
+  if (/@WV@/.test(h)) out.add("WV");
+  for (const [code, name] of US_STATES) {
+    if (code === "WA" || code === "WV") continue;
+    if (new RegExp(`\\b${name}\\b`, "i").test(h)) out.add(code);
+  }
+  if (/\bWashington state\b/i.test(h)) out.add("WA");
+  // "Kansas City" is a metro, "Virginia Beach" a city in VA — both still point at a state, fine.
+  return [...out];
+}
+/** A headline that names only states where we have no location doesn't affect us. */
+export function headlineAffectsUs(headline: string, ourStates: Set<string>): boolean {
+  const st = headlineStates(headline);
+  return !st.length || st.some(x => ourStates.has(x));
+}
 export interface CreditLocation { dealId: string; property: string; tenant: string; rent: number; sf: number | null; isAnchor: boolean; coTenancyRentAtRisk: number; coTenancyTenants: number }
-export interface CreditRow { key: string; brand: string; locations: CreditLocation[]; rent: number; pctOfRent: number; ig: boolean; status: CreditStatus; statusSource: string; news: NewsSignal | null }
+export interface CreditRow { key: string; brand: string; locations: CreditLocation[]; rent: number; pctOfRent: number; ig: boolean; status: CreditStatus; statusSource: string; news: NewsSignal | null;
+  /** Distress headlines left out because they only name states where we have no location. */
+  newsDropped?: number }
+const SEV: Record<string, number> = { liquidating: 3, bankruptcy: 2, distressed: 1 };
 export function buildCreditWatch(deals: Deal[], abstracts: LeaseAbstract[], watchlist: WatchEntry[], news: NewsSignal[]): { rows: CreditRow[]; totalRent: number; source: string } {
   const byKey = new Map<string, CreditRow>();
+  const stateOf = new Map(deals.map(d => [d.id, d.state ?? null]));
   let total = 0, datexDeals = 0;
   const wl = new Map(watchlist.map(w => [brandFamilyKey(w.brand), w]));
   const nw = new Map(news.map(x => [brandFamilyKey(x.brand), x]));
@@ -530,8 +555,17 @@ export function buildCreditWatch(deals: Deal[], abstracts: LeaseAbstract[], watc
   }
   for (const r of byKey.values()) {
     r.pctOfRent = total > 0 ? Math.round((r.rent / total) * 10000) / 100 : 0;
-    const w = wl.get(r.key), x = nw.get(r.key);
-    r.news = x ?? null;
+    const w = wl.get(r.key), raw = nw.get(r.key);
+    const ourStates = new Set(r.locations.map(l => String(stateOf.get(l.dealId) ?? "").toUpperCase()).filter(Boolean));
+    let x: NewsSignal | null = raw ?? null;
+    if (raw) {
+      const hits = (raw.hits && raw.hits.length ? raw.hits : raw.headline ? [{ level: raw.level, headline: raw.headline, url: raw.url, at: raw.at }] : []);
+      const keep = hits.filter(h => headlineAffectsUs(h.headline, ourStates));
+      r.newsDropped = hits.length - keep.length;
+      const best = keep.sort((a, b) => (SEV[b.level ?? ""] ?? 0) - (SEV[a.level ?? ""] ?? 0))[0];
+      x = { ...raw, level: best?.level ?? null, headline: best?.headline ?? null, url: best?.url ?? null, at: best?.at ?? null };
+    }
+    r.news = x;
     const st = String(w?.status ?? "").toLowerCase();
     if (st === "bankruptcy" || st === "liquidating") { r.status = "Bankruptcy"; r.statusSource = `watchlist: ${st}${w?.note ? ` — ${w.note}` : ""}`; }
     else if (x?.level === "bankruptcy" || x?.level === "liquidating") { r.status = "Bankruptcy"; r.statusSource = `news headline — confirm: "${x.headline}"`; }

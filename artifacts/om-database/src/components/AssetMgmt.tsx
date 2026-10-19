@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
 import {
@@ -740,26 +740,35 @@ function CreditTab({ deals, abstracts, onOpenDeal }: { deals: Deal[]; abstracts:
   }, [top]);
   const { rows, totalRent, source } = useMemo(() => buildCreditWatch(deals, abstracts, [...wl.values()], news), [deals, abstracts, wl, news]);
   const flag = (s: CreditRow["status"]): "red" | "amber" | "green" | "gray" => s === "Bankruptcy" ? "red" : s === "Store closures announced" || s === "Watch" ? "amber" : "green";
+  // Default: only brands that are flagged (watchlist, distress, or a headline that touches a
+  // state we're in). "Show all brands" lists every tenant brand.
+  const [showAll, setShowAll] = useState(false);
+  const flagged = rows.filter(r => r.status !== "OK" || !!r.news?.headline);
+  const list = showAll ? rows : flagged;
   const summarize = async (brand: string) => { setSummary(m => ({ ...m, [brand]: "…" })); try { const s = await apiAmSummarizeNews(brand); setSummary(m => ({ ...m, [brand]: s })); } catch (e) { setSummary(m => ({ ...m, [brand]: e instanceof Error ? e.message : "failed" })); } };
   return (
     <>
-      <SectionTitle right={<span style={{ fontSize: 12, color: K.gray }}>{scanning ? "checking headlines…" : `headlines checked daily for the top ${top.length} brands`}</span>}>{rows.length} brands · {fmtM(totalRent)} base rent</SectionTitle>
+      <SectionTitle right={<span style={{ fontSize: 12, color: K.gray }}>{scanning ? "checking headlines…" : `headlines checked daily for the top ${top.length} brands`}</span>}>{showAll ? `${rows.length} brands` : `${flagged.length} flagged of ${rows.length} brands`} · {fmtM(totalRent)} base rent</SectionTitle>
+      <div role="radiogroup" aria-label="Which brands" style={{ display: "inline-flex", border: "1px solid #d9d8d2", borderRadius: 8, overflow: "hidden", marginBottom: 10 }}>
+        {([[false, `Flagged (${flagged.length})`], [true, `All brands (${rows.length})`]] as const).map(([v, l]) => <button key={String(v)} role="radio" aria-checked={showAll === v} onClick={() => setShowAll(v)} style={{ padding: "7px 12px", minHeight: 34, border: "none", background: showAll === v ? K.charcoal : "#fff", color: showAll === v ? "#fff" : K.charcoal, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{l}</button>)}
+      </div>
+      {!showAll && !flagged.length && <div style={{ ...card, padding: 14, fontSize: 13.5, color: K.gray, marginBottom: 10 }}>No brand is on the watchlist or has a distress headline touching a state we're in. Switch to “All brands” for the full list.</div>}
       <Table minWidth={900}>
         <thead><tr>{["Brand", "Our locations", "Annual base rent", "% of rent", "IG", "Status", "Latest distress headline", ""].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
-        <tbody>{rows.map(r => (
-          <>
-            <tr key={r.key}>
+        <tbody>{list.map(r => (
+          <Fragment key={r.key}>
+            <tr>
               <td style={td}><button onClick={() => setOpen(o => o === r.key ? null : r.key)} style={linkBtn} aria-expanded={open === r.key}>{r.brand}</button></td>
               <td style={num}>{r.locations.length}</td>
               <td style={num}>{fmtM(r.rent)}</td>
               <td style={num}>{r.pctOfRent.toFixed(2)}%</td>
               <td style={td}>{r.ig ? <Pill flag="green">IG</Pill> : "—"}</td>
               <td style={td}><Pill flag={flag(r.status)}>{r.status}</Pill><Src>{r.statusSource}</Src></td>
-              <td style={{ ...td, maxWidth: 320, fontSize: 12.5 }}>{r.news?.headline ? <a href={r.news.url ?? "#"} target="_blank" rel="noreferrer" style={{ color: K.ink }}>{r.news.headline}</a> : <span style={{ color: K.gray }}>{r.news?.scannedAt ? "none in the last 5 months" : "not checked yet"}</span>}{summary[r.brand] && <div style={{ marginTop: 4, color: K.charcoal }}>{summary[r.brand]}</div>}</td>
+              <td style={{ ...td, maxWidth: 320, fontSize: 12.5 }}>{r.news?.headline ? <a href={r.news.url ?? "#"} target="_blank" rel="noreferrer" style={{ color: K.ink }}>{r.news.headline}</a> : <span style={{ color: K.gray }}>{r.news?.scannedAt ? "none in the last 5 months" : "not checked yet"}</span>}{r.newsDropped ? <Src>{r.newsDropped} headline{r.newsDropped === 1 ? "" : "s"} about states where we have no {r.brand} hidden</Src> : null}{summary[r.brand] && <div style={{ marginTop: 4, color: K.charcoal }}>{summary[r.brand]}</div>}</td>
               <td style={td}>{r.news?.scannedAt && <button style={miniBtn} onClick={() => summarize(r.brand)}>Summarize</button>}</td>
             </tr>
             {open === r.key && (
-              <tr key={r.key + "-x"}><td colSpan={8} style={{ ...td, background: "#fafaf7" }}>
+              <tr><td colSpan={8} style={{ ...td, background: "#fafaf7" }}>
                 {r.locations.map(l => (
                   <div key={l.dealId + l.tenant} style={{ display: "flex", gap: 10, flexWrap: "wrap", padding: "4px 0", fontSize: 12.5 }}>
                     <button onClick={() => onOpenDeal(l.dealId)} style={linkBtn}>{l.property}</button>
@@ -771,10 +780,10 @@ function CreditTab({ deals, abstracts, onOpenDeal }: { deals: Deal[]; abstracts:
                 ))}
               </td></tr>
             )}
-          </>
+          </Fragment>
         ))}</tbody>
       </Table>
-      <Src>{source}. Status: the retailer watchlist first, then a free daily headline check (Google News: bankruptcy, Chapter 11, store closures, downgrades) — a headline is a prompt to confirm, never a verdict. "Summarize" makes one AI call for that brand only. Co-tenancy exposure uses each deal's lease-risk read: rent that trips if this anchor alone goes dark.</Src>
+      <Src>{source}. Status: the retailer watchlist first, then a free daily headline check (Google News: bankruptcy, Chapter 11, store closures, downgrades) — a headline is a prompt to confirm, never a verdict. A headline that names only states where we have no location for that brand is left out. "Summarize" makes one AI call for that brand only. Co-tenancy exposure uses each deal's lease-risk read: rent that trips if this anchor alone goes dark.</Src>
     </>
   );
 }

@@ -150,7 +150,11 @@ router.post("/am/credit-news", requireAuth, async (req, res) => {
           // returned for "Fred Meyer" must not read as a Fred Meyer closure.
           const articles = (await fetchBrandNews(brand, 6_000)).filter(a => headlineNamesBrand(a.title, brand));
           const sig = assessNews(articles, "none");
-          const data = { brand, level: sig?.suggestedStatus ?? null, headline: sig?.headline ?? null, url: sig?.url ?? null, at: sig?.at ?? null,
+          // Every distress headline (not just the worst), so the page can drop ones about places
+          // we have no store (PNC closing Colorado branches when we own no Colorado PNC).
+          const hits = articles.map(a => ({ a, s: assessNews([a], "none") })).filter(x => x.s).slice(0, 8)
+            .map(x => ({ level: x.s!.suggestedStatus, headline: x.s!.headline, url: x.s!.url ?? null, at: x.s!.at ?? null }));
+          const data = { brand, level: sig?.suggestedStatus ?? null, headline: sig?.headline ?? null, url: sig?.url ?? null, at: sig?.at ?? null, hits,
             recent: articles.slice(0, 5).map(a => ({ title: a.title, url: a.link, at: a.publishedAt, source: a.source })), scannedAt: new Date().toISOString() };
           await upsertRecord(`news:${brandNorm(brand)}`, "news", null, data, "Google News RSS (headline keyword match)", "credit-news");
           stored.set(`news:${brandNorm(brand)}`, { id: `news:${brandNorm(brand)}`, kind: "news", dealId: null, data, sourceNote: null, updatedBy: null, updatedAt: data.scannedAt });

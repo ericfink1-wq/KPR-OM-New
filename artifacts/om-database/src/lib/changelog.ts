@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-19-credit-watch",
+    date: "2026-10-19",
+    category: "improved",
+    title: "Credit Watch shows flagged brands first, one row per brand",
+    detail: "Credit Watch now opens on brands that need a look — on the watchlist, or with a distress headline — with a switch to see every brand. A headline that only names states where we have no store for that brand (PNC closing Colorado branches) is left out. Store numbers are stripped everywhere (\"Walgreens #5282\" is just Walgreens), and the watchlist card in Portfolio Analytics now uses the same rent as Credit Watch, so a brand's total matches in both places.",
+    where: "Asset Mgmt → Credit Watch; Portfolio Analytics → Owned",
+  },
+  {
     id: "2026-10-19-am-dates-properties",
     date: "2026-10-19",
     category: "improved",
