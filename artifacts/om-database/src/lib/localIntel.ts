@@ -50,5 +50,16 @@ export function intelUpside(fs: IntelFinding[]): Array<{ priority: string; item:
     detail: `${f.whyItMatters}${intelMeta(f) ? ` (${intelMeta(f)}; per ${f.sources[0]?.title ?? "local news"})` : ""}`,
   }));
 }
+/** Audit view of a scan's searches: what actually ran, and planned searches the model skipped. */
+export function searchAudit(rec: { queries: string[]; queriesRun?: string[] }): { ran: string[]; skipped: string[]; known: boolean } {
+  const ran = rec.queriesRun ?? [];
+  if (!rec.queriesRun) return { ran: [], skipped: [], known: false };     // scans before 10/19/26 didn't log them
+  const norm = (x: string) => x.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const ranSet = ran.map(norm);
+  // A planned search counts as run when a run query shares most of its words (the model may reword).
+  const covered = (p: string) => { const w = norm(p).split(" ").filter(t => t.length > 2); return ranSet.some(r => w.filter(t => r.includes(t)).length >= Math.ceil(w.length * 0.7)); };
+  return { ran, skipped: rec.queries.filter(p => !covered(p)), known: true };
+}
+
 /** Only http(s) links are ever rendered. */
 export const safeHref = (u: string): string | null => /^https?:\/\//i.test(u) ? u : null;

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   siteFacts, buildQueries, buildPrompt, normalizeFindings, mergeScan, indexSearchResults, replyJsonText, normUrl,
-  isDismissed, intelForAnalysis, haversineMiles, MAX_QUERIES, MIN_QUERIES, type LocalIntelRecord,
+  isDismissed, intelForAnalysis, haversineMiles, MAX_QUERIES, MIN_QUERIES, BASE_QUERIES, queriesRun, anchorCategory, queryBudget, type LocalIntelRecord,
 } from "../localIntel";
 
 // Shaped on a real web search for KPR's Fred Meyer in Bend, OR (10/19/26): the Trader Joe's
@@ -36,22 +36,56 @@ const reply = { findings: [
 ] };
 
 describe("search plan", () => {
-  it("8–12 queries across the categories, anchors searched by brand (store # stripped)", () => {
-    const f = siteFacts(bend);
-    expect(f.anchors).toEqual(["Fred Meyer"]);
-    expect(f.radiusMiles).toBe(3);
-    const q = buildQueries(f);
-    expect(q.length).toBeGreaterThanOrEqual(MIN_QUERIES);
-    expect(q.length).toBeLessThanOrEqual(MAX_QUERIES);
-    expect(q.some(x => /Trader Joe's/.test(x) && /Bend OR/.test(x))).toBe(true);
-    expect(q.some(x => x.startsWith(`"Fred Meyer" Bend OR`))).toBe(true);
-    expect(q.some(x => /rezoning/.test(x))).toBe(true);
+  // 10/19/26: the first live Bend scan ran 9 searches and MISSED the Trader Joe's — "competing
+  // supply" was one long OR query. These pin the dedicated competing-anchor searches.
+  const f = siteFacts(bend);
+  const q = buildQueries(f);
+  it("Fred Meyer is a grocer → 15-search budget, competing-grocer block FIRST", () => {
+    expect(f.anchorCategories).toEqual(["grocery"]);
+    expect(queryBudget(f)).toBe(MAX_QUERIES);
+    expect(q).toHaveLength(15);
+    expect(q[0]).toBe("Bend Oregon new grocery store");
+    expect(q[1]).toBe("Bend Oregon grocery store opening 2025 2026");
+    expect(q[2]).toBe(`"Trader Joe's" Bend Oregon new store`);
+    expect(q.some(x => x.includes(`"Whole Foods" Bend Oregon`))).toBe(true);
+    expect(q.some(x => x.includes(`"WinCo"`))).toBe(true);
+    expect(q.some(x => x.includes(`"Grocery Outlet"`))).toBe(true);
+    expect(q).toContain(`Bend Oregon "Fred Meyer" competitor`);
+  });
+  it("the deal's own brand and its sister banners are never searched as competitors", () => {
+    const comp = q.filter(x => /new store$/.test(x));
+    expect(comp.some(x => /Fred Meyer|QFC/.test(x))).toBe(false);
+    expect(comp.some(x => /Safeway/.test(x))).toBe(true);      // a different parent — a real competitor
+  });
+  it("the rest of the categories still run (tenant health, demand, access, municipal)", () => {
+    expect(q.some(x => x.startsWith(`"Fred Meyer" Bend Oregon store closing`))).toBe(true);
     expect(q.some(x => /road widening/.test(x))).toBe(true);
-    expect(buildPrompt(f, q, "2026-10-19")).toMatch(/<json>/);
+    expect(q.some(x => /rezoning/.test(x))).toBe(true);
+    expect(buildPrompt(f, q, "2026-10-19")).toMatch(/Run EVERY one of these searches/);
+  });
+  it("the site's street gets a new-development search; other anchor categories get their own block", () => {
+    const g = siteFacts({ propertyName: "X", address: "4200 Main St", city: "Columbus", state: "OH", centerType: "Power Center",
+      tenants: [{ name: "Marshalls", sf: 28_000, isAnchor: true }, { name: "Planet Fitness", sf: 20_000, isAnchor: true }, { name: "Dick's Sporting Goods", sf: 45_000, isAnchor: true }] });
+    expect(g.anchorCategories).toEqual(["sporting_goods", "off_price", "fitness"]);
+    const gq = buildQueries(g);
+    expect(gq).toContain(`"Main St" Columbus new development`);
+    expect(gq.some(x => /new off-price store opening/.test(x) && !/Marshalls/.test(x) === true)).toBe(true);
+    expect(gq.find(x => /"TJ Maxx"/.test(x))).toBeUndefined();   // sister banner of the Marshalls anchor
+    expect(gq.some(x => /"Academy Sports"/.test(x))).toBe(true);
+    expect(queryBudget(g)).toBe(BASE_QUERIES);
+    expect(gq.length).toBeGreaterThanOrEqual(MIN_QUERIES);
+  });
+  it("categories from brand names", () => {
+    expect(["Trader Joe's", "Ross Dress for Less", "CVS Pharmacy", "Home Depot", "Target", "Joe's Pizza"].map(anchorCategory))
+      .toEqual(["grocery", "off_price", "pharmacy", "home", "big_box", null]);
+  });
+  it("logs the searches actually run", () => {
+    expect(queriesRun(searchBlocks)).toEqual(["new grocery store opening Bend OR"]);
   });
   it("a regional center widens the radius to 10 miles", () => {
     expect(siteFacts({ totalSF: 900_000, tenants: [] }).radiusMiles).toBe(10);
   });
+  it("prints the Bend plan", () => { console.log("BEND PLAN\n" + q.map((x, i) => `${i + 1}. ${x}`).join("\n")); });
 });
 
 describe("turning the reply into trusted findings", () => {

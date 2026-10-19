@@ -16,7 +16,7 @@ import { isTombstoned } from "./dealTombstone";
 import { logger } from "./logger";
 import {
   LOCAL_INTEL_KIND, LOCAL_INTEL_QUEUE_KIND, AUTO_RESCAN_MIN_DAYS, OWNED_RESCAN_DAYS, LOCAL_INTEL_SYSTEM,
-  siteFacts, buildQueries, buildPrompt, normalizeFindings, mergeScan, indexSearchResults, replyJsonText, haversineMiles,
+  siteFacts, buildQueries, buildPrompt, normalizeFindings, mergeScan, indexSearchResults, replyJsonText, haversineMiles, queriesRun,
   type LocalIntelRecord, type IntelFinding, type Dismissal,
 } from "./localIntel";
 
@@ -139,7 +139,10 @@ export async function scanLocalIntel(dealId: string, opts: { trigger: "manual" |
     }
 
     const { blocks, stop } = await runSearch(LOCAL_INTEL_SYSTEM, buildPrompt(facts, queries, now.toISOString().slice(0, 10)), queries.length, facts);
-    const searchesUsed = blocks.filter(b => b.type === "server_tool_use" && b.name === "web_search").length;
+    // Log what was ACTUALLY searched (stored + shown in the box) so a miss can be audited.
+    const ran = queriesRun(blocks);
+    const searchesUsed = ran.length;
+    logger.info({ dealId, planned: queries, ran }, "Local intel searches");
     if (stop === "refusal") throw new Error("The research request was declined by the model's safety filter.");
     const index = indexSearchResults(blocks);
     const text = blocks.filter(b => b.type === "text").map(b => b.text ?? "").join("");
@@ -150,7 +153,7 @@ export async function scanLocalIntel(dealId: string, opts: { trigger: "manual" |
     const findings = normalizeFindings(parsed, index, now);
     await geocodeDistances(findings, site, facts.state);
     const rec = mergeScan(prev, findings, {
-      dealId, scannedAt: now.toISOString(), trigger: opts.trigger, by: opts.by, queries, searchesUsed,
+      dealId, scannedAt: now.toISOString(), trigger: opts.trigger, by: opts.by, queries, queriesRun: ran, searchesUsed,
       error: null, radiusMiles: facts.radiusMiles, site,
     });
     await put(recId(dealId), LOCAL_INTEL_KIND, dealId, rec, opts.by);

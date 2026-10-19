@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { intelRedFlags, intelUpside, intelMeta, fmtDistance, safeHref, groupByCategory } from "../localIntel";
+import { intelRedFlags, intelUpside, intelMeta, fmtDistance, safeHref, groupByCategory, searchAudit } from "../localIntel";
 import type { IntelFinding } from "../api";
 
 const base: IntelFinding = { id: "a", category: "competing_supply", headline: "Trader Joe's plans second Bend store", whyItMatters: "Competes with Fred Meyer's grocery.", distanceMiles: 1, distanceBasis: "estimated", location: null, date: "2026-06", forwardLooking: true, impact: "negative", severity: "high", tenant: "Fred Meyer", sources: [{ title: "The Bulletin", url: "https://bendbulletin.com/x" }], firstSeenAt: "2026-10-19" };
@@ -31,5 +31,12 @@ describe("Local Intel on the deal page", () => {
     expect(g.map(([c]) => c)).toEqual(["competing_supply", "tenant_health", "property"]);
     expect(g[0][1].map(f => f.id)).toEqual(["a", "c2"]);
     expect(g.flatMap(([, x]) => x)).toHaveLength(4);
+  });
+  it("search audit: what ran, and planned searches the model skipped (rewording allowed)", () => {
+    const a = searchAudit({ queries: ["Bend Oregon new grocery store", `"Trader Joe's" Bend Oregon new store`, "Bend Oregon property tax reassessment 2026"],
+      queriesRun: ["new grocery store Bend Oregon", "Bend OR property tax reassessment 2026"] });
+    expect(a.ran).toHaveLength(2);
+    expect(a.skipped).toEqual([`"Trader Joe's" Bend Oregon new store`]);
+    expect(searchAudit({ queries: ["x"] }).known).toBe(false);
   });
 });

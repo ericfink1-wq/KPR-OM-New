@@ -3,7 +3,16 @@
 Persistent context for this repo. Read this fully at the start of every session.
 
 ## LOCAL INTEL (10/19/26) — web-research scan per deal (Eric: "didn't know a Trader Joe's is opening ~1 mi from our Fred Meyer in Bend")
-`api lib/localIntel.ts` (PURE, tested: `siteFacts` → `buildQueries` 8–12 across competing_supply / tenant_health / demand /
+`api lib/localIntel.ts` (PURE, tested: `siteFacts` → `buildQueries`. QUERY PLAN FIX (10/19/26 — the first live Bend scan ran 9
+searches and MISSED the Trader Joe's because competing supply was ONE long OR query): `anchorCategory` (grocery / off_price /
+sporting_goods / pharmacy / fitness / home / big_box) per anchor + major tenant → a competing-anchor block FIRST: for grocers
+"[city State] new grocery store", "… grocery store opening 2025 2026", then SHORT named-chain queries from
+`GROCERS_BY_REGION` (solo for the top 3, pairs after); other categories get a generic + a chains query; the deal's own brand AND
+its sister banners (`BANNER_FAMILIES`: Kroger, Albertsons, Ahold, Walmart, TJX) are never searched as competitors; then
+"[city] "[anchor]" competitor", "[street] new development", and the other categories. Budget `queryBudget`: 15 with a grocer /
+big-box / home anchor, else 12; prompt says run EVERY search + self-check for any anchor-type opening. The searches actually
+run are stored as `queriesRun` (`queriesRun()` from the server_tool_use blocks) and shown in the box's collapsed "Searches run"
+line with "planned but not run" (`searchAudit`). Then across competing_supply / tenant_health / demand /
 access / municipal / property; prompt; `normalizeFindings` — a source must be a URL the web_search RESULTS contained
 (model-named URLs that weren't returned are dropped, no source = dropped), last 24 months + forward-looking only, dedupe by
 shared URL or near-identical headline (`similar`), `mergeScan` keeps firstSeenAt/id, marks isNew, `newHighIds` = new

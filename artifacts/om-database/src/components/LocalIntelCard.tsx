@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { apiLocalIntelScan, apiLocalIntelDismiss, type LocalIntelResponse, type IntelFinding } from "../lib/api";
-import { INTEL_CATEGORY_LABEL, intelMeta, safeHref, groupByCategory } from "../lib/localIntel";
+import { INTEL_CATEGORY_LABEL, intelMeta, safeHref, groupByCategory, searchAudit } from "../lib/localIntel";
 
 // Local Intel box (Eric, 10/19/26) — a standalone, RAW view on the Summary tab: EVERY finding
 // the web scan returned (low-severity and positive items too), grouped by category, each with
@@ -108,6 +108,26 @@ export default function LocalIntelCard({ dealId, data, onChange }: { dealId: str
           {showDismissed ? "Hide items marked not relevant" : `Show ${dismissed.length} marked not relevant`}
         </button>
       )}
+      {rec?.scannedAt && (() => {
+        const a = searchAudit(rec);
+        const list = a.known ? a.ran : rec.queries;
+        return (
+          <details style={{ marginTop: 10, fontSize: 12, color: "#676767" }}>
+            <summary style={{ cursor: "pointer", padding: "6px 0", minHeight: 30 }}>
+              Searches run ({a.known ? a.ran.length : `${rec.searchesUsed}, planned list shown`}){a.known && a.skipped.length ? ` · ${a.skipped.length} planned search${a.skipped.length === 1 ? "" : "es"} not run` : ""}
+            </summary>
+            <ol style={{ margin: "4px 0 0", paddingLeft: 20, lineHeight: 1.6, overflowWrap: "anywhere" }}>
+              {list.map((x, i) => <li key={i}>{x}</li>)}
+            </ol>
+            {a.known && a.skipped.length > 0 && (
+              <div style={{ marginTop: 6 }}>
+                <div style={{ fontWeight: 600, color: "#8a5a08" }}>Planned but not run:</div>
+                <ul style={{ margin: "2px 0 0", paddingLeft: 20, lineHeight: 1.6, overflowWrap: "anywhere" }}>{a.skipped.map((x, i) => <li key={i}>{x}</li>)}</ul>
+              </div>
+            )}
+          </details>
+        );
+      })()}
       {rec?.scannedAt && <div style={{ fontSize: 10.5, color: "#b8b5ad", marginTop: 6 }}>From a web search of local news — each item links its source. Reported news, not verified fact.</div>}
     </div>
   );

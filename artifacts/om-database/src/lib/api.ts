@@ -1414,7 +1414,7 @@ export interface IntelFinding {
 }
 export interface LocalIntelRecord {
   dealId: string; scannedAt: string | null; trigger: "manual" | "new-om" | "monthly" | null; by: string | null;
-  queries: string[]; searchesUsed: number; findings: IntelFinding[]; newHighIds: string[]; error?: string | null; radiusMiles: number;
+  queries: string[]; queriesRun?: string[]; searchesUsed: number; findings: IntelFinding[]; newHighIds: string[]; error?: string | null; radiusMiles: number;
 }
 export interface LocalIntelResponse { record: LocalIntelRecord | null; canScan: boolean; configured: boolean }
 export async function apiLocalIntel(dealId: string): Promise<LocalIntelResponse | null> {

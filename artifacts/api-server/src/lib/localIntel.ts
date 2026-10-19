@@ -17,7 +17,9 @@ import { createHash } from "crypto";
 
 export const LOCAL_INTEL_KIND = "local_intel";
 export const LOCAL_INTEL_QUEUE_KIND = "local_intel_queue";
-export const MAX_QUERIES = 12;
+/** Search budget: 12 normally, 15 when an anchor is a grocer or big box (the competing-anchor block needs room). */
+export const BASE_QUERIES = 12;
+export const MAX_QUERIES = 15;
 export const MIN_QUERIES = 8;
 /** Auto scans (new OM, monthly) never re-run within this window; a manual Refresh always may. */
 export const AUTO_RESCAN_MIN_DAYS = 7;
@@ -62,7 +64,10 @@ export interface LocalIntelRecord {
   scannedAt: string | null;
   trigger: "manual" | "new-om" | "monthly" | null;
   by: string | null;
+  /** The PLANNED searches. */
   queries: string[];
+  /** The searches the model ACTUALLY ran (from the web_search calls) — shown in the box to audit misses. */
+  queriesRun?: string[];
   searchesUsed: number;
   findings: IntelFinding[];
   /** Ids of NEW high-severity negatives from the latest scan (drives the owned-asset alerts). */
@@ -82,11 +87,76 @@ const isVacant = (n: string) => /^(vacant|available|avail\b|spec\b|white\s*box|t
 export interface SiteFacts {
   propertyName: string | null; address: string | null; city: string | null; state: string | null; county: string | null;
   anchors: string[]; majorTenants: string[]; radiusMiles: number; regional: boolean;
+  /** The anchor categories present (drives the competing-anchor searches). */
+  anchorCategories: AnchorCategory[];
 }
 /** Brand only — store numbers and lease notes off ("Fred Meyer #123 (Ground Lease)" → "Fred Meyer"). */
 export function brandName(n: string): string {
   return n.replace(/\s*\(.*?\)\s*/g, " ").replace(/\s*#\s*\d+.*$/, "").replace(/\s+(store|ste\.?|suite)\s*\d+.*$/i, "").replace(/\s+/g, " ").trim();
 }
+
+// ── anchor categories → who would compete with them ────────────────────────────────────
+// 10/19/26: the first live Bend scan MISSED the Trader Joe's opening because "competing supply"
+// was ONE long query with every chain OR'd together. Now each anchor's CATEGORY gets its own
+// block of short, dedicated searches (generic + named chains for the region), run first.
+export type AnchorCategory = "grocery" | "off_price" | "sporting_goods" | "pharmacy" | "fitness" | "home" | "big_box";
+const CAT_RULES: Array<[AnchorCategory, RegExp]> = [
+  ["grocery", /\b(kroger|fred meyer|qfc|king soopers|ralphs|smith'?s food|fry'?s food|harris teeter|safeway|albertsons|vons|pavilions|jewel|acme markets?|shaw'?s|star market|publix|h-?e-?b|food lion|giant( eagle| food)?|stop ?& ?shop|hannaford|wegmans|shop ?rite|weis|meijer|hy-?vee|winco|grocery outlet|aldi|lidl|trader joe'?s|whole foods|sprouts|natural grocers|ingles|winn-?dixie|bi-?lo|lowes foods|schnucks|dierbergs|price chopper|tops markets?|market basket|raley'?s|save mart|stater bros|food 4 less|smart ?& ?final|redner'?s|festival foods|piggly wiggly|fresh thyme|earth fare|the fresh market|lucky|food city|marc'?s|save-?a-?lot|cub foods|fareway|brookshire|tom thumb|randalls|carrs|haggen|metropolitan market|new seasons)\b|\b(supermarket|grocery|grocer)\b/i],
+  ["off_price", /\b(t\.?j\.? ?maxx|marshalls|homegoods|home goods|ross( dress for less)?|burlington|nordstrom rack|saks off|dd'?s discounts|big lots|ollie'?s|gabe'?s|citi trends|bealls outlet|tuesday morning)\b/i],
+  ["sporting_goods", /\b(dick'?s|academy sports|hibbett|big 5|scheels|rei\b|bass pro|cabela'?s|dunham'?s|sportsman'?s warehouse|golf galaxy)\b/i],
+  ["pharmacy", /\b(cvs|walgreens|rite ?aid|duane reade)\b|\bpharmacy\b/i],
+  ["fitness", /\b(planet fitness|la fitness|crunch|anytime fitness|gold'?s gym|24 hour fitness|eos fitness|chuze|vasa|life time|lifetime fitness|orangetheory|ymca|esporta|blink fitness|youfit|in-?shape)\b|\b(fitness|gym)\b/i],
+  ["home", /\b(home depot|lowe'?s|menards|ace hardware|true value|at home|hobby lobby|michaels|joann|jo-?ann|tractor supply|floor ?& ?decor|kirkland'?s|bed bath|ashley|mattress firm|harbor freight|sherwin)\b/i],
+  ["big_box", /\b(walmart|target|costco|sam'?s club|bj'?s wholesale|kohl'?s|best buy|petsmart|petco|five below|dollar tree|dollar general|old navy|ulta|jcpenney|macy'?s)\b/i],
+];
+export function anchorCategory(name: string): AnchorCategory | null {
+  for (const [c, re] of CAT_RULES) if (re.test(name)) return c;
+  return null;
+}
+
+const STATE_NAME: Record<string, string> = { AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming" };
+type Region = "west" | "mountain" | "texas" | "south" | "midwest" | "northeast";
+const REGION: Record<string, Region> = {
+  WA: "west", OR: "west", CA: "west", NV: "west", AK: "west", HI: "west",
+  ID: "mountain", MT: "mountain", WY: "mountain", UT: "mountain", CO: "mountain", AZ: "mountain", NM: "mountain",
+  TX: "texas", OK: "texas",
+  FL: "south", GA: "south", AL: "south", MS: "south", LA: "south", AR: "south", TN: "south", SC: "south", NC: "south", KY: "south", VA: "south",
+  OH: "midwest", MI: "midwest", IN: "midwest", IL: "midwest", WI: "midwest", MN: "midwest", IA: "midwest", MO: "midwest", KS: "midwest", NE: "midwest", ND: "midwest", SD: "midwest",
+  PA: "northeast", NY: "northeast", NJ: "northeast", CT: "northeast", MA: "northeast", RI: "northeast", NH: "northeast", VT: "northeast", ME: "northeast", MD: "northeast", DE: "northeast", DC: "northeast", WV: "northeast",
+};
+/** Grocery chains worth a dedicated search, by region — most-likely new entrants first. */
+const GROCERS_BY_REGION: Record<Region, string[]> = {
+  west: ["Trader Joe's", "Whole Foods", "WinCo", "Grocery Outlet", "Sprouts", "Natural Grocers", "Costco", "Safeway", "Albertsons", "Fred Meyer", "QFC", "Walmart Neighborhood Market", "Aldi"],
+  mountain: ["Trader Joe's", "Whole Foods", "Sprouts", "Natural Grocers", "WinCo", "Aldi", "Costco", "Safeway", "Albertsons", "King Soopers", "Smith's", "Fry's", "Walmart Neighborhood Market", "Grocery Outlet"],
+  texas: ["H-E-B", "Trader Joe's", "Whole Foods", "Aldi", "Sprouts", "Costco", "Kroger", "Tom Thumb", "Walmart Neighborhood Market", "Natural Grocers"],
+  south: ["Publix", "Aldi", "Lidl", "Trader Joe's", "Whole Foods", "Sprouts", "Costco", "Kroger", "Harris Teeter", "Food Lion", "Walmart Neighborhood Market", "The Fresh Market"],
+  midwest: ["Aldi", "Trader Joe's", "Whole Foods", "Meijer", "Kroger", "Hy-Vee", "Costco", "Fresh Thyme", "Sprouts", "Walmart Neighborhood Market", "Lidl"],
+  northeast: ["Aldi", "Lidl", "Trader Joe's", "Whole Foods", "Wegmans", "ShopRite", "Giant", "Stop & Shop", "Costco", "Sprouts", "Weis", "Walmart Neighborhood Market"],
+};
+/** Competitors by anchor category (national). */
+const CHAINS: Record<Exclude<AnchorCategory, "grocery">, { words: string; chains: string[] }> = {
+  off_price: { words: "off-price store", chains: ["TJ Maxx", "Marshalls", "Ross", "Burlington", "HomeGoods", "Nordstrom Rack"] },
+  sporting_goods: { words: "sporting goods store", chains: ["Dick's Sporting Goods", "Academy Sports", "Scheels", "Big 5", "REI"] },
+  pharmacy: { words: "pharmacy", chains: ["CVS", "Walgreens"] },
+  fitness: { words: "gym", chains: ["Planet Fitness", "Crunch Fitness", "EoS Fitness", "LA Fitness", "Chuze Fitness"] },
+  home: { words: "home improvement OR home decor store", chains: ["Home Depot", "Lowe's", "At Home", "Hobby Lobby", "Floor & Decor", "Tractor Supply"] },
+  big_box: { words: "big box store", chains: ["Walmart", "Target", "Costco", "Sam's Club", "Kohl's", "Best Buy"] },
+};
+const normBrand = (x: string) => x.toLowerCase().replace(/[^a-z0-9]/g, "");
+/** Sister banners of one parent are not competitors of each other (a Fred Meyer anchor → don't search QFC / King Soopers). */
+const BANNER_FAMILIES: string[][] = [
+  ["kroger", "fredmeyer", "qfc", "kingsoopers", "ralphs", "smiths", "frys", "harristeeter", "dillons", "marianos", "picknsave", "foodsco", "food4less"],
+  ["albertsons", "safeway", "vons", "pavilions", "jewelosco", "jewel", "acme", "shaws", "starmarket", "tomthumb", "randalls", "carrs", "haggen"],
+  ["aholddelhaize", "foodlion", "giant", "stopshop", "hannaford"],
+  ["walmart", "walmartneighborhoodmarket", "samsclub"],
+  ["tjmaxx", "marshalls", "homegoods"],
+];
+const sameBrand = (a: string, b: string) => {
+  const x = normBrand(a), y = normBrand(b);
+  if (x.includes(y) || y.includes(x)) return true;
+  return BANNER_FAMILIES.some(f => f.some(m => x.includes(m)) && f.some(m => y.includes(m)));
+};
+
 export function siteFacts(d: D): SiteFacts {
   const tenants = (Array.isArray(d.tenants) ? d.tenants : []) as D[];
   const live = tenants
@@ -95,45 +165,90 @@ export function siteFacts(d: D): SiteFacts {
     .sort((a, b) => b.sf - a.sf);
   const seen = new Set<string>();
   const uniq = live.filter(t => { const k = t.name.toLowerCase(); if (!k || seen.has(k)) return false; seen.add(k); return true; });
-  const anchors = uniq.filter(t => t.anchor || t.sf >= 20_000).slice(0, 4).map(t => t.name);
+  const anchors0 = uniq.filter(t => t.anchor || t.sf >= 20_000).slice(0, 4).map(t => t.name);
+  const anchors = anchors0.length ? anchors0 : uniq.slice(0, 1).map(t => t.name);
   const majorTenants = uniq.filter(t => !anchors.includes(t.name) && t.sf >= 4_000).slice(0, 4).map(t => t.name);
   const totalSF = num(d.totalSF) ?? uniq.reduce((s, t) => s + t.sf, 0);
   const center = String(d.centerType ?? "").toLowerCase();
   const regional = totalSF >= 400_000 || /regional|power|outlet|lifestyle/.test(center);
+  // Categories: the anchors first; a center called "grocery-anchored" is a grocer even if the brand isn't recognised.
+  const cats: AnchorCategory[] = [];
+  for (const n of [...anchors, ...majorTenants]) { const c = anchorCategory(n); if (c && !cats.includes(c)) cats.push(c); }
+  if (/grocery/.test(center) && !cats.includes("grocery")) cats.unshift("grocery");
   return {
     propertyName: str(d.propertyName), address: str(d.address), city: str(d.city), state: str(d.state),
-    county: str(d.county), anchors: anchors.length ? anchors : uniq.slice(0, 1).map(t => t.name), majorTenants,
-    radiusMiles: regional ? 10 : 3, regional,
+    county: str(d.county), anchors, majorTenants, radiusMiles: regional ? 10 : 3, regional, anchorCategories: cats,
   };
 }
 
-/** The search plan: 8–12 queries across the six categories. The model runs each (max_uses caps it). */
+/** Search budget for this site. */
+export function queryBudget(f: SiteFacts): number {
+  return f.anchorCategories.includes("grocery") || f.anchorCategories.includes("big_box") || f.anchorCategories.includes("home") ? MAX_QUERIES : BASE_QUERIES;
+}
+
+/**
+ * The search plan, in PRIORITY order (the budget cuts from the end):
+ *   1. competing-anchor block — per anchor category: generic "[city] new … store" searches, then
+ *      named competitor chains (regional list for grocers), each its own short query; the
+ *      deal's own brand is never searched as a competitor;
+ *   2. "[city] [anchor] competitor" and "[site street] new development";
+ *   3. tenant health, new retail centers, demand, access, municipal, tax, the property itself.
+ */
 export function buildQueries(f: SiteFacts): string[] {
-  const place = [f.city, f.state].filter(Boolean).join(" ");
-  const where = place || f.address || f.propertyName || "";
+  const stateName = f.state ? STATE_NAME[f.state.toUpperCase()] ?? f.state : null;
+  const where = [f.city, stateName].filter(Boolean).join(" ") || f.address || f.propertyName || "";
+  const budget = queryBudget(f);
   const q: string[] = [];
-  const add = (s: string | null | false) => { if (s && s.trim() && !q.includes(s.trim())) q.push(s.trim()); };
-  // (a) competing supply
-  add(`new grocery store opening ${where} Trader Joe's Aldi Publix Costco Whole Foods Sprouts Lidl`);
-  add(`new shopping center OR retail development planned permitted under construction ${where}`);
-  // (b) tenant health — the anchors one by one, the rest pooled
-  for (const a of f.anchors.slice(0, 3)) add(`"${a}" ${where} store closing OR relocation OR new store`);
-  if (f.majorTenants.length) add(`${f.majorTenants.map(t => `"${t}"`).join(" OR ")} bankruptcy OR store closures 2026`);
-  // (c) demand
-  add(`${where}${f.county ? ` ${f.county} County` : ""} major employer OR new jobs OR housing development 2026`);
-  // (d) access
-  const street = f.address ? f.address.replace(/^\d+[A-Za-z-]*\s+/, "").split(",")[0] : null;
+  const add = (s: string | null | false) => { const t = s ? s.replace(/\s+/g, " ").trim() : ""; if (t && !q.includes(t)) q.push(t); };
+  const own = [...f.anchors, ...f.majorTenants];
+  const notOwn = (chain: string) => !own.some(o => sameBrand(o, chain));
+  const region = f.state ? REGION[f.state.toUpperCase()] ?? "midwest" : "midwest";
+
+  // 1. Competing anchors.
+  const cats = f.anchorCategories.slice(0, 3);
+  for (const cat of cats) {
+    if (cat === "grocery") {
+      add(`${where} new grocery store`);
+      add(`${where} grocery store opening 2025 2026`);
+      const chains = GROCERS_BY_REGION[region].filter(notOwn);
+      // One dedicated query per top chain, then pairs — short queries are what find a local opening.
+      const solo = chains.slice(0, 3), paired = chains.slice(3, 9);
+      for (const c of solo) add(`"${c}" ${where} new store`);
+      for (let i = 0; i < paired.length; i += 2) add(`"${paired[i]}"${paired[i + 1] ? ` OR "${paired[i + 1]}"` : ""} ${where} new store`);
+    } else {
+      const c = CHAINS[cat];
+      add(`${where} new ${c.words} opening 2025 2026`);
+      const chains = c.chains.filter(notOwn);
+      add(`${chains.slice(0, 3).map(x => `"${x}"`).join(" OR ")} ${where} new store`);
+    }
+  }
+  if (!cats.length) add(`${where} new store opening 2025 2026`);
+  // 2. The anchor's competitor + the site's own road.
+  if (f.anchors[0]) add(`${where} "${f.anchors[0]}" competitor`);
+  const street = f.address ? f.address.replace(/^\d+[A-Za-z-]*\s+/, "").split(",")[0].trim() : null;
+  if (street) add(`"${street}" ${f.city ?? where} new development`);
+  // 3. Everything else.
+  for (const a of f.anchors.slice(0, 2)) add(`"${a}" ${where} store closing OR relocation`);
+  add(`${where} new shopping center OR retail development planned`);
+  if (f.majorTenants.length) add(`${f.majorTenants.slice(0, 3).map(t => `"${t}"`).join(" OR ")} bankruptcy OR store closures 2026`);
+  add(`${where}${f.county ? ` ${f.county} County` : ""} major employer OR housing development 2026`);
   add(`${street ? `"${street}" ` : ""}${where} road widening OR interchange OR traffic project`);
-  // (e) municipal
-  add(`${where} planning commission rezoning retail OR commercial approval`);
+  add(`${where} planning commission rezoning commercial approval`);
   add(`${f.county ? `${f.county} County` : where} property tax reassessment 2026`);
-  // (f) property-specific
   if (f.propertyName) add(`"${f.propertyName}" ${where} news`);
-  if (f.propertyName && q.length < MAX_QUERIES) add(`"${f.propertyName}" ${where} crime OR lawsuit OR sold OR listed for sale`);
-  // Backfill to the minimum with the broadest useful queries.
   if (q.length < MIN_QUERIES) add(`${where} retail news 2026`);
   if (q.length < MIN_QUERIES) add(`${where} commercial real estate development 2026`);
-  return q.slice(0, MAX_QUERIES);
+  return q.slice(0, budget);
+}
+
+/** The searches the model actually ran (each web_search call's query), in order. */
+export function queriesRun(blocks: unknown[]): string[] {
+  const out: string[] = [];
+  for (const b0 of blocks) {
+    const b = b0 as { type?: string; name?: string; input?: { query?: unknown } };
+    if (b?.type === "server_tool_use" && b.name === "web_search" && typeof b.input?.query === "string") out.push(b.input.query);
+  }
+  return out;
 }
 
 export const LOCAL_INTEL_SYSTEM = `You are a retail real-estate research analyst for KPR Centers, a shopping-center owner. You research LOCAL news that changes the risk or value of ONE shopping center, using the web_search tool.
@@ -152,8 +267,10 @@ SITE
 - Other major tenants: ${f.majorTenants.join(", ") || "(none recorded)"}
 - Competition radius: about ${f.radiusMiles} miles${f.regional ? " (regional draw)" : ""}
 
-Run these searches (one web_search each, in order; you may refine a query's wording):
+Run EVERY one of these searches — one web_search each, in this order. Do not skip or merge any (you may fix a query's wording). The first ones look for COMPETING anchor stores; a competitor opening near this center's anchor is the single most important thing to find.
 ${queries.map((x, i) => `${i + 1}. ${x}`).join("\n")}
+
+Before answering, check yourself: did any search show a grocery store, warehouse club or other anchor-type store announced, permitted or under construction in this city? If so it MUST be a competing_supply finding (with its distance from the site, estimated if needed) — even when no opening date is announced.
 
 What counts:
 (a) competing_supply — NEW grocery or anchor stores, or new retail centers, announced / permitted / under construction within ~${f.radiusMiles} miles (Trader Joe's, Aldi, Publix, Costco, Whole Foods, Sprouts, Lidl, Walmart, Target …). A competitor of THIS center's anchors is the most important kind.
