@@ -51,8 +51,8 @@ export const CHANGELOG: ChangeEntry[] = [
     id: "2026-10-19-roster-flags-right",
     date: "2026-10-19",
     category: "improved",
-    title: "Tenant roster: Flags pinned to the right, cleaner market-rent column",
-    detail: "The Flags column now sits at the far right of the tenant roster and stays pinned there while you scroll sideways, with the tenant name still pinned on the left. The Mkt rent column shows just the dollar figure. Hover it (tap on a phone) to see what it's based on and how many leases, for example \"Category benchmark (Grocery, 10–25K SF), 36 leases\". The same detail is added to the below/above-market arrow next to Rent/SF. The flag filters above the table and column sorting work as before.",
+    title: "Tenant roster: Flags pinned to the right, cleaner market-rent column, tap-to-read hints on phones",
+    detail: "The Flags column now sits at the far right of the tenant roster and stays pinned there while you scroll sideways, with the tenant name still pinned on the left. The Mkt rent column shows just the dollar figure. Hover it (tap on a phone) to see what it's based on and how many leases, for example \"Category benchmark (Grocery, 10–25K SF), 36 leases\". The same detail is added to the below/above-market arrow next to Rent/SF. The flag filters above the table and column sorting work as before. On a phone, tap any flag, badge or icon (roster flag chips, the flag filters, the doc count on Debt loans and the small hints across the site) to read what hovering shows on a computer. Tap anywhere else to close it.",
     where: "Deal page → Tenants & Sales → Tenant roster",
   },
   {

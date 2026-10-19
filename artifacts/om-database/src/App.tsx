@@ -25,6 +25,7 @@ import SaveStatusIndicator from "./components/SaveStatusIndicator";
 import GlobalSearch from "./components/GlobalSearch";
 import { isSupportedUpload } from "./lib/fileExtract";
 import { useAnalysisRefresh } from "./lib/useAnalysisRefresh";
+import TapTipLayer from "./components/TapTip";
 // Heavy, route-gated screens are lazy-loaded so they don't bloat the initial
 // bundle (faster first paint, especially on mobile). They only fetch their chunk
 // when first opened; a Suspense fallback covers the brief load.
@@ -612,6 +613,8 @@ function AppInner() {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       style={{ height: "100%", background: "#faf9f5", display: "flex", flexDirection: "column", overflow: "hidden", paddingTop: 16, fontFamily: "'Roboto',-apple-system,sans-serif", color: "#383a37", WebkitFontSmoothing: "antialiased" as any }}>
+      {/* Touch screens: tap a hint (icon / badge / chip) to read what hovering shows on desktop. */}
+      <TapTipLayer />
 
       <Header
         tab={tab}

@@ -553,11 +553,11 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
             <span style={{ fontFamily:"'Montserrat',sans-serif", fontSize:9.5, fontWeight:800, letterSpacing:"0.1em", color:"#676767", textTransform:"uppercase", marginRight:2 }}>Flags</span>
             {FLAG_ORDER.filter(f => f !== "proposed" && counts.get(f)).map(f => {
               const m = FLAG_META[f], on = flagFilter === f, c = TONE[m.tone];
-              return <button key={f} onClick={() => setFlagFilter(on ? null : f)} title={m.tip} aria-pressed={on}
+              return <button key={f} onClick={() => setFlagFilter(on ? null : f)} title={m.tip} data-tap-tip="also" aria-pressed={on}
                 style={{ display:"inline-flex", alignItems:"center", gap:4, background: on ? c.fg : c.bg, color: on ? "#fff" : c.fg, border:"none", borderRadius:14, padding:"3px 9px", fontSize:11, fontWeight:700, cursor:"pointer" }}>{m.icon} {m.label} <span style={{ opacity:0.8, fontWeight:600 }}>{counts.get(f)}</span></button>;
             })}
             {proposedCount > 0 && onToggleProposed && (
-              <button onClick={onToggleProposed} aria-pressed={includeProposed} title={FLAG_META.proposed.tip}
+              <button onClick={onToggleProposed} aria-pressed={includeProposed} title={FLAG_META.proposed.tip} data-tap-tip="also"
                 style={{ display:"inline-flex", alignItems:"center", gap:4, background: includeProposed ? "#a8640f" : "#fff2e0", color: includeProposed ? "#fff" : "#a8640f", border:"1px dashed #e8c48d", borderRadius:14, padding:"3px 9px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
                 ✎ {includeProposed ? "Hide" : "Show"} proposed / unsigned ({proposedCount})
               </button>
@@ -950,7 +950,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                       if (!sr || !sr.flags.length) return <span style={{ color:"#d6d0c4" }}>·</span>;
                       return <span style={{ display:"inline-flex", gap:3 }}>{FLAG_ORDER.filter(f => sr.flags.includes(f)).map(f => {
                         const m = FLAG_META[f], c = TONE[m.tone];
-                        return <span key={f} title={`${m.label} — ${m.tip}`} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", minWidth:18, height:18, padding:"0 3px", borderRadius:5, fontSize:10, fontWeight:800, color:c.fg, background:c.bg, lineHeight:1 }}>{m.icon}</span>;
+                        return <span key={f} title={`${m.label} — ${m.tip}`} data-tap-tip style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", minWidth:18, height:18, padding:"0 3px", borderRadius:5, fontSize:10, fontWeight:800, color:c.fg, background:c.bg, lineHeight:1 }}>{m.icon}</span>;
                       })}</span>;
                     })()}
                   </td>

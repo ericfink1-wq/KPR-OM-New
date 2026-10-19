@@ -79,6 +79,11 @@ Tests: `__tests__/docPrivacy.test.ts` (+ verified live: Andy-session sweep of ev
 - Roster Flags column is LAST and pinned RIGHT (`stickyLastCol`, lib/stickyCol.ts — NOT released on phones, it's narrow);
   Tenant stays pinned left. Mkt rent cell = the dollar value only; basis + sample size via `benchmarkBasisText`
   (rosterScrub.ts) in a FlagTip (tap on phone), also appended to the Rent/SF ▲/▼ tip. No inline "n=" labels in tables.
+- TOUCH TOOLTIPS SITE-WIDE: `TapTipLayer` (components/TapTip.tsx, mounted once in App) + pure `tapTipFor` (lib/tapTip.ts,
+  tested). On a TOUCH tap (pointerType touch/pen — mouse/hover untouched) a small titled hint (span/icon/badge ≤260×64,
+  not inside a button/link, title not just the visible text) shows a bubble and the tap stops there; `data-tap-tip`
+  opts an element in even inside a button (Debt DocBadge, roster flag chips); `data-tap-tip="also"` shows the bubble AND
+  lets the tap act (flag-filter chips). Closes on next tap / scroll / 8 s. New hover-only hint → just give it a `title`.
 - Site-wide design system lives in `index.css`: tokens + `.kpr-page-head/-title/-sub/-kicker`, `.kpr-section-head`,
   `.kpr-card`, `.kpr-table` (sticky th, right-aligned numbers, zebra only where no inline bg), `.kpr-chip`,
   `.kpr-btn`, `.kpr-skel`. Fonts: Montserrat (caps heads) / Lora (display) / Roboto (body, tabular nums). The old

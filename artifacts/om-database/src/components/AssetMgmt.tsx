@@ -281,8 +281,8 @@ const STATUS_TONE: Record<string, "green" | "amber" | "gray"> = { Executed: "gre
 /** "4 docs" on a row (amber when documents are known to be missing, gray "no docs" when none listed). */
 export function DocBadge({ rec }: { rec: AmRecord }) {
   const { count, missing } = recordSources(rec);
-  if (!count && !missing.length) return <span title="No source documents listed yet" style={{ display: "inline-block", fontSize: 10.5, color: K.gray, border: `1px solid ${K.line}`, borderRadius: 10, padding: "0 6px", marginLeft: 6, whiteSpace: "nowrap" }}>no docs</span>;
-  return <span title={missing.length ? `Missing: ${missing.join("; ")}` : `${count} source document${count === 1 ? "" : "s"}`} style={{ display: "inline-block", fontSize: 10.5, fontWeight: 600, color: missing.length ? K.amber : K.gray, background: missing.length ? "#fff2e0" : "#f1f0ec", borderRadius: 10, padding: "0 6px", marginLeft: 6, whiteSpace: "nowrap" }}>{count} doc{count === 1 ? "" : "s"}{missing.length ? ` · ${missing.length} missing` : ""}</span>;
+  if (!count && !missing.length) return <span title="No source documents listed yet" data-tap-tip style={{ display: "inline-block", fontSize: 10.5, color: K.gray, border: `1px solid ${K.line}`, borderRadius: 10, padding: "0 6px", marginLeft: 6, whiteSpace: "nowrap" }}>no docs</span>;
+  return <span title={missing.length ? `${count} source document${count === 1 ? "" : "s"} · missing: ${missing.join("; ")}` : `${count} source document${count === 1 ? "" : "s"} — open the row for the list`} data-tap-tip style={{ display: "inline-block", fontSize: 10.5, fontWeight: 600, color: missing.length ? K.amber : K.gray, background: missing.length ? "#fff2e0" : "#f1f0ec", borderRadius: 10, padding: "0 6px", marginLeft: 6, whiteSpace: "nowrap" }}>{count} doc{count === 1 ? "" : "s"}{missing.length ? ` · ${missing.length} missing` : ""}</span>;
 }
 /** The drawer's "Sources" block: each document as a link + type + date + status + what it was used for,
  *  then anything known to be missing (amber). Falls back to the free-text source line. */
