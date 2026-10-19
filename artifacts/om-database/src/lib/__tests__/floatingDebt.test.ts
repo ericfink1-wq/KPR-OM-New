@@ -193,3 +193,50 @@ describe("swapped / partly swapped loans + IO / Amort (Andy, 10/19/26)", () => {
     expect(lbl({ lender: "X" })).toBeNull();
   });
 });
+
+describe("partly swapped regression — Pointe Plaza + Overland Plaza (live 93a7abe showed '—')", () => {
+  const ds = [{ id: "pp", propertyName: "Pointe Plaza" }, { id: "op", propertyName: "Overland Plaza" }] as unknown as Deal[];
+  // Shapes as imported: no spreadBps on the loan; the swap carries all-in + swap rate.
+  const pointe = (loanExtra: Record<string, unknown> = {}, swapExtra: Record<string, unknown> = {}) => [
+    rec("lpp", "loan", "pp", { lender: "BankUnited", currentBalance: 26_000_000, rateType: "floating", index: "1M Term SOFR", maturityDate: "2031-01-01", ...loanExtra }),
+    rec("spp", "swap", "pp", { counterparty: "BankUnited", notional: 23_500_000, fixedSwapRatePct: 3.45, allInFixedPct: 5.10, maturityDate: "2031-01-01", ...swapExtra }),
+  ];
+  const overland = (loanExtra: Record<string, unknown> = {}) => [
+    rec("lop", "loan", "op", { lender: "ONB", currentBalance: 18_655_000, rateType: "floating", index: "Daily Simple SOFR", maturityDate: "2030-06-01", ...loanExtra }),
+    rec("sop", "swap", "op", { counterparty: "ONB", notional: 16_345_000, fixedSwapRatePct: 4.16, allInFixedPct: 5.91, index: "Daily Simple SOFR", maturityDate: "2030-06-01" }),
+  ];
+  const pointeExpected = (23.5 * 5.10 + 2.5 * (3.95 + 1.65)) / 26;          // 1M Term 3.95 + 165
+  const overlandExpected = (16.345 * 5.91 + 2.31 * (4.01 + 1.75)) / 18.655;  // overnight 4.01 + 175
+  const one = (recs: AmRecord[]) => buildDebtRows(recs, ds, rates, today)[0];
+  it("Pointe: spread from the swap (all-in − swap rate) → ~5.15% blended", () => {
+    const r = one(pointe());
+    expect(r.allInPct).toBeCloseTo(pointeExpected, 3);
+    expect(r.allInPct!).toBeGreaterThan(5.1); expect(r.allInPct!).toBeLessThan(5.2);
+    expect(r.allInBasis).toBe("blended"); expect(r.estimated).toBe(true); expect(r.spreadBps).toBe(165);
+  });
+  it("Overland: Daily Simple SOFR remainder at overnight SOFR + 175 → ~5.9% blended", () => {
+    const r = one(overland({ spreadBps: 175 }));
+    expect(r.allInPct).toBeCloseTo(overlandExpected, 3);
+    expect(r.allInPct!).toBeGreaterThan(5.85); expect(r.allInPct!).toBeLessThan(6.0);
+    expect(r.allInBasis).toBe("blended");
+    expect(one(overland()).allInPct).toBeCloseTo(overlandExpected, 3); // spread derived from the swap too
+  });
+  it("loan spread read from raw columns / text: spread 165, '1.65%', '165 over 1M Term SOFR', swap spreadBps", () => {
+    for (const extra of [{ spread: 165 }, { spread: 1.65 }, { margin: "165 bps" }, { index: "165 over 1M Term SOFR" }, { notes: "x", index: "1M Term SOFR + 1.65%" }, { margin: "1M Term SOFR + 165 bps" }]) {
+      expect(one(pointe(extra, { fixedSwapRatePct: undefined })).allInPct).toBeCloseTo(pointeExpected, 3);
+    }
+    expect(one(pointe({}, { fixedSwapRatePct: undefined, spreadBps: 165 })).allInPct).toBeCloseTo(pointeExpected, 3);
+  });
+  it("swap with only notional + all-in (no swap rate yet) still prices the loan; no SOFR rate at all → '—' with the reason", () => {
+    const r = one(pointe({ spreadBps: 165 }, { fixedSwapRatePct: undefined }));
+    expect(r.allInPct).toBeCloseTo(pointeExpected, 3);
+    const none = buildDebtRows(pointe({ spreadBps: 165 }), ds, null, today)[0];
+    expect(none.allInPct).toBeNull(); expect(none.allInSource).toMatch(/can't be priced/);
+  });
+  it("any SOFR variant falls back to 1M Term when overnight is missing", () => {
+    const noOn = { ...rates, sofrOvernight: null } as unknown as RatesPayload;
+    const r = buildDebtRows(overland({ spreadBps: 175 }), ds, noOn, today)[0];
+    expect(r.allInPct).toBeCloseTo((16.345 * 5.91 + 2.31 * (3.95 + 1.75)) / 18.655, 3);
+    expect(r.allInSource).toMatch(/1M Term SOFR/);
+  });
+});

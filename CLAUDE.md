@@ -18,6 +18,10 @@ it through these. Boundary tests: `__tests__/money.test.ts`.
   (Bensalem stored "fixed 6.44%"); link = loanId, else label match, else unlabelled, else the property's ONLY loan.
   Live priced notional < 99.5% of balance → `partlySwapped`, all-in BLENDED (swap all-in on the notional + curve/floor +
   spread on the rest, `estimated`); an entered all-in that just equals the swap rate is ignored for the blend.
+  Blend FIX (live 93a7abe showed "—" on Pointe/Overland): spread = loan field/text (`spread`/`margin` bare >20 = bps,
+  ≤20 = %; "165 over 1M Term SOFR") → swap `spreadBps` → swap all-in − swap rate; a swap needs only notional + all-in to
+  price the coupon (termsPending blocks MTM only); Daily Simple SOFR ↔ 1M Term fall back to each other. Server
+  `spreadToBps` (the importer used to DROP `spread: 165`). Regression: floatingDebt.test.ts "Pointe Plaza + Overland".
   `allInBasis` = swap / curve est. / fixed note / blended / as entered (All-in tooltip + drawer). `ioAmortLabel` →
   IO / Amort column from `ioUntil` (alias `ioEndDate`) + `amortYears` + maturity; "—" when unknown.
 - Sorting (10/19/26): EVERY Asset Mgmt table uses `useTableSort` (lib/tableSort.ts — single-level on top of useMultiSort,

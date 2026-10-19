@@ -65,8 +65,19 @@ const loanText = (d: Record<string, unknown>): string =>
 export function loanSpreadBps(d: Record<string, unknown>): number | null {
   const f = n(d.spreadBps);
   if (f != null) return f;
-  const t = `${s(d.index) ?? ""} ${s(d.rateText) ?? ""} ${s(d.rateType) ?? ""}`;
-  const bps = /(?:\+|plus|spread(?: of)?:?)\s*(\d{2,4})\s*(?:bps?|basis)/i.exec(t) ?? /\bS\s*\+\s*(\d{2,4})\b/i.exec(t);
+  // Raw import columns kept as extras: a bare number > 20 is bps, ≤ 20 a percent.
+  for (const k of ["spread", "margin", "spreadPct"]) {
+    const raw = d[k], txt = typeof raw === "string" ? raw : "";
+    // Text only when it is JUST a number + unit ("165 bps", "1.65%"); "1M Term SOFR + 165" goes to the text parser below.
+    const v = n(raw) ?? n(/^\s*\+?\s*(\d+(?:\.\d+)?)\s*(?:%|bps?|basis(?: points?)?)?\s*$/i.exec(txt)?.[1]);
+    if (v == null || v <= 0) continue;
+    const isPct = /%/.test(txt) || (!/bp|basis/i.test(txt) && (k === "spreadPct" || v <= 20));
+    const b = isPct ? Math.round(v * 100) : v;
+    if (b < 2000) return b;
+  }
+  const t = `${s(d.index) ?? ""} ${s(d.rateText) ?? ""} ${s(d.rateType) ?? ""} ${typeof d.spread === "string" ? d.spread : ""} ${typeof d.margin === "string" ? d.margin : ""}`;
+  const bps = /(?:\+|plus|spread(?: of)?:?)\s*(\d{2,4})\s*(?:bps?|basis)/i.exec(t) ?? /\bS\s*\+\s*(\d{2,4})\b/i.exec(t)
+    ?? /\b(\d{2,4})\s*(?:bps?|basis points?)?\s*(?:over|above)\s+(?:the\s+)?(?:1[- ]?M|one[- ]month|daily|term|compounded|simple|SOFR)/i.exec(t);
   if (bps) { const v = Number(bps[1]); return v > 0 && v < 2000 ? v : null; }
   const pct = /(?:\+|plus)\s*(\d{1,2}(?:\.\d+)?)\s*%/i.exec(t);
   if (pct) { const v = Number(pct[1]); return v > 0 && v < 20 ? Math.round(v * 100) : null; }
@@ -204,8 +215,14 @@ export function buildDebtRows(records: AmRecord[], deals: Deal[], rates: RatesPa
     // Live = not matured. Any live linked swap makes the loan SWAPPED whatever rateType says
     // (Bensalem: stored "fixed 6.44%" is a SOFR+236 loan swapped to 6.44%).
     const liveSwaps = mySwaps.filter(w => !w.maturity || w.maturity >= todayIso);
-    const pricedSwaps = liveSwaps.filter(w => !w.termsPending && w.allInFixedPct != null);
-    const spread = loanSpread ?? (liveSwaps.length ? n(liveSwaps.find(w => n(w.record.data.spreadBps) != null)?.record.data.spreadBps) : null);
+    // Pricing the LOAN only needs notional + all-in fixed; "terms pending" (no swap rate /
+    // maturity) blocks the mark-to-market, not the coupon.
+    const pricedSwaps = liveSwaps.filter(w => w.notional != null && w.allInFixedPct != null);
+    // Spread: the loan's, else the swap's own field, else the swap's all-in minus its swap rate.
+    const swapSpread = (() => { for (const w of liveSwaps) {
+      const b = n(w.record.data.spreadBps) ?? (w.allInFixedPct != null && w.fixedSwapRatePct != null ? Math.round((w.allInFixedPct - w.fixedSwapRatePct) * 10000) / 100 : null);
+      if (b != null && b > 0 && b < 2000) return b; } return null; })();
+    const spread = loanSpread ?? swapSpread;
     const idx = s(d.index);
     const looksFloating = spread != null && /sofr|libor|prime|index|term/i.test(`${idx ?? ""} ${s(d.rateType) ?? ""}`);
     const type = liveSwaps.length ? "swapped"
@@ -217,9 +234,11 @@ export function buildDebtRows(records: AmRecord[], deals: Deal[], rates: RatesPa
     // Floating all-in off today's curve: max(index, floor) + spread, capped at the highest live strike.
     const curveRate = (sp: number) => {
       const daily = isDailySofr(idx);
-      const base = daily && rates?.sofrOvernight ? { rate: rates.sofrOvernight.rate, label: "SOFR overnight" }
-        : spot.rate != null ? { rate: spot.rate, label: "1M Term SOFR" }
-        : rates?.sofrOvernight ? { rate: rates.sofrOvernight.rate, label: "SOFR overnight (1M Term n/a)" } : null;
+      // Daily Simple SOFR → overnight SOFR; any other SOFR variant (or an index we can't read) → 1M Term
+      // SOFR spot; each falls back to the other so a priced swap's remainder is never left at "—".
+      const base = daily && rates?.sofrOvernight?.rate != null ? { rate: rates.sofrOvernight.rate, label: "SOFR overnight" }
+        : spot.rate != null ? { rate: spot.rate, label: daily ? "1M Term SOFR (overnight n/a)" : "1M Term SOFR" }
+        : rates?.sofrOvernight?.rate != null ? { rate: rates.sofrOvernight.rate, label: "SOFR overnight (1M Term n/a)" } : null;
       if (!base) return null;
       let ix = floor != null ? Math.max(base.rate, floor) : base.rate;
       const floorBinds = floor != null && floor > base.rate;

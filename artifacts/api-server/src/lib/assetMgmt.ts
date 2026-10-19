@@ -215,8 +215,27 @@ export function sanitizeMissingDocs(v: unknown): string[] | undefined {
   return arr.map(x => String(x ?? "").trim().slice(0, 300)).filter(Boolean).slice(0, 30);
 }
 
+
+/** Spread in bps from spreadBps / spread_bps / spreadPct / spread / margin, as a number or text
+ *  ("165", "165 bps", "1.65%", "S+165"). A bare number > 20 is bps, ≤ 20 is a percent — the
+ *  old reader took `spread` as a percent only, so `spread: 165` was silently dropped (Pointe). */
+export function spreadToBps(r: Record<string, unknown>): number | undefined {
+  const asBps = (v: unknown, unit: "bps" | "pct" | "auto"): number | undefined => {
+    if (v == null || v === "") return undefined;
+    const txt = String(v).trim();
+    // A plain number + unit ("165", "165 bps", "1.65%", "S+165"), else the "+ N" in "1M Term SOFR + 165 bps" — never the "1" of "1M".
+    const m = /^\s*(?:S\s*)?\+?\s*(\d+(?:\.\d+)?)\s*(?:%|bps?|basis(?: points?)?)?\s*$/i.exec(txt) ?? /\+\s*(\d+(?:\.\d+)?)\s*(?:%|bps?|basis)?/i.exec(txt);
+    if (!m) return undefined;
+    let x = Number(m[1]);
+    const u = /%/.test(txt) ? "pct" : /bp|basis/i.test(txt) ? "bps" : unit === "auto" ? (x > 20 ? "bps" : "pct") : unit;
+    if (u === "pct") x = Math.round(x * 100);
+    return Number.isFinite(x) && x > 0 && x < 2000 ? Math.round(x * 100) / 100 : undefined;
+  };
+  return asBps(r.spreadBps, "bps") ?? asBps(r.spread_bps, "bps") ?? asBps(r.spreadPct, "pct") ?? asBps(r.spread, "auto") ?? asBps(r.margin, "auto");
+}
+
 export function sanitizeLoan(r: Record<string, unknown>): LoanRec {
-  const spreadBps = num(r.spreadBps ?? r.spread_bps, 0, 2000) ?? (num(r.spreadPct ?? r.spread, 0, 20) != null ? Math.round(num(r.spreadPct ?? r.spread, 0, 20)! * 100) : undefined);
+  const spreadBps = spreadToBps(r);
   const amort = String(r.amortization ?? "").toLowerCase();
   return prune({
     lender: str(r.lender), loanName: str(r.loanName ?? r.name), originalBalance: num(r.originalBalance ?? r.originalAmount, 0, 5e9),
@@ -238,7 +257,7 @@ export function sanitizeLoan(r: Record<string, unknown>): LoanRec {
   } as LoanRec & Record<string, unknown>);
 }
 export function sanitizeSwap(r: Record<string, unknown>): SwapRec {
-  const spreadBps = num(r.spreadBps, 0, 2000) ?? (num(r.spreadPct ?? r.spread, 0, 20) != null ? Math.round(num(r.spreadPct ?? r.spread, 0, 20)! * 100) : undefined);
+  const spreadBps = spreadToBps(r);
   return prune({
     loanId: str(r.loanId, 120), counterparty: str(r.counterparty), notional: num(r.notional, 0, 5e9),
     fixedSwapRatePct: pct(r.fixedSwapRatePct ?? r.swapRate ?? r.fixedRate), spreadBps, allInFixedPct: pct(r.allInFixedPct ?? r.allIn),
@@ -268,7 +287,7 @@ export function sanitizeDate(r: Record<string, unknown>): DateRec {
 // ── Columns we don't model are KEPT, not silently dropped (Eric's 10/18 seed lost its
 //    covenant, prepayment and Drive-link columns to a whitelist). Bounded, primitive-ish only.
 const META_KEYS = new Set(["kind", "id", "dealId", "bldgId", "BLDGID", "property", "propertyName", "source", "sourceNote"]);
-const ALIAS_KEYS = new Set(["ioEndDate", "sources", "missingDocs", "spread", "spreadPct", "spread_bps", "originalAmount", "balance", "name", "fixedRate", "allInRate", "startDate", "maturity",
+const ALIAS_KEYS = new Set(["margin", "ioEndDate", "sources", "missingDocs", "spread", "spreadPct", "spread_bps", "originalAmount", "balance", "name", "fixedRate", "allInRate", "startDate", "maturity",
   "dscr", "debtYieldCovenant", "swapRate", "allIn", "terminationDate", "floatingIndex", "label", "prepaymentTerms", "prepay", "provider",
   "prefRatePct", "rate", "allInPct", "currentPay", "cashPayPct", "accrualPct", "accrued", "accrual", "rateSteps", "steps", "price", "closingDate", "noiAtClose", "goingInCap", "capRate", "kpOwnershipPct", "kpPercent", "jv", "partner"]);
 function withExtras(raw: Record<string, unknown>, clean: Record<string, unknown>): Record<string, unknown> {
