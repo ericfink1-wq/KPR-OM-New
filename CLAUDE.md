@@ -28,6 +28,10 @@ it through these. Boundary tests: `__tests__/money.test.ts`.
   key `kpr_sort_<table>` in localStorage) + `SortTh` / `SortSelect` (components/SortControls.tsx, phone dropdown). Column
   defs (`LOAN_COLS`, `SWAP_COLS`, `PREF_COLS`, `DATE_COLS`, `PROP_COLS`, `CREDIT_COLS`) return the UNDERLYING value;
   blanks/"—" last both ways. New AM table → add a SortCol list, never sort display strings.
+- AM tables never "…" (Eric, 10/19/26): `.am-pin` (index.css) on every AM / owned-asset table — first column (Property /
+  Brand / Tenant / Covenant) sticky-left on desktop AND phone, cells wrap (break-word, NOT anywhere — that squeezed
+  buttons to one letter per line), long free text via `Clamp2` (2 lines + full text in title → tap tip). A th with an
+  inline `position:"static"` breaks the pin — give the first header `position:"sticky", left:0`.
 - Dates: `keyDebtDeadlines` (cap expiries grouped across loans, extension-notice WINDOWS parsed from text, maturities ≤12 mo)
   pinned above the window; `collapsePortfolioCovenants` (same type+date+description on ≥3 properties → one
   "<Name> portfolio (N properties)" row, name from `portfolioName`). Owner = acquisition row `assetManager` → Datex.

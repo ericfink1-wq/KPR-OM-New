@@ -49,7 +49,7 @@ export function Kpi({ label, value, sub }: { label: string; value: string; sub?:
   );
 }
 function Table({ children, minWidth = 900 }: { children: ReactNode; minWidth?: number }) {
-  return <div style={{ ...card, overflowX: "auto" }}><table className="kpr-table" style={{ width: "100%", minWidth, borderCollapse: "collapse" }}>{children}</table></div>;
+  return <div style={{ ...card, overflowX: "auto" }}><table className="kpr-table am-pin" style={{ width: "100%", minWidth, borderCollapse: "collapse" }}>{children}</table></div>;
 }
 export function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
@@ -206,7 +206,12 @@ const partlyTxt = (r: DebtRow) => { if (!r.partlySwapped) return null; const { s
   return `partly swapped (${fmtMoney(swapped, { dp })} of ${fmtMoney(balance, { dp })})`; };
 const rateLabel = (r: DebtRow) => `${r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType ?? "—"}${r.spreadBps != null && r.rateClass !== "fixed" ? ` +${r.spreadBps}` : ""}`;
 const allInTip = (r: DebtRow) => `${r.allInBasis ? `Source: ${r.allInBasis} — ` : ""}${r.allInSource}`;
-const ell: React.CSSProperties = { ...td, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle" };
+// Asset Mgmt cells WRAP instead of "…" (Eric, 10/19/26); long free text stops at 2 lines with the full text on hover / tap.
+const wrapTd: React.CSSProperties = { ...td, whiteSpace: "normal", overflowWrap: "break-word", verticalAlign: "middle" };
+function Clamp2({ text }: { text: string | null | undefined }) {
+  if (!text) return <>—</>;
+  return <div className="am-clamp2" title={text}>{text}</div>;
+}
 function LoanDrawer({ r, isAdmin, onClose, onEdit, onDelete, onOpenDeal }: { r: DebtRow; isAdmin: boolean; onClose: () => void; onEdit: () => void; onDelete: () => void; onOpenDeal: (id: string) => void }) {
   const d = r.record.data;
   const known = new Set(["lender", "loanName", "loanLabel", "originalBalance", "currentBalance", "balanceAsOf", "rateType", "index", "spreadBps", "fixedRatePct", "allInRatePct", "originationDate", "maturityDate", "extensionOptions", "extensionNoticeDate", "amortization", "amortYears", "ioUntil", "ioEndDate", "amortizationText", "dscrCovenant", "debtYieldCovenantPct", "recourse", "guarantor", "covenants", "prepayment", "notes", "openQuestions", "confidence", "datexLoanId"]);
@@ -505,32 +510,31 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
             <div style={{ ...card, overflow: "hidden" }}>
               {loanRows.map((r, k) => (
                 <button key={r.record.id} onClick={() => setDrawer(r.record.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: "2px 10px", width: "100%", textAlign: "left", background: "#fff", border: "none", borderTop: k ? "1px solid #f3f2ee" : "none", padding: "11px 14px", cursor: "pointer", opacity: r.superseded ? 0.5 : 1, fontFamily: "inherit" }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.property}{r.loanLabel ? <span style={{ color: K.gray, fontWeight: 400 }}> · {r.loanLabel}</span> : null}</span>
+                  <span style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere", minWidth: 0 }}>{r.property}{r.loanLabel ? <span style={{ color: K.gray, fontWeight: 400 }}> · {r.loanLabel}</span> : null}</span>
                   <span style={{ fontSize: 13.5, color: K.ink, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{fmtM(r.balance)}{r.balanceIsOriginal ? "*" : ""}</span>
-                  <span style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ fontSize: 12, color: K.gray, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.lender ?? "—"} · {rateLabel(r)}{r.partlySwapped ? " · partly" : ""} · {fmtDate(r.maturity)}</span><span style={{ flex: "none" }}><DocBadge rec={r.record} /></span></span>
+                  <span style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ fontSize: 12, color: K.gray, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere", minWidth: 0 }}>{r.lender ?? "—"} · {rateLabel(r)}{r.partlySwapped ? " · partly" : ""} · {fmtDate(r.maturity)}</span><span style={{ flex: "none" }}><DocBadge rec={r.record} /></span></span>
                   <span style={{ fontSize: 12, color: K.gray, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtPct(r.allInPct, 2)}{r.estimated ? <span style={{ color: K.amber }}>~</span> : null}</span>
                 </button>
               ))}
             </div></>
           ) : (
           <div style={{ ...card, overflowX: "auto" }}>
-            <table className="kpr-table" style={{ width: "100%", minWidth: 1000, borderCollapse: "collapse", tableLayout: "fixed" }}>
-              <colgroup><col style={{ width: "18%" }} /><col style={{ width: "10%" }} /><col style={{ width: 92 }} /><col style={{ width: "17%" }} /><col style={{ width: 82 }} /><col style={{ width: "13%" }} /><col style={{ width: 150 }} /><col style={{ width: "9%" }} /><col style={{ width: "11%" }} /></colgroup>
-              <thead><tr>{LOAN_COLS.map(c => <SortTh key={c.key} sort={loanSort} k={c.key} style={{ ...th, position: "static" }}>{c.label}</SortTh>)}</tr></thead>
+            <table className="kpr-table am-pin" style={{ width: "100%", minWidth: 1100, borderCollapse: "collapse" }}>
+              <thead><tr>{LOAN_COLS.map(c => <SortTh key={c.key} sort={loanSort} k={c.key} style={{ ...th, ...(c.key === "property" ? { position: "sticky", left: 0, zIndex: 3 } : { position: "static" }) }}>{c.label}</SortTh>)}</tr></thead>
               <tbody>{loanRows.map((r: DebtRow) => {
                 const d = r.record.data;
                 const recourse = [d.recourse, d.guarantor].filter(Boolean).map(String).join(" · ") || "—";
                 return (
                   <tr key={r.record.id} onClick={() => setDrawer(r.record.id)} tabIndex={0} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDrawer(r.record.id); } }} style={{ opacity: r.superseded ? 0.5 : 1, cursor: "pointer", height: 42 }} title="Click for every field">
-                    <td style={{ ...ell, overflow: "visible" }}><div style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={{ fontWeight: 600 }}>{r.property}</span>{r.loanLabel && <span style={{ color: K.gray }}> · {r.loanLabel}</span>}{r.superseded && <span style={{ color: K.gray }}> · Datex row (superseded)</span>}</span><span style={{ flex: "none" }}><DocBadge rec={r.record} /></span></div></td>
-                    <td style={ell} title={r.lender ?? undefined}>{r.lender ?? "—"}</td>
+                    <td style={{ ...wrapTd, minWidth: 190 }}><div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "2px 0" }}><span><span style={{ fontWeight: 600 }}>{r.property}</span>{r.loanLabel && <span style={{ color: K.gray }}> · {r.loanLabel}</span>}{r.superseded && <span style={{ color: K.gray }}> · Datex row (superseded)</span>}</span><span style={{ flex: "none" }}><DocBadge rec={r.record} /></span></div></td>
+                    <td style={{ ...wrapTd, minWidth: 130 }}>{r.lender ?? "—"}</td>
                     <td style={{ ...num, verticalAlign: "middle" }}>{fmtM(r.balance)}{r.balanceIsOriginal ? "*" : ""}</td>
-                    <td style={ell} title={[rateLabel(r), partlyTxt(r)].filter(Boolean).join(" · ")}>{r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType ?? "—"}{r.spreadBps != null && r.rateClass !== "fixed" ? <span style={{ color: K.gray }}> +{r.spreadBps}</span> : null}{r.partlySwapped ? <span style={{ color: K.amber }}> · {partlyTxt(r)}</span> : null}</td>
+                    <td style={{ ...wrapTd, minWidth: 140 }}>{r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType ?? "—"}{r.spreadBps != null && r.rateClass !== "fixed" ? <span style={{ color: K.gray }}> +{r.spreadBps}</span> : null}{r.partlySwapped ? <span style={{ color: K.amber }}> · {partlyTxt(r)}</span> : null}</td>
                     <td style={{ ...num, verticalAlign: "middle" }} title={allInTip(r)}>{fmtPct(r.allInPct, 2)}{r.estimated ? <span style={{ color: K.amber }} aria-label={r.allInBasis === "blended" ? "blended estimate (partly swapped)" : "estimated from today's curve"}>~</span> : null}</td>
-                    <td style={ell} title={r.ioAmort ?? undefined}>{r.ioAmort ?? "—"}</td>
-                    <td style={ell}>{fmtDate(r.maturity)} {daysPill(r.daysToMaturity, r.flag)}</td>
-                    <td style={ell} title={s(d.extensionOptions) ?? undefined}>{String(d.extensionOptions ?? "—")}</td>
-                    <td style={ell} title={recourse}>{recourse}</td>
+                    <td style={{ ...wrapTd, minWidth: 140 }}><Clamp2 text={r.ioAmort} /></td>
+                    <td className="am-nowrap" style={{ ...wrapTd, whiteSpace: "nowrap" }}>{fmtDate(r.maturity)} {daysPill(r.daysToMaturity, r.flag)}</td>
+                    <td style={{ ...wrapTd, minWidth: 230 }}><Clamp2 text={s(d.extensionOptions)} /></td>
+                    <td style={{ ...wrapTd, minWidth: 230 }}><Clamp2 text={recourse === "—" ? null : recourse} /></td>
                   </tr>
                 );
               })}</tbody>
@@ -560,7 +564,7 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
                   <td style={num}>{fmtPct(w.marketRatePct, 3)}<Src>{w.termsPending ? "not priced" : `${w.curve ?? "no curve"}${w.remainingYears != null ? ` · ${w.remainingYears}y left` : ""}`}</Src></td>
                   <td style={{ ...num, color: w.mtm == null ? K.gray : w.mtm >= 0 ? "#3e8a2f" : K.red, fontWeight: 700 }}>{w.mtm == null ? "—" : `${w.mtm >= 0 ? "+" : "−"}${fmtM(Math.abs(w.mtm))}`}<Src>{w.mtmLabel}</Src></td>
                   <td style={{ ...td, fontSize: 11.5, color: K.gray, maxWidth: 220 }}><DocBadge rec={w.record} />{w.record.sourceNote ? <div style={{ marginTop: 3 }}>{w.record.sourceNote}</div> : null}</td>
-                  <td style={td}><RowActions isOpen={swapDrawer === w.record.id} onToggle={() => setSwapDrawer(w.record.id)} isAdmin={isAdmin} onEdit={() => setEdit({ kind: "swap", rec: w.record })} onDelete={() => del(w.record.id)} /></td>
+                  <td className="am-nowrap" style={{ ...td, whiteSpace: "nowrap" }}><RowActions isOpen={swapDrawer === w.record.id} onToggle={() => setSwapDrawer(w.record.id)} isAdmin={isAdmin} onEdit={() => setEdit({ kind: "swap", rec: w.record })} onDelete={() => del(w.record.id)} /></td>
                 </tr>,
               ];
             })}</tbody>
@@ -580,27 +584,27 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
                 <div style={{ ...card, overflow: "hidden" }}>
                   {prefRows.map((p, k) => (
                     <button key={p.record.id} onClick={() => setPrefDrawer(p.record.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: "2px 10px", width: "100%", textAlign: "left", background: "#fff", border: "none", borderTop: k ? "1px solid #f3f2ee" : "none", padding: "11px 14px", cursor: "pointer", fontFamily: "inherit" }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{p.property}{p.loanLabel ? <span style={{ color: K.gray, fontWeight: 400 }}> · {p.loanLabel}</span> : null}</span>
+                      <span style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere", minWidth: 0 }}>{p.property}{p.loanLabel ? <span style={{ color: K.gray, fontWeight: 400 }}> · {p.loanLabel}</span> : null}</span>
                       <span style={{ fontSize: 13.5, color: K.ink, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{fmtM(p.amount)}</span>
-                      <span style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ fontSize: 12, color: K.gray, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{p.investor ?? "—"} · current {fmtPct(p.currentPayPct, 2)}{p.accruedPct != null ? ` +${p.accruedPct.toFixed(2)}% accrues` : ""}</span><span style={{ flex: "none" }}><DocBadge rec={p.record} /></span></span>
+                      <span style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ fontSize: 12, color: K.gray, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere", minWidth: 0 }}>{p.investor ?? "—"} · current {fmtPct(p.currentPayPct, 2)}{p.accruedPct != null ? ` +${p.accruedPct.toFixed(2)}% accrues` : ""}</span><span style={{ flex: "none" }}><DocBadge rec={p.record} /></span></span>
                       <span style={{ fontSize: 12, color: K.gray, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>all-in {fmtPct(p.ratePct, 2)}</span>
                     </button>
                   ))}
                 </div></>
               ) : (
               <div style={{ ...card, overflowX: "auto" }}>
-                <table className="kpr-table" style={{ width: "100%", minWidth: 900, borderCollapse: "collapse" }}>
-                  <thead><tr>{PREF_COLS.map(c => <SortTh key={c.key} sort={prefSort} k={c.key} style={{ ...th, position: "static" }}>{c.label}</SortTh>)}</tr></thead>
+                <table className="kpr-table am-pin" style={{ width: "100%", minWidth: 980, borderCollapse: "collapse" }}>
+                  <thead><tr>{PREF_COLS.map(c => <SortTh key={c.key} sort={prefSort} k={c.key} style={{ ...th, ...(c.key === "property" ? { position: "sticky", left: 0, zIndex: 3 } : { position: "static" }) }}>{c.label}</SortTh>)}</tr></thead>
                   <tbody>{prefRows.map((p: PrefRow) => (
                     <tr key={p.record.id} onClick={() => setPrefDrawer(p.record.id)} tabIndex={0} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPrefDrawer(p.record.id); } }} style={{ cursor: "pointer", height: 42 }} title="Click for every field">
-                      <td style={{ ...ell, overflow: "visible" }}><div style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={{ fontWeight: 600 }}>{p.property}</span>{p.loanLabel && <span style={{ color: K.gray }}> · {p.loanLabel}</span>}</span><span style={{ flex: "none" }}><DocBadge rec={p.record} /></span></div></td>
-                      <td style={ell}>{p.investor ?? "—"}</td>
+                      <td style={{ ...wrapTd, minWidth: 190 }}><div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "2px 0" }}><span><span style={{ fontWeight: 600 }}>{p.property}</span>{p.loanLabel && <span style={{ color: K.gray }}> · {p.loanLabel}</span>}</span><span style={{ flex: "none" }}><DocBadge rec={p.record} /></span></div></td>
+                      <td style={{ ...wrapTd, minWidth: 130 }}>{p.investor ?? "—"}</td>
                       <td style={{ ...num, verticalAlign: "middle" }}>{fmtM(p.amount)}</td>
                       <td style={{ ...num, verticalAlign: "middle" }}>{fmtPct(p.currentPayPct, 2)}{p.accruedPct != null && <span style={{ color: K.gray, fontSize: 11.5 }}> +{p.accruedPct.toFixed(2)}% accrues</span>}</td>
                       <td style={{ ...num, verticalAlign: "middle" }}>{fmtPct(p.ratePct, 2)}</td>
                       <td style={{ ...num, verticalAlign: "middle" }}>{fmtM(p.annualCurrentPay)}</td>
                       <td style={{ ...num, verticalAlign: "middle" }}>{fmtM(p.annualAccrual)}</td>
-                      <td style={ell}>{fmtDate(p.redemptionDate ?? p.maturity)} {daysPill(p.daysToMaturity)}</td>
+                      <td className="am-nowrap" style={{ ...wrapTd, whiteSpace: "nowrap" }}>{fmtDate(p.redemptionDate ?? p.maturity)} {daysPill(p.daysToMaturity)}</td>
                     </tr>
                   ))}</tbody>
                 </table>
@@ -1198,7 +1202,7 @@ export function DatexSalesCard({ deal, bench, note }: { deal: Deal; bench?: Anal
           {note && <div style={{ fontSize: 12.5, color: K.ink, marginTop: 4 }}>{note}</div>}
           <Src>{sales.source}. Occupancy cost = base rent + recoveries + other ÷ 12-month sales; at risk over 12% (anchors) / 15% (shops). Benchmark = library median sales PSF for the brand.</Src>
           <div style={{ overflowX: "auto", marginTop: 8 }}>
-            <table className="kpr-table" style={{ width: "100%", minWidth: 760, borderCollapse: "collapse" }}>
+            <table className="kpr-table am-pin" style={{ width: "100%", minWidth: 760, borderCollapse: "collapse" }}>
               <thead><tr>{["Tenant", "SF", "12-mo sales", "Sales PSF", "Period", "Occ. cost", "vs library", "Flags"].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>{sales.rows.map(r => (
                 <tr key={r.tenant}>
@@ -1256,8 +1260,8 @@ export function DateTimeline({ items, onOpenDeal }: { items: CriticalDate[]; onO
           <div key={`${i.type}-${i.dealId}-${i.date}-${k}`} style={{ display: "grid", gridTemplateColumns: "34px 1fr auto", gap: 12, alignItems: "center", padding: "10px 0", borderTop: k ? "1px solid #f3f2ee" : "none" }}>
             <span title={i.type} style={{ position: "relative", width: 30, height: 30, borderRadius: "50%", background: `${c}14`, color: c, border: `1.5px solid ${c}55`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13 }}>{TYPE_ICON[i.type] ?? "•"}</span>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, color: K.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}><button onClick={() => onOpenDeal(i.dealId)} style={linkBtn}>{i.property}</button>{i.tenant ? ` · ${i.tenant}` : ""}</div>
-              <div style={{ fontSize: 12, color: K.gray, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{i.type}{i.description ? ` — ${i.description}` : ""}</div>
+              <div style={{ fontSize: 13.5, color: K.ink, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere" }}><button onClick={() => onOpenDeal(i.dealId)} style={linkBtn}>{i.property}</button>{i.tenant ? ` · ${i.tenant}` : ""}</div>
+              <div style={{ fontSize: 12, color: K.gray, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere" }}>{i.type}{i.description ? ` — ${i.description}` : ""}</div>
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontFamily: "'Roboto',sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 13, color: K.ink, whiteSpace: "nowrap" }}>{fmtDate(i.date)}</div>

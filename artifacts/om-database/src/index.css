@@ -255,3 +255,19 @@ button:disabled { cursor: default; opacity: .6; }
 .kpr-skel { background: linear-gradient(90deg, #efeee9 25%, #f7f6f2 37%, #efeee9 63%); background-size: 400% 100%; animation: kprShimmer 1.3s ease infinite; border-radius: 8px; }
 @keyframes kprShimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
 @media (prefers-reduced-motion: reduce) { .kpr-skel { animation: none; } * { scroll-behavior: auto !important; } }
+
+/* Asset Mgmt tables (Eric, 10/19/26): nothing truncated with "…", each table scrolls sideways inside
+   its card, and the FIRST column (Property / Brand / Tenant / Covenant) stays pinned on the left —
+   on phones too — so you always know which row you're on. Zebra / hover rules above still colour it. */
+.am-pin tbody td:first-child, .am-pin thead th:first-child, .am-pin tfoot td:first-child {
+  position: sticky; left: 0; z-index: 1; background: #fff; border-right: 1px solid #ecebe6;
+  box-shadow: 6px 0 6px -6px rgba(0,0,0,0.12); min-width: 170px; max-width: 280px; white-space: normal;
+}
+.am-pin thead th:first-child { z-index: 3; }
+.am-pin td { white-space: normal; overflow-wrap: break-word; }
+.am-pin td button { white-space: nowrap; }
+.am-pin td.am-nowrap { white-space: nowrap; overflow-wrap: normal; }
+.am-clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@media (max-width: 767px) {
+  .am-pin tbody td:first-child, .am-pin thead th:first-child, .am-pin tfoot td:first-child { min-width: 120px; max-width: 150px; }
+}

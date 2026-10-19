@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-19-am-tables-full-text",
+    date: "2026-10-19",
+    category: "improved",
+    title: "Asset Mgmt tables show names and terms in full",
+    detail: "Property, lender and counterparty names and loan terms no longer get cut off with \"…\"; wide tables scroll sideways inside their card, with the Property column pinned on the left.",
+    where: "Asset Mgmt and owned deal pages",
+  },
+  {
     // Oct 17–19 consolidated into ONE entry (Eric, 10/19/26). Lines: "## " = heading, "- " = bullet,
     // "- [admin] " = shown to admins only (see forViewer).
     id: "2026-10-19-weekend-roundup",
