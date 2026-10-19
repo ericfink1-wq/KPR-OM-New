@@ -25,6 +25,7 @@ import {
 import { requireAdmin, requireAuth } from "../middleware/auth";
 import { logger } from "../lib/logger";
 import { BUILD_COMMIT } from "../lib/buildInfo";
+import { isDocOwner, scrubForViewer } from "../lib/docPrivacy";
 
 // Two routers, deliberately: `router` (the MCP protocol endpoint) is mounted BEFORE
 // the site's session/2FA gate because it authenticates with its own API key, while
@@ -120,7 +121,9 @@ function buildServer(key: VerifiedKey, baseUrl?: string): Server {
     const args = (request.params.arguments ?? {}) as Record<string, unknown>;
     try {
       const result = await tool.handler(args, { caller: { id: key.id, name: key.name, userId: key.userId, email: key.email }, baseUrl });
-      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+      // Drive / SharePoint links and ids are owner-only, on the connector too.
+      const shown = isDocOwner({ userId: key.userId, email: key.email }) ? result : scrubForViewer(result);
+      return { content: [{ type: "text" as const, text: JSON.stringify(shown, null, 2) }] };
     } catch (err) {
       // Return the failure as tool content rather than throwing: the client can then
       // tell the user what broke instead of the whole conversation dying on a 500.

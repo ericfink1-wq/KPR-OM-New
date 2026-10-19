@@ -25,6 +25,7 @@ import houseViewRouter from "./houseView";
 import mcpRouter, { mcpAdminRouter } from "./mcp";
 import datexIngestRouter from "./datexIngest";
 import { needs2faReverify } from "./../lib/twoFactorPolicy";
+import { docPrivacyMiddleware } from "../lib/docPrivacy";
 
 const router: IRouter = Router();
 
@@ -55,6 +56,9 @@ router.use((req, res, next) => {
   next();
 });
 
+// Drive / SharePoint links and ids are Eric's only (10/19/26): every response below is scrubbed
+// for any other account. Mounted after the auth + 2FA gate so the session user is known.
+router.use(docPrivacyMiddleware as unknown as Parameters<typeof router.use>[0]);
 router.use(ingestRouter);
 router.use(dealsRouter);
 router.use(aliasesRouter);

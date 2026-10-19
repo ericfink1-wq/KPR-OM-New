@@ -29,6 +29,7 @@ import { planDatexImport, applyLiveBlock, datexDivergence, DATEX_BLOCK_KEY, type
 import { updateDealSafely } from "../lib/dealWrite";
 import { keepServerOwnedAnalysis } from "../lib/analysisOwnership";
 import { toListView, restoreOmittedDetail } from "../lib/dealListView";
+import { keepHiddenOnSave } from "../lib/docPrivacy";
 
 // Run the deterministic portfolio-comparison analytics (rescoreDeal) for an
 // imported deal and merge the result back. The JSON's self-contained grade is
@@ -384,7 +385,7 @@ router.post("/deals/import", requireAuth, async (req, res) => {
 
     if (existingRow) {
       // MERGE — overlay extracted fields from upload, keep user-entered fields from DB
-      const merged: Record<string, unknown> = { ...uploadedData };
+      const merged: Record<string, unknown> = keepHiddenOnSave(req.session, { ...uploadedData }, existingRow.data);
       for (const [k, v] of Object.entries(existingRow.data)) {
         if (USER_PRESERVED_KEYS.has(k) || k.startsWith("user_") || k.startsWith("custom_")) {
           merged[k] = v;
@@ -585,6 +586,8 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
     // A save from a LIST copy must not wipe the blocks the list leaves out — put them back
     // BEFORE the audit runs, or it would judge an incomplete record.
     restoreOmittedDetail(prevRows[0]?.data as Record<string, unknown> | undefined, rest);
+    // A non-owner never saw Eric's Drive / SharePoint links — put them back before writing.
+    if (prevRows[0]) { const kept = keepHiddenOnSave(req.session, rest, prevRows[0].data); for (const k of Object.keys(kept)) rest[k] = kept[k]; }
     normalizeDealAddress(rest);   // street-only address + backfill blank city/state/zip
     // Self-clean + refresh the integrity audit on every save (edits, roster pastes), so
     // the data stays clean and the audit stays current without any manual sweep. Pure +

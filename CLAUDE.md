@@ -53,6 +53,20 @@ it through these. Boundary tests: `__tests__/money.test.ts`.
 - `useAmData` resolves records / rates / abstracts independently (the hero waited on the slowest); hero caches last debt
   figures in localStorage. Fixed-position panels use `100%` not `100vw` (100vw read 409px on a 390px phone).
 
+## DOCUMENT-LINK PRIVACY (Eric, 10/19/26) — Drive / SharePoint links are OWNER-ONLY, enforced server-side
+`api-server lib/docPrivacy.ts`. Owner = seeded `usr_owner` / `OWNER_EMAIL` (default efink@kprcenters.com) / optional
+`DOC_LINK_OWNER_EMAILS` (comma list) — nobody else is assumed to be Eric. `docPrivacyMiddleware` (routes/index.ts, after
+the 2FA gate) wraps res.json for every other account: drops `sourceDocs`/`fileId`/any key naming drive|sharepoint|
+file/folder/doc ids, drops the `url` on debt-record sources (any host), replaces Drive/Docs/SharePoint/OneDrive links
+and Drive-style ids (25–44 chars, mixed case + digit, not ≥3 Capitalised words) in every string with "[link hidden]".
+MCP tool results get the same `scrubForViewer` (routes/mcp.ts, by the key's owner). SAVES by a non-owner go through
+`keepHiddenOnSave` → `restoreHidden` (deals PUT + import merge, am records POST + import, lease abstracts, site
+agreements) so an edit from a scrubbed copy never erases Eric's links. Skipped paths: /auth, /mcp-keys,
+/am/datex-auto/tokens, /datex/ (credentials shown once must stay intact). KEEP_KEY exempts ids/hashes/tokens but NEVER a
+key naming a file/doc/link (a `driveFileIds` column leaked through an "…Ids" exemption in the live test). New route that
+returns or saves records → it is covered by the middleware; a new WRITE path must call `keepHiddenOnSave`.
+Tests: `__tests__/docPrivacy.test.ts` (+ verified live: Andy-session sweep of every endpoint + MCP = zero hits).
+
 ## ROSTER SCRUB + DESIGN SYSTEM (10/18/26)
 - `om-database lib/rosterScrub.ts` (`scrubRoster`, `buildMarketIndex`, `benchmarkFor`, `nextRentStep`): ONE
   standard scrub for every OM — summary band (`RosterScrubBand.tsx`, top of Tenants tab), per-tenant flags +

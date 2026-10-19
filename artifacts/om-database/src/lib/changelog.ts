@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-19-doc-link-privacy",
+    date: "2026-10-19",
+    category: "improved",
+    title: "Links to internal document folders are private to the site owner",
+    detail: "Loan, swap and preferred-equity sources still show each document's title, type, date, status and what it was used for. The link itself, and any Google Drive or SharePoint link or file ID in notes, appears only on the site owner's account — everyone else sees \"[link hidden]\". The same applies in exports, the analyst chat and the Claude connector. Edits you make are saved as normal, and the hidden links stay in place.",
+    where: "Asset Mgmt → Debt, deal pages, lease abstracts",
+  },
+  {
     id: "2026-10-19-am-sorting",
     date: "2026-10-19",
     category: "improved",

@@ -11,6 +11,7 @@ import { fetchBrandNews, assessNews, brandNorm } from "../lib/watchlistNews";
 import { callAnthropicOnce } from "../lib/extract";
 import { proposeCovenants } from "../lib/covenants";
 import { listIngestTokens, createIngestToken, revokeIngestToken, listIngestLogs, getAutoRefreshSetting, setAutoRefreshEnabled, listIngestAudit } from "../lib/datexAutoRefresh";
+import { keepHiddenOnSave } from "../lib/docPrivacy";
 
 // ASSET MANAGEMENT — owned properties only. Reads for any signed-in member; every write is
 // admin-only (Eric: "admin-only edit controls"). Records carry a per-row source note.
@@ -37,11 +38,15 @@ router.post("/am/records", requireAdmin, async (req, res) => {
     if (!ENTRY_KINDS.includes(kind)) { res.status(400).json({ error: "kind must be loan, swap, date or pref" }); return; }
     const owned = await ownedDeals();
     if (!b.dealId || !owned.some(d => d.id === b.dealId)) { res.status(400).json({ error: "pick an owned property" }); return; }
-    const data = sanitizeFor(kind, b.data ?? {});
+    const id0 = (b.id && String(b.id).slice(0, 120)) || null;
+    const prior = id0 ? (await listRecords([...ENTRY_KINDS])).find(r => r.id === id0) : undefined;
+    // An admin who isn't Eric saved from a copy with his links stripped — put them back.
+    const data = keepHiddenOnSave(req.session, sanitizeFor(kind, b.data ?? {}), prior?.data);
     const bad = validateRecord(kind, data);
     if (bad) { res.status(400).json({ error: bad }); return; }
-    const id = (b.id && String(b.id).slice(0, 120)) || recordId(kind, b.dealId, data);
-    await upsertRecord(id, kind, b.dealId, data, b.sourceNote ? String(b.sourceNote).slice(0, 300) : null, req.session.userEmail || "admin");
+    const id = id0 || recordId(kind, b.dealId, data);
+    const note = keepHiddenOnSave(req.session, b.sourceNote ? String(b.sourceNote).slice(0, 300) : null, prior?.sourceNote);
+    await upsertRecord(id, kind, b.dealId, data, note, req.session.userEmail || "admin");
     res.json({ ok: true, id, data });
   } catch (err) { req.log.error({ err }, "am record save failed"); res.status(500).json({ error: "Couldn't save the record" }); }
 });
@@ -59,7 +64,11 @@ router.post("/am/records/import", requireAdmin, async (req, res) => {
     const plan = planImport(text, await ownedDeals(), new Set(recs.map(r => r.id)), recs);
     if (plan.problem) { res.status(400).json({ error: plan.problem }); return; }
     if ((req.body ?? {}).apply === true) {
-      for (const r of plan.rows) await upsertRecord(r.id, r.kind as AmKind, r.dealId, r.data, r.sourceNote, req.session.userEmail || "admin");
+      const byId = new Map(recs.map(x => [x.id, x]));
+      for (const r of plan.rows) {
+        const prior = byId.get(r.id);
+        await upsertRecord(r.id, r.kind as AmKind, r.dealId, keepHiddenOnSave(req.session, r.data, prior?.data), keepHiddenOnSave(req.session, r.sourceNote, prior?.sourceNote), req.session.userEmail || "admin");
+      }
     }
     res.json({ ok: true, applied: (req.body ?? {}).apply === true, rows: plan.rows, rejected: plan.rejected });
   } catch (err) { req.log.error({ err }, "am import failed"); res.status(500).json({ error: "Import failed" }); }

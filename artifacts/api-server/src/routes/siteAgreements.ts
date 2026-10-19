@@ -2,6 +2,7 @@ import { Router } from "express";
 import { sql, eq, and, asc } from "drizzle-orm";
 import { db, siteAgreementsTable } from "@workspace/db";
 import { requireAuth, requireAdmin } from "../middleware/auth";
+import { keepHiddenOnSave } from "../lib/docPrivacy";
 
 const router = Router();
 
@@ -120,7 +121,7 @@ router.post("/deals/:id/site-agreements", requireAuth, async (req, res) => {
       const row = existing[0];
       const nextVersion = (row.version ?? 1) + 1;
       await db.update(siteAgreementsTable)
-        .set({ data: data as Record<string, unknown>, version: nextVersion, updatedAt: new Date() })
+        .set({ data: keepHiddenOnSave(req.session, data, row.data) as Record<string, unknown>, version: nextVersion, updatedAt: new Date() })
         .where(eq(siteAgreementsTable.id, row.id));
       res.json({ ok: true, id: row.id, version: nextVersion });
       return;
@@ -167,7 +168,7 @@ router.post("/deals/:id/site-agreements/bulk", requireAuth, async (req, res) => 
       if (existing.length) {
         const row = existing[0];
         await db.update(siteAgreementsTable)
-          .set({ data: data as Record<string, unknown>, version: (row.version ?? 1) + 1, updatedAt: new Date() })
+          .set({ data: keepHiddenOnSave(req.session, data, row.data) as Record<string, unknown>, version: (row.version ?? 1) + 1, updatedAt: new Date() })
           .where(eq(siteAgreementsTable.id, row.id));
       } else {
         await db.insert(siteAgreementsTable).values({ id: newSiteAgreementId(), dealId, agreementName, data: data as Record<string, unknown>, version: 1 });
