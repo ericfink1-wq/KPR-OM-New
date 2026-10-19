@@ -2,7 +2,84 @@ import type { Deal } from "./idb";
 import { apiAiMessages } from "./api";
 import { robustParseJSON } from "./utils";
 
-export type DocType = "om" | "rent-roll" | "lease-options" | "sales" | "flyer" | "swap" | "loan" | "amort" | "unknown";
+export type DocType = "om" | "rent-roll" | "lease-options" | "sales" | "flyer" | "swap" | "loan" | "amort"
+  | "tax-bill" | "utility-bill" | "contract" | "estoppel" | "lease" | "rea" | "unknown";
+
+/** Supporting paperwork the site has no reader for: it can only be FILED against an
+ *  existing deal (recorded in that deal's Upload history), never become a deal itself
+ *  (Eric, 10/19/26 — the Project Evergreen drop turned a tax bill, a utility bill and
+ *  a signed contract into junk deals). */
+export const DOCUMENT_ONLY_TYPES: ReadonlySet<DocType> = new Set(["tax-bill", "utility-bill", "contract", "estoppel", "lease", "rea"]);
+export const DOC_TYPE_LABEL: Record<DocType, string> = {
+  "om": "OM", "rent-roll": "Rent roll", "lease-options": "Lease options", "sales": "Sales report", "flyer": "Leasing flyer",
+  "swap": "Swap confirm", "loan": "Loan document", "amort": "Amortization schedule", "tax-bill": "Tax bill",
+  "utility-bill": "Utility bill", "contract": "Contract / PSA", "estoppel": "Estoppel", "lease": "Lease", "rea": "REA / easement",
+  "unknown": "Unknown",
+};
+
+const countHits = (t: string, res: RegExp[]) => res.reduce((n, r) => n + (r.test(t) ? 1 : 0), 0);
+const isShort = (pages?: number | null) => pages == null || pages <= 6;
+
+/** A property TAX bill / statement / assessment notice. */
+export function detectTaxBill(text: string, fileName: string, pageCount?: number | null): boolean {
+  const fn = fileName.toLowerCase();
+  if (/offering|\bom\b|memorandum/.test(fn)) return false;
+  const t = (text || "").slice(0, 5000).toLowerCase();
+  const fileHit = /\btax(es)?[\s_-]*(bill|statement|notice|invoice)|\b(re|property|real[\s_-]*estate|county|school|city|town(ship)?)[\s_-]*tax(es)?\b/.test(fn);
+  const hits = countHits(t, [
+    /\b(tax bill|tax statement|tax notice|real estate tax|property tax|ad valorem)\b/, /\b(tax collector|treasurer|tax commissioner|assessor|receiver of taxes)\b/,
+    /\btax year\b/, /\bassessed (value|valuation)\b/, /\b(millage|mill rate|tax rate)\b/, /\bparcel (number|id|no\.?)|\bpin\b|\bblock\s+\d+.{0,20}\blot\b/,
+    /\b(amount due|total due|pay(able)? by|due date|installment|delinquent)\b/,
+  ]);
+  if (fileHit && isShort(pageCount) && hits >= 1) return true;
+  return hits >= 4 && isShort(pageCount) && !hasOmSaleSignals(text);
+}
+
+/** A utility bill (electric / water / gas / sewer / trash). */
+export function detectUtilityBill(text: string, fileName: string, pageCount?: number | null): boolean {
+  const fn = fileName.toLowerCase();
+  if (/offering|\bom\b|memorandum/.test(fn)) return false;
+  const t = (text || "").slice(0, 5000).toLowerCase();
+  const fileHit = /\b(utility|utilities|electric|water|sewer|gas|power)[\s_-]*(bill|invoice|statement)/.test(fn);
+  const hits = countHits(t, [
+    /\bkwh\b|\bccf\b|\bgallons\b|\bthm\b|\btherms\b/, /\bmeter (number|no\.?|reading|read)\b/, /\bservice (address|period|location)\b/,
+    /\bbilling (period|date)\b/, /\baccount (number|no\.?)\b/, /\b(amount due|total amount due|current charges|previous balance)\b/,
+    /\b(electric|water|sewer|natural gas|stormwater) (service|charges|usage)\b/, /\busage\b/,
+  ]);
+  if (fileHit && isShort(pageCount) && hits >= 2) return true;
+  return hits >= 4 && isShort(pageCount) && !hasOmSaleSignals(text);
+}
+
+/** A purchase-and-sale agreement / contract of sale (signed or draft) — a legal instrument, not a marketing OM. */
+export function detectContract(text: string, fileName: string): boolean {
+  const head = (text || "").slice(0, 3000).toLowerCase();
+  if (/offering memorandum|offering summary|confidential offering|investment (offering|opportunity|highlights)/.test(head)) return false;
+  const title = /\b(purchase and sale agreement|agreement of (purchase and )?sale|contract of sale|contract for (the )?(purchase|sale)|(real estate |real property )?purchase agreement|sale and purchase agreement|agreement for (the )?(purchase|sale) (and sale )?of)\b/.test(head);
+  const legal = countHits((text || "").slice(0, 20000).toLowerCase(), [
+    /\bwitnesseth\b/, /\bin witness whereof\b/, /\bhereinafter\b/, /[“"](seller|purchaser|buyer)[”"]/, /\b(earnest money|deposit) (shall|will) be\b|\bescrow agent\b/,
+    /\bclosing date\b/, /\bdue diligence period\b|\binspection period\b/, /docusign envelope id/,
+  ]);
+  if (title && legal >= 2) return true;
+  const fn = fileName.toLowerCase();
+  return /\bpsa\b|purchase[\s_-]*(and[\s_-]*sale[\s_-]*)?agreement|contract[\s_-]*of[\s_-]*sale|signed[\s_-]*contract|executed[\s_-]*(psa|contract)/.test(fn) && legal >= 3;
+}
+
+/** A tenant estoppel certificate. */
+export function detectEstoppel(text: string, fileName: string): boolean {
+  const head = (text || "").slice(0, 3000).toLowerCase();
+  if (/offering memorandum|offering summary/.test(head)) return false;
+  return /\bestoppel\b/.test(fileName.toLowerCase()) || /\b(tenant )?estoppel (certificate|letter|statement)\b/.test(head);
+}
+
+/** A tenant SALES report (one property or a whole portfolio) — routed to the sales importer, never read as an OM. */
+export function detectSalesReport(text: string, fileName: string): boolean {
+  if (hasOmSaleSignals(text)) return false;      // an OM that carries a sales page is still an OM
+  const fn = fileName.toLowerCase();
+  if (/offering|\bom\b|memorandum|flyer|brochure/.test(fn)) return false;
+  const head = (text || "").slice(0, 3000).toLowerCase();
+  return /\bsales[\s_-]*(report|history|summary|analysis)|tenant[\s_-]*sales|\bttm[\s_-]*sales/.test(fn)
+    || /\b(tenant sales (report|history|summary)|sales (report|history) by tenant|gross sales (report|by tenant)|annual sales report|sales per (sq\.? ?ft|square foot) report)\b/.test(head);
+}
 
 // Deterministic detector for a lease-OPTIONS schedule (a renewal-option report,
 // not a full rent roll). These list option ladders but usually lack current SF /
@@ -176,6 +253,16 @@ export function applyDeterministicOverrides(
   llmType: DocType, text: string, fileName: string, pageCount?: number | null,
 ): DocType {
   let type = llmType;
+  // Supporting paperwork first (Eric, 10/19/26): a tax bill, utility bill, estoppel or
+  // signed contract read as an "om" became a junk deal. These only REPLACE an om/unknown
+  // guess, and each detector refuses a document that reads like a sale OM.
+  if (type === "om" || type === "unknown") {
+    if (detectEstoppel(text, fileName)) type = "estoppel";
+    else if (detectContract(text, fileName)) type = "contract";
+    else if (detectTaxBill(text, fileName, pageCount)) type = "tax-bill";
+    else if (detectUtilityBill(text, fileName, pageCount)) type = "utility-bill";
+    else if (detectSalesReport(text, fileName)) type = "sales";
+  }
   // An options schedule must never be treated as a roster-replacing rent roll.
   if ((type === "rent-roll" || type === "unknown") && detectLeaseOptions(text, fileName)) type = "lease-options";
   // Swap and loan docs are financing, never a sale OM (swap first — more specific).
@@ -203,7 +290,7 @@ export async function classifyDocument(text: string, fileName: string, pageCount
   const slice = text.slice(0, 6000);
   const prompt = `You are a commercial real estate document classifier. Given the START of a document (and its file name), identify what it is and which property it concerns.
 
-Return ONLY JSON: {"type":"om|rent-roll|lease-options|sales|flyer|swap|loan|amort|unknown","propertyName":string|null,"address":string|null,"confidence":"high|medium|low"}
+Return ONLY JSON: {"type":"om|rent-roll|lease-options|sales|flyer|swap|loan|amort|tax-bill|utility-bill|contract|estoppel|lease|unknown","propertyName":string|null,"address":string|null,"confidence":"high|medium|low"}
 
 Definitions:
 - "om" = an Offering Memorandum / investment-SALE package for a property being sold (has sections like investment highlights, sale financials/NOI/cap rate, rent abstracts, sale comps).
@@ -214,7 +301,13 @@ Definitions:
 - "swap" = an interest-rate SWAP confirmation (e.g. an ISDA dealer confirmation): a notional amount, fixed rate, floating rate option (SOFR), spread, trade/effective/termination dates, and a Fixed/Floating Rate Payer.
 - "loan" = a LOAN document: a loan agreement, credit agreement, promissory note, loan term sheet, or closing statement — the FINANCING terms (lender, loan amount, rate, maturity, LTV, prepayment). Distinct from an "om" (a sale-marketing package, not a loan).
 - "amort" = an AMORTIZATION SCHEDULE: a table of periodic payments with a running principal balance (columns like Period/Date, Payment, Interest, Principal, Balance). The numeric schedule itself, not a legal loan agreement.
-- "unknown" = none of the above, or can't tell.
+- "tax-bill" = a property TAX bill, tax statement or assessment notice (parcel, tax year, assessed value, amount due).
+- "utility-bill" = an electric / water / gas / sewer bill (account number, meter, usage, amount due).
+- "contract" = a purchase and sale agreement / contract of sale / amendment to one (a legal instrument between Seller and Purchaser), signed or draft. NOT an OM.
+- "estoppel" = a tenant estoppel certificate.
+- "lease" = a lease, lease amendment or guaranty (legal document between landlord and tenant).
+- "sales" ALSO covers a PORTFOLIO sales report listing tenant sales at several properties.
+- "unknown" = none of the above, or can't tell. Only a sale-marketing package is "om" — paperwork ABOUT a property (bills, contracts, certificates) never is.
 
 Rules:
 - propertyName / address: the subject property this document is about, if stated (clean name, no boilerplate). null if not clear.
@@ -234,7 +327,7 @@ ${slice}`;
     });
     const raw = res.content?.[0]?.text ?? "";
     const parsed = robustParseJSON(raw) as Partial<Classification>;
-    const llmType = (["om", "rent-roll", "lease-options", "sales", "flyer", "swap", "loan", "amort", "unknown"] as const).includes(parsed.type as DocType)
+    const llmType = (["om", "rent-roll", "lease-options", "sales", "flyer", "swap", "loan", "amort", "tax-bill", "utility-bill", "contract", "estoppel", "lease", "unknown"] as readonly string[]).includes(parsed.type as string)
       ? (parsed.type as DocType) : "unknown";
     const type = applyDeterministicOverrides(llmType, text, fileName, pageCount);
     const confidence = (["high", "medium", "low"] as const).includes(parsed.confidence as Classification["confidence"])
@@ -246,7 +339,8 @@ ${slice}`;
       confidence,
     };
   } catch {
-    return { type: "unknown", propertyName: null, address: null, confidence: "low" };
+    // The model call failed — the deterministic detectors still decide what they can.
+    return { type: applyDeterministicOverrides("unknown", text, fileName, pageCount), propertyName: null, address: null, confidence: "low" };
   }
 }
 

@@ -153,13 +153,13 @@ export async function apiChangePassword(currentPassword: string, newPassword: st
   return { ok: true };
 }
 
-export interface AuthState { authenticated: boolean; isAdmin: boolean; email: string | null; name: string | null; twoFactorPending?: boolean; needs2faSetup?: boolean; needs2faReverify?: boolean }
+export interface AuthState { authenticated: boolean; isAdmin: boolean; isOwner?: boolean; email: string | null; name: string | null; twoFactorPending?: boolean; needs2faSetup?: boolean; needs2faReverify?: boolean }
 export async function apiCheckAuth(): Promise<AuthState> {
   try {
     const resp = await apiFetch("/auth/me");
     if (!resp.ok) return { authenticated: false, isAdmin: false, email: null, name: null };
-    const body = await resp.json() as { authenticated?: boolean; isAdmin?: boolean; email?: string | null; name?: string | null; twoFactorPending?: boolean; needs2faSetup?: boolean; needs2faReverify?: boolean };
-    return { authenticated: !!body.authenticated, isAdmin: !!body.isAdmin, email: body.email ?? null, name: body.name ?? null, twoFactorPending: !!body.twoFactorPending, needs2faSetup: !!body.needs2faSetup, needs2faReverify: !!body.needs2faReverify };
+    const body = await resp.json() as { authenticated?: boolean; isAdmin?: boolean; isOwner?: boolean; email?: string | null; name?: string | null; twoFactorPending?: boolean; needs2faSetup?: boolean; needs2faReverify?: boolean };
+    return { authenticated: !!body.authenticated, isAdmin: !!body.isAdmin, isOwner: !!body.isOwner, email: body.email ?? null, name: body.name ?? null, twoFactorPending: !!body.twoFactorPending, needs2faSetup: !!body.needs2faSetup, needs2faReverify: !!body.needs2faReverify };
   } catch {
     return { authenticated: false, isAdmin: false, email: null, name: null };
   }
@@ -199,24 +199,37 @@ export async function apiLoginEvents(): Promise<LoginEvent[]> {
 }
 
 // --- Upload activity log ---
+/** What one upload did: created a deal / was added to one / was skipped / was turned away
+ *  ("Not an OM — not added") / failed. Legacy rows say success. */
+export type UploadResult = "created" | "attached" | "skipped" | "rejected" | "failed";
 export interface UploadLogEntry {
   id: string; fileName: string | null; docType: string | null; status: string;
   detail: string | null; dealId: string | null;
   userEmail: string | null; userName: string | null; createdAt: string;
+  result?: UploadResult; dealName?: string | null; dealExists?: boolean;
 }
 // Record one upload outcome (best-effort; the WHO is filled in server-side from
 // the session). Never throws — logging must never break the upload flow.
-export async function apiRecordUpload(e: { fileName: string; docType?: string | null; status: "success" | "failed"; detail?: string | null; dealId?: string | null }): Promise<void> {
+export async function apiRecordUpload(e: { fileName: string; docType?: string | null; status: UploadResult | "success"; detail?: string | null; dealId?: string | null }): Promise<void> {
   try { await apiFetch("/upload-log", { method: "POST", body: JSON.stringify(e) }); } catch { /* non-fatal */ }
 }
-export async function apiUploadLog(): Promise<UploadLogEntry[]> {
-  const resp = await apiFetch("/upload-log");
+export async function apiUploadLog(f: { user?: string; from?: string; to?: string; result?: string; limit?: number } = {}): Promise<UploadLogEntry[]> {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(f)) if (v != null && v !== "") qs.set(k, String(v));
+  const resp = await apiFetch(`/upload-log${qs.toString() ? `?${qs}` : ""}`);
   if (!resp.ok) return [];
   return await resp.json().catch(() => []) as UploadLogEntry[];
 }
-// Who first uploaded a given deal (team attribution shown on the deal page). Any
-// signed-in user can read it; returns null when the deal has no logged upload.
-export interface DealUploader { userName: string | null; userEmail: string | null; at: string | null; inferred?: boolean }
+// A deal's upload provenance (shown on the deal page). Any signed-in user can read it.
+// `createdBy` = who created the deal (null = before upload tracking — `inferredCreator`
+// is only a guess); `lastUpload` = the most recent upload that created or added to it.
+export interface UploadPerson { userName: string | null; userEmail: string | null; at: string | null }
+export interface UploadHistoryEntry { id: string; fileName: string | null; docType: string | null; result: UploadResult; detail: string | null; userName: string | null; userEmail: string | null; at: string }
+export interface DealUploader {
+  userName: string | null; userEmail: string | null; at: string | null; inferred?: boolean;
+  createdBy?: UploadPerson | null; lastUpload?: UploadPerson | null; history?: UploadHistoryEntry[];
+  inferredCreator?: { userName: string | null; userEmail: string | null } | null;
+}
 export async function apiDealUploadedBy(dealId: string): Promise<DealUploader | null> {
   try {
     const resp = await apiFetch(`/upload-log/by-deal/${encodeURIComponent(dealId)}`);
@@ -471,6 +484,17 @@ export async function apiSaveDeals(deals: Deal[]): Promise<void> {
 export async function apiDeleteDeal(id: string): Promise<void> {
   const resp = await apiFetch(`/deals/${id}`, { method: "DELETE" });
   if (!resp.ok) throw new Error("Failed to delete deal");
+}
+
+// Throw away THIS upload's own in-flight record (skipped / discarded / "Not an OM — not
+// added"). Members can't DELETE deals, so the server lets the uploader discard a record
+// they started and no one has saved; an admin falls back to the normal delete. Never throws.
+export async function apiDiscardUpload(id: string): Promise<void> {
+  try {
+    const r = await apiFetch(`/deals/${encodeURIComponent(id)}/discard-ingest`, { method: "POST" });
+    if (r.ok) return;
+  } catch { /* fall through */ }
+  await apiDeleteDeal(id).catch(() => {});
 }
 
 export async function apiCreateDeal(deal: Deal): Promise<void> {

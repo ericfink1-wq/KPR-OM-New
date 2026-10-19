@@ -10,6 +10,7 @@ import QRCode from "qrcode";
 import { generateSecret, verifyTotp, otpauthUri } from "../lib/totp";
 import { needs2faReverify } from "../lib/twoFactorPolicy";
 import { whatsNewCutoff } from "../lib/whatsNew";
+import { isDocOwner } from "../lib/docPrivacy";
 
 const router = Router();
 
@@ -497,6 +498,8 @@ router.get("/auth/me", async (req, res) => {
   res.json({
     authenticated: !!req.session.authenticated,
     isAdmin: !!req.session.isAdmin,
+    // Eric's own account (docPrivacy owner rule) — gates the owner-only upload override.
+    isOwner: !!req.session.authenticated && isDocOwner({ userId: req.session.userId, email: req.session.userEmail }),
     email: req.session.userEmail || null,
     name: req.session.userName || null,
     twoFactorPending: !!req.session.pending2faUserId && !req.session.authenticated,

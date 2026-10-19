@@ -6,6 +6,7 @@ import { apiImportDeal, apiSaveDeal, apiLoadDealsFull, ensureFullDeal, apiLoadSo
 import type { SnapshotMeta, FeedbackItem } from "../lib/api";
 import RatesPanel from "./RatesPanel";
 import Members from "./Members";
+import UploadLogPage from "./UploadLogPage";
 import McpAccess from "./McpAccess";
 import TwoFactorModal from "./TwoFactorModal";
 import ChangePassword from "./ChangePassword";
@@ -46,11 +47,13 @@ interface Props {
   onAnalyticsNav?: (dest: string) => void;
   onClosingCalc?: () => void;
   onOpenSearch?: () => void;
+  /** Open a deal (the Upload log's deal links). */
+  onOpenDeal?: (id: string) => void;
   /** The deal page that's open, if any — Today's Rates sizes a loan for it. */
   currentDeal?: { name: string; noi: number | null; price?: number | null } | null;
 }
 
-export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onWhatsNew, whatsNewCount = 0, onDealsAdded, isAdmin, onAdminChange, onAnalyticsNav, onClosingCalc, onOpenSearch, currentDeal }: Props) {
+export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles, onHelpOpen, onWhatsNew, whatsNewCount = 0, onDealsAdded, isAdmin, onAdminChange, onAnalyticsNav, onClosingCalc, onOpenSearch, onOpenDeal, currentDeal }: Props) {
   const isMobile = useIsMobile();
   const fileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
@@ -71,6 +74,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
   const [ratesOpen, setRatesOpen] = useState(false);
   const [houseViewOpen, setHouseViewOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
+  const [uploadLogOpen, setUploadLogOpen] = useState(false);
   const [mcpOpen, setMcpOpen] = useState(false);   // "Claude access" — MCP key management (admin)
   const [twoFAOpen, setTwoFAOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
@@ -675,6 +679,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
         {/* Everything account/admin-ish lives in the avatar menu (right, never scrolls),
             so the nav no longer overflows and slides under the logo (Eric, 10/16/26). */}
         {membersOpen && <Members onClose={() => setMembersOpen(false)} />}
+        {uploadLogOpen && <UploadLogPage onClose={() => setUploadLogOpen(false)} onOpenDeal={onOpenDeal} />}
         {mcpOpen && <McpAccess onClose={() => setMcpOpen(false)} isAdmin={isAdmin} />}
         {pwOpen && <ChangePassword onClose={() => setPwOpen(false)} />}
         {twoFAOpen && <TwoFactorModal onClose={() => setTwoFAOpen(false)} />}
@@ -734,6 +739,7 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
             {isAdmin && <>
               <div style={{ padding: "10px 14px 4px", fontSize: 9.5, fontWeight: 800, letterSpacing: "0.1em", color: "#94928b", textTransform: "uppercase", background: "#faf9f5", borderTop: "1px solid #efeee9" }}>Admin</div>
               {menuBtn(() => { setBackupMenu(false); setMembersOpen(true); setUploadFails(0); try { localStorage.setItem("uploadlog-last-view", String(Date.now())); } catch { /* ignore */ } }, `Members${uploadFails > 0 ? ` (${uploadFails} failed upload${uploadFails === 1 ? "" : "s"})` : ""}`, "Approve accounts, upload log")}
+              {menuBtn(() => { setBackupMenu(false); setUploadLogOpen(true); }, "Upload log", "Every upload: who, what, and what it did")}
               {menuBtn(handleFullBackup, "Full backup (.json)", `All deals, sources & images · ${deals.length} deal${deals.length !== 1 ? "s" : ""}`)}
               {menuBtn(handleDealsOnlyBackup, "Deals only (.json, no images)", `Deal data only — a few MB, easy to share`)}
               {menuBtn(exportCSV, "Export spreadsheet (.csv)", "Key fields for Excel")}

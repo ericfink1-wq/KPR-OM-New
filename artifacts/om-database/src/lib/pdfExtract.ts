@@ -166,6 +166,10 @@ export async function _capturePagePhoto(
   // aerial background (a green wash), so site-plan captures pass
   // preferPageRender=true to use the full composed page render instead.
   preferPageRender = false,
+  // Auto-picked covers (Eric, 10/19/26): a tax bill / utility bill / contract has no
+  // property photo, and the page-render fallback turned a random page into the cover.
+  // requirePhoto=true returns nothing unless a real photo was found on the page.
+  requirePhoto = false,
 ): Promise<{ cover: string | null; thumb: string | null }> {
   const page = await pdf.getPage(pageNum);
   const base = page.getViewport({ scale: 1 });
@@ -260,6 +264,7 @@ export async function _capturePagePhoto(
     }
   } catch {}
 
+  if (!cleanCanvas && requirePhoto) { pc.width = pc.height = 0; return { cover: null, thumb: null }; }
   let source: HTMLCanvasElement = cleanCanvas || pc;
   // No clean photo found but a half was requested → crop the page render.
   if (!cleanCanvas && (half === "left" || half === "right")) {
@@ -288,7 +293,7 @@ export async function extractFlyerImages(buffer: ArrayBuffer): Promise<{ cover: 
   let cover: string | null = null, coverThumb: string | null = null;
   // Even on a marketing flyer the hero photo isn't always page 1's largest image —
   // some lead with a tenant-LOGO collage. Pick the genuinely photographic page.
-  try { const cp = await _pickCoverPage(pdf, lib); const c = await _capturePagePhoto(pdf, cp, lib); cover = c.cover; coverThumb = c.thumb; } catch {}
+  try { const cp = await _pickCoverPage(pdf, lib); if (cp != null) { const c = await _capturePagePhoto(pdf, cp, lib, "full", false, true); cover = c.cover; coverThumb = c.thumb; } } catch {}
   const sitePlan: string[] = [];
   if (pdf.numPages >= 2) {
     try { const sp = await _captureSitePlan(pdf, 2, lib); if (sp) sitePlan.push(sp); } catch {}
@@ -497,9 +502,10 @@ function _imagePhotoScore(im: any): number {
 // collage is often the bigger image), or behind a title page — so blindly taking
 // page 1's largest image grabs the wrong thing (Eric: "flyers pull the wrong cover").
 // We score every sizable image on each page by photographic quality and pick the page
-// holding the single best real photo. Falls back to page 1 when nothing on the first
-// pages reads as a photo (preserves the old behavior).
-async function _pickCoverPage(pdf: any, lib: any): Promise<number> {
+// holding the single best real photo. Returns null when nothing on the first pages
+// reads as a photo — the deal is then left WITHOUT a cover rather than given a random
+// page (Eric, 10/19/26: a tax bill and a contract got a page of text as their photo).
+async function _pickCoverPage(pdf: any, lib: any): Promise<number | null> {
   const OPS = lib.OPS;
   const maxScan = Math.min(pdf.numPages, 6);
   let bestPage = 1, bestScore = -Infinity, anyPhoto = false;
@@ -546,7 +552,7 @@ async function _pickCoverPage(pdf: any, lib: any): Promise<number> {
       if (score > bestScore) { bestScore = score; bestPage = pageNum; }
     } catch {}
   }
-  return anyPhoto ? bestPage : 1;
+  return anyPhoto ? bestPage : null;
 }
 
 // Choose the SITE-PLAN page(s) from the front-section page texts. OM site plans sit on
@@ -664,9 +670,11 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
   // (which renders just the one chosen page). Keeps OM uploads fast and predictable.
   try {
     const coverPage = await _pickCoverPage(pdf, lib);
-    const c = await _capturePagePhoto(pdf, coverPage, lib);
-    result.cover = c.cover;
-    result.coverThumb = c.thumb;
+    if (coverPage != null) {
+      const c = await _capturePagePhoto(pdf, coverPage, lib, "full", false, true);
+      result.cover = c.cover;
+      result.coverThumb = c.thumb;
+    }
   } catch {}
 
   // AUTO SITE-PLAN DETECTION. Scan only the FRONT ~40 pages (OM site plans always live

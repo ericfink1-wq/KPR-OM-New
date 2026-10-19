@@ -2,6 +2,28 @@
 
 Persistent context for this repo. Read this fully at the start of every session.
 
+## UPLOAD GATE + PROVENANCE (Eric, 10/19/26) — classify first; paperwork never becomes a deal
+Jacob's Project Evergreen drop made 4 junk deals (tax bill, utility bill, portfolio sales report, signed contract read as
+"om", each with a random page as cover). Now: `docClassify.ts` detectors (`detectTaxBill` / `detectUtilityBill` /
+`detectContract` / `detectEstoppel` / `detectSalesReport`) run in `applyDeterministicOverrides` on an om/unknown guess (and
+when the model call FAILS); each refuses a doc with sale-OM signals. `DOCUMENT_ONLY_TYPES` (tax/utility bill, contract,
+estoppel, lease, REA) are only FILED against a matched deal (name / address / also-known-as) — logged "attached", deal
+untouched. No match → status `not_added` "Not an OM — not added" (UploadQueue `markNotAdded`): nothing saved, the item
+keeps its read so a same-drop OM files it (`registerCreatedDeal`), the user can pick a deal, or the OWNER
+(`/auth/me isOwner` = docPrivacy `isDocOwner`) overrides. Extractable docs (rent roll / sales / options / swap / loan /
+amort / flyer) no longer auto-create a property either (`autoCreateOrAttach`); "Create new property" is owner-only. OM
+path LAST GATE: no match + not `looksLikeOm` (uploadGate.ts: sale signals, or ≥3 tenants AND ≥4 pages) → held, not saved.
+Temp ingest rows: members can't DELETE deals, so a discarded upload used to SURVIVE as a junk deal — ingest stamps
+`_ingestBy` (session user; dropped by any client save = claimed) and `POST /deals/:id/discard-ingest` lets that same user
+delete an unclaimed row <24h old (`apiDiscardUpload`); GET /deals hides `_processingError` rows. Cover: `_pickCoverPage`
+returns null without a real photo and `_capturePagePhoto(..., requirePhoto)` never falls back to a page render; a file
+with no photo never CLEARS a deal's existing cover (`saveImagesNoting`). Provenance: upload_log `status` now holds the
+outcome created/attached/skipped/rejected/failed (legacy "success": first row near the deal's creation = created) —
+`api lib/uploadProvenance.ts` (pure, tested); `GET /upload-log/by-deal/:id` → `createdBy` (null before tracking; the old
+primary-uploader guess only as `inferredCreator`) + `lastUpload` + `history`; deal header shows both lines,
+`UploadHistoryCard` on Summary; admin `UploadLogPage` (menu → Upload log; filters person/date/result; deal links;
+portalled to body). No new tables/columns. Tests: uploadGate.test.ts (web), uploadProvenance.test.ts (api).
+
 ## MONEY FORMAT (Eric, 10/19/26) — one formatter, units roll at 4 digits
 `fmtMoney` (om-database `lib/money.ts`, mirrored verbatim in api-server `lib/money.ts` — a test fails if they drift):
 K → M at 1,000K, M → B at 1,000M, decided on the ROUNDED figure; M/B always 2 dp; options `below:"full"` ($930,000),

@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { sql, desc, asc, eq } from "drizzle-orm";
-import { db, uploadLogTable, usersTable } from "@workspace/db";
+import { sql, desc, asc, eq, inArray } from "drizzle-orm";
+import { db, uploadLogTable, usersTable, dealsTable } from "@workspace/db";
+import { normalizeStatusIn, dealProvenance, resultOf, filterLog, type LogRow } from "../lib/uploadProvenance";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 
 const router = Router();
@@ -41,7 +42,8 @@ router.post("/upload-log", requireAuth, async (req, res) => {
       id: `ul_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
       fileName: trunc(b.fileName, 400),
       docType: trunc(b.docType, 40),
-      status: b.status === "failed" ? "failed" : "success",
+      // created / attached / skipped / rejected / failed (legacy clients: success / failed).
+      status: normalizeStatusIn(b.status),
       detail: trunc(b.detail, 1000),
       dealId: trunc(b.dealId, 80),
       userId: req.session.userId ?? null,
@@ -68,7 +70,7 @@ async function getPrimaryUploader(): Promise<{ userName: string | null; userEmai
     const rows = await db.select().from(uploadLogTable);
     const counts = new Map<string, { n: number; userName: string | null; userEmail: string | null }>();
     for (const r of rows) {
-      if (r.status !== "success") continue;
+      if (r.status !== "success" && r.status !== "created" && r.status !== "attached") continue;
       const key = (r.userEmail || r.userName || "").toLowerCase();
       if (!key) continue;
       const c = counts.get(key) || { n: 0, userName: r.userName ?? null, userEmail: r.userEmail ?? null };
@@ -91,11 +93,23 @@ async function currentUserName(userId: string | null | undefined, email: string 
   } catch { return null; }
 }
 
-// GET /api/upload-log/by-deal/:dealId — WHO uploaded this deal. Uses the deal's own
-// earliest successful upload record when it has one; otherwise falls back to the
-// library's primary uploader (marked `inferred`) so EXISTING deals with no record
-// still show attribution. Any signed-in user can see it (team attribution, not the
-// full admin audit). Null only when the log is empty (no basis to attribute).
+// Every user's CURRENT name (a rename carries back to old rows), keyed by id and email.
+async function nameLookup(): Promise<(r: LogRow) => string | null> {
+  try {
+    const users = await db.select({ id: usersTable.id, email: usersTable.email, name: usersTable.name }).from(usersTable);
+    const byId = new Map(users.map(u => [u.id, u.name ?? null]));
+    const byEmail = new Map(users.map(u => [(u.email || "").toLowerCase(), u.name ?? null]));
+    return (r: LogRow) => (r.userId ? byId.get(r.userId) : undefined) ?? (r.userEmail ? byEmail.get(r.userEmail.toLowerCase()) : undefined) ?? null;
+  } catch { return () => null; }
+}
+
+// GET /api/upload-log/by-deal/:dealId — the deal's provenance: who CREATED it, who LAST
+// uploaded to it, and its full Upload history (file, doc type, what it did, who, when).
+// Any signed-in member can read it (team attribution, not the admin audit).
+// Back-compat: the top-level userName / userEmail / at / inferred still describe the
+// creator (older clients read those). When the creator predates upload tracking,
+// `createdBy` is null and the old "library's primary uploader" guess rides along ONLY as
+// `inferredCreator`, labelled as a guess — it is never shown as fact.
 router.get("/upload-log/by-deal/:dealId", requireAuth, async (req, res) => {
   try {
     await ensureUploadLogTable();
@@ -103,28 +117,58 @@ router.get("/upload-log/by-deal/:dealId", requireAuth, async (req, res) => {
     const rows = await db.select().from(uploadLogTable)
       .where(eq(uploadLogTable.dealId, dealId))
       .orderBy(asc(uploadLogTable.createdAt));
-    const r = rows.find(x => x.status === "success") ?? null;
-    if (r) {
-      // The log stores the name as it was at upload time; show the person's CURRENT
-      // name so a rename (e.g. "KPR Admin" → a real name) carries back to old uploads.
-      const current = await currentUserName(r.userId, r.userEmail);
-      res.json({ userName: current ?? r.userName ?? null, userEmail: r.userEmail ?? null, at: r.createdAt, inferred: false });
-      return;
+    const deal = (await db.select({ createdAt: dealsTable.createdAt }).from(dealsTable).where(eq(dealsTable.id, dealId)))[0];
+    const nameFor = await nameLookup();
+    const prov = dealProvenance(rows as LogRow[], deal?.createdAt ?? null, nameFor);
+    let inferredCreator: { userName: string | null; userEmail: string | null } | null = null;
+    if (!prov.createdBy) {
+      const primary = await getPrimaryUploader();
+      if (primary) inferredCreator = { userName: (await currentUserName(null, primary.userEmail)) ?? primary.userName, userEmail: primary.userEmail };
     }
-    const primary = await getPrimaryUploader();
-    const current = primary ? await currentUserName(null, primary.userEmail) : null;
-    res.json(primary ? { userName: current ?? primary.userName, userEmail: primary.userEmail, at: null, inferred: true } : null);
+    const c = prov.createdBy;
+    res.json({
+      ...prov, inferredCreator,
+      userName: c?.userName ?? inferredCreator?.userName ?? null, userEmail: c?.userEmail ?? inferredCreator?.userEmail ?? null,
+      at: c?.at ?? null, inferred: !c,
+    });
   } catch (err) {
     req.log.error({ err }, "upload-log by-deal lookup failed");
     res.json(null);
   }
 });
 
-// GET /api/upload-log — recent upload activity (admin only), newest first.
-router.get("/upload-log", requireAdmin, async (_req, res) => {
+// GET /api/upload-log — the site-wide Upload log (admins / the owner), newest first.
+// ?user= (name or email, substring) &from=YYYY-MM-DD &to=YYYY-MM-DD &result= &limit= (≤2000, default 500).
+// Each row carries `result` (created / attached / skipped / rejected / failed) and the
+// deal it landed on (`dealName`, `dealExists` — false once that deal was deleted or trashed).
+router.get("/upload-log", requireAdmin, async (req, res) => {
   await ensureUploadLogTable();
-  const rows = await db.select().from(uploadLogTable).orderBy(desc(uploadLogTable.createdAt)).limit(300);
-  res.json(rows);
+  const q = req.query as Record<string, string | undefined>;
+  const limit = Math.max(1, Math.min(2000, Number(q.limit) || 500));
+  const raw = (await db.select().from(uploadLogTable).orderBy(desc(uploadLogTable.createdAt)).limit(5000)) as LogRow[];
+  // Legacy "success" rows: the first one per deal is the creation (see resultOf).
+  const firstSuccess = new Map<string, string>();
+  for (const r of [...raw].reverse()) if (r.dealId && r.status === "success" && !firstSuccess.has(r.dealId)) firstSuccess.set(r.dealId, r.id);
+  const ids = [...new Set(raw.map(r => r.dealId).filter((x): x is string => !!x))];
+  const deals = new Map<string, { name: string | null; trashed: boolean; createdAt: Date }>();
+  for (let i = 0; i < ids.length; i += 500) {
+    const chunk = ids.slice(i, i + 500);
+    const found = await db.select({ id: dealsTable.id, data: dealsTable.data, createdAt: dealsTable.createdAt }).from(dealsTable).where(inArray(dealsTable.id, chunk));
+    for (const d of found) {
+      const data = (d.data ?? {}) as Record<string, unknown>;
+      deals.set(d.id, { name: (data.propertyName as string) || (data.fileName as string) || null, trashed: !!data.trashedAt, createdAt: d.createdAt });
+    }
+  }
+  const nameFor = await nameLookup();
+  const rows = raw.map(r => {
+    const d = r.dealId ? deals.get(r.dealId) : undefined;
+    return {
+      ...r, userName: nameFor(r) || r.userName,
+      result: resultOf(r, r.dealId ? firstSuccess.get(r.dealId) ?? null : null, d?.createdAt ?? null),
+      dealName: d?.name ?? null, dealExists: !!d && !d.trashed,
+    };
+  });
+  res.json(filterLog(rows, { user: q.user, from: q.from, to: q.to, result: q.result }).slice(0, limit));
 });
 
 export default router;

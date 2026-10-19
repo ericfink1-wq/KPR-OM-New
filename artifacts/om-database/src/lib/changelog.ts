@@ -48,6 +48,19 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-19-upload-sorting-provenance",
+    date: "2026-10-19",
+    category: "improved",
+    title: "Uploads: bills and contracts no longer become deals; see who uploaded what",
+    detail: [
+      "- Tax bills, utility bills, sales reports, rent rolls, leases, estoppels and contracts are filed under the deal they belong to (matched by name, address or also-known-as). If nothing matches, no deal is made — the file shows \"Not an OM — not added\", and you can pick the deal it belongs to.",
+      "- A file with no real property photo leaves the cover empty instead of using a random page.",
+      "- The deal header shows who created the deal and who uploaded to it last; the Summary tab has an Upload history list (file, type, what it did, who, when).",
+      "- [admin] New Upload log in the menu: every upload site-wide by date, person, file, type and result, with deal links and filters. Only the owner can override \"Not an OM — not added\".",
+    ].join("\n"),
+    where: "Upload button, deal pages, and the menu (Upload log)",
+  },
+  {
     id: "2026-10-19-am-tables-full-text",
     date: "2026-10-19",
     category: "improved",

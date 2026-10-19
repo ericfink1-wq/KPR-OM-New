@@ -262,12 +262,12 @@ export default function Members({ onClose }: { onClose: () => void }) {
                 <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2, maxHeight: 300, overflowY: "auto" }}>
                   {uploads.map(u => (
                     <div key={u.id} title={u.detail || ""} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, padding: "5px 2px", borderBottom: "1px solid #f4efe6" }}>
-                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: u.status === "success" ? "#3e8a2f" : "#c0392b", flexShrink: 0 }} />
+                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: u.status === "failed" ? "#c0392b" : u.status === "rejected" || u.status === "skipped" ? "#c9a227" : "#3e8a2f", flexShrink: 0 }} />
                       <span style={{ color: "#383a37", minWidth: 0, flex: "1 1 auto", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {u.fileName || "(file)"}
                         {u.docType ? <span style={{ color: "#9b9992", fontSize: 9.5, marginLeft: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>{u.docType}</span> : null}
                       </span>
-                      <span style={{ color: u.status === "success" ? "#676767" : "#c0392b", flexShrink: 0 }}>{u.status === "success" ? "ok" : "failed"}</span>
+                      <span style={{ color: u.status === "failed" ? "#c0392b" : "#676767", flexShrink: 0 }}>{u.result ?? (u.status === "success" ? "ok" : u.status)}</span>
                       <span style={{ color: "#8a8579", flexShrink: 0, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.userName || u.userEmail || "—"}</span>
                       <span style={{ color: "#9b9992", flexShrink: 0 }}>{new Date(u.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
                     </div>

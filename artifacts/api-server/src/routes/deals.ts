@@ -271,7 +271,7 @@ function prettyName(name: unknown): unknown {
 // GET /api/deals — list all deals (excludes in-progress ingests)
 // One stored row → what the app receives (tidied name, canonical tenant names, cover flags).
 function presentDeal(r: { id: string; data: Record<string, unknown>; updatedAt: Date | null }, aliasMap: Awaited<ReturnType<typeof loadAliasMap>>, hasCover: boolean, hasThumb: boolean): Record<string, unknown> {
-  const { _processing: _p, _processingError: _e, _reanalyzeError: _r, ...rest } = r.data;
+  const { _processing: _p, _processingError: _e, _reanalyzeError: _r, _ingestBy: _b, ...rest } = r.data;
   const out = { ...enrichTenants(rest, aliasMap), id: r.id, updatedAt: r.updatedAt } as Record<string, unknown>;
   out.propertyName = prettyName(out.propertyName);   // tidy ALL-CAPS names for display/exports (stored value unchanged)
   if (hasCover) out.imageMeta = { ...((out.imageMeta as Record<string, unknown>) || {}), cover: true, thumb: hasThumb };
@@ -298,7 +298,8 @@ router.get("/deals", requireAuth, async (req, res) => {
     const coverSet = new Set(coverIdRows.map(c => c.id));
     const thumbSet = new Set(thumbIdRows.map(c => c.id));
     const deals = rows
-      .filter(r => !r.data._processing)
+      // An upload still reading, or one whose read failed, is never a library deal.
+      .filter(r => !r.data._processing && !r.data._processingError)
       .filter(r => req.query.all === "1" || (wantTrash ? !!r.data.trashedAt : !r.data.trashedAt))
       .map(r => {
         const out = presentDeal(r as { id: string; data: Record<string, unknown>; updatedAt: Date | null }, aliasMap, coverSet.has(r.id), thumbSet.has(r.id));

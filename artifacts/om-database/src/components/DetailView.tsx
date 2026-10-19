@@ -5,6 +5,7 @@ import CompScatter from "./CompScatter";
 import { isNonAnchorUse } from "../lib/anchorUse";
 import NoClosingDatePill from "./NoClosingDatePill";
 import PropertyHistoryCard from "./PropertyHistoryCard";
+import UploadHistoryCard, { whoOf, fmtWhen } from "./UploadHistoryCard";
 import { isClosingDate } from "../lib/closingDate";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstract } from "../lib/idb";
@@ -1753,7 +1754,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   }, [d.id]);
   useEffect(() => { setAbstracts([]); reloadAbstracts(); }, [reloadAbstracts]);
 
-  // Who first uploaded this deal (from the upload log), shown as team attribution.
+  // Who CREATED this deal and who LAST uploaded to it, plus its Upload history (from the upload log).
   const [uploader, setUploader] = useState<DealUploader | null>(null);
   useEffect(() => {
     setUploader(null);
@@ -2722,9 +2723,18 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           </div>
           <span style={{ fontSize:9, color:"#8a8983", textAlign:"right" }}>
             {[d.omDate ? (d.omDateSource === "upload-date" ? `uploaded ${d.omDate} (OM undated)` : `OM ${d.omDate}`) : null, d.pdfPages ? `${d.pdfPages}pp` : null].filter(Boolean).join(" · ")}
-            {uploader && (uploader.userName || uploader.userEmail) && (
-              <span title={uploader.inferred ? "No upload record for this deal — attributed to the library's primary uploader" : (uploader.at ? `Uploaded ${new Date(uploader.at).toLocaleDateString()}` : "Uploaded by")} style={{ display:"block" }}>
-                ⬆ Uploaded by {uploader.userName || uploader.userEmail}{uploader.inferred ? " *" : ""}
+            {/* Provenance (Eric, 10/19/26): the original creator and the last uploader are
+                different facts — "Uploaded by Eric" on a deal Jacob added files to read as
+                if Eric had uploaded them. A creator from before upload tracking is never named as fact. */}
+            {uploader && (uploader.createdBy || uploader.inferredCreator) && (
+              <span style={{ display:"block" }}
+                title={uploader.createdBy ? `Created ${fmtWhen(uploader.createdBy.at)}${uploader.createdBy.userEmail ? ` · ${uploader.createdBy.userEmail}` : ""}` : `Added before upload tracking — not recorded${uploader.inferredCreator ? ` (probably ${whoOf(uploader.inferredCreator)})` : ""}`}>
+                Created by {uploader.createdBy ? whoOf(uploader.createdBy) : "— (before upload tracking)"}
+              </span>
+            )}
+            {uploader?.lastUpload && (!uploader.createdBy || uploader.lastUpload.at !== uploader.createdBy.at) && (
+              <span style={{ display:"block" }} title={`${fmtWhen(uploader.lastUpload.at)}${uploader.lastUpload.userEmail ? ` · ${uploader.lastUpload.userEmail}` : ""}`}>
+                ⬆ Last upload {whoOf(uploader.lastUpload)} · {uploader.lastUpload.at ? new Date(uploader.lastUpload.at).toLocaleDateString(undefined, { month:"short", day:"numeric" }) : ""}
               </span>
             )}
           </span>
@@ -3527,6 +3537,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
       {/* What changed between this property's earlier documents and now. */}
       <PropertyHistoryCard deal={d} />
+
+      {/* Every file uploaded against this deal — what, what it did, who, when. */}
+      <UploadHistoryCard data={uploader} />
 
       <div id="section-metriceditor"><MetricsEditor deal={d} onUpdate={onUpdate}/></div>
 

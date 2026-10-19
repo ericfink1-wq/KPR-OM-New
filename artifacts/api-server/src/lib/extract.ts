@@ -1061,7 +1061,12 @@ export async function runBackgroundExtraction(
   pageCount: number,
   log: Logger,
   extraGuidance = "",
+  // Who started this upload (session user). Kept on the row as `_ingestBy` until the
+  // uploader's client saves the deal (a PUT replaces the data), so that same person may
+  // discard their own unclaimed upload — see POST /deals/:id/discard-ingest.
+  ingestBy: string | null = null,
 ): Promise<void> {
+  const owner = ingestBy ? { _ingestBy: ingestBy } : {};
   try {
     const { data: rawExtracted, timings } = await runOmExtraction(text, extraGuidance);
     const _scoreStart = Date.now();
@@ -1096,6 +1101,7 @@ export async function runBackgroundExtraction(
       lastScoredAt: new Date().toISOString(),
       lastScoredDealCount: totalCount,
       analysisVersion: ANALYSIS_VERSION,
+      ...owner,
     };
     // Post-extraction validators → fold into Import-Review questions. Two families:
     // (1) lease-risk (unverified OM co-tenancy/kickout, decreasing "increase" steps);
@@ -1140,7 +1146,7 @@ export async function runBackgroundExtraction(
     log.error({ err, id }, "Background extraction failed");
     await db.update(dealsTable)
       .set({
-        data: { _processing: false, _processingError: errorMsg, fileName, status: "Prospect", uploadedAt: new Date().toISOString() },
+        data: { _processing: false, _processingError: errorMsg, fileName, status: "Prospect", uploadedAt: new Date().toISOString(), ...owner },
         updatedAt: new Date(),
       })
       .where(eq(dealsTable.id, id));

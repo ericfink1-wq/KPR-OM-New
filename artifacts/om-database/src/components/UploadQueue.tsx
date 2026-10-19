@@ -1,11 +1,12 @@
 import { useRef, useState, useEffect, type CSSProperties } from "react";
 import type { Deal, ImageBundle, ReviewQuestion } from "../lib/idb";
-import { ensureFullDeal, apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus, apiRefreshAnalysis, apiRecordUpload, apiDealUploadedBy } from "../lib/api";
+import { ensureFullDeal, apiSaveSource, apiSaveImages, apiSaveDeal, apiDeleteDeal, apiIngestDeal, apiPollDealStatus, apiRefreshAnalysis, apiRecordUpload, apiDealUploadedBy, apiDiscardUpload } from "../lib/api";
 import { extractPdfImages, extractFlyerImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote, tenantKey } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
 import { playUploadSuccess, playUploadError } from "../lib/sounds";
-import { classifyDocument, matchDeal, hasPossibleMatch, hasOmSaleSignals, detectUnsupportedDoc, nameFromFileName, type DocType } from "../lib/docClassify";
+import { classifyDocument, matchDeal, hasPossibleMatch, hasOmSaleSignals, detectUnsupportedDoc, nameFromFileName, DOCUMENT_ONLY_TYPES, DOC_TYPE_LABEL, type DocType } from "../lib/docClassify";
+import { looksLikeOm, uploadResultFor, NOT_ADDED_MSG } from "../lib/uploadGate";
 import { detectPackageRole, groupOf, initialPackageSources, planPackageMerge, type PackagePlan } from "../lib/packageMerge";
 import { extractRentRoll, extractLeaseOptions, buildRosterPatch, buildOptionsPatch } from "../lib/rentRollExtract";
 import { extractSalesReport, buildSalesHistoryPatch, type SalesExtractResult } from "../lib/salesExtract";
@@ -20,7 +21,7 @@ interface QueueItem {
   id: string;
   name: string;
   file?: File;
-  status: "pending" | "extracting" | "awaiting_dup" | "awaiting_match" | "awaiting_confirm" | "done" | "error" | "advisory";
+  status: "pending" | "extracting" | "awaiting_dup" | "awaiting_match" | "awaiting_confirm" | "done" | "error" | "advisory" | "not_added";
   msg: string;
   progress: number;
   startedAt?: number;   // ms when ACTIVE processing began (not queue/wait time)
@@ -49,6 +50,13 @@ interface QueueItem {
   // "post" = after extraction matched a library deal, "pick" = a supporting file
   // (site plan, financial narrative…) that needs to be told which property it belongs to.
   confirmMode?: "pre" | "post" | "pick";
+  // "Not an OM — not added" (Eric, 10/19/26): nothing matched, so no deal was created.
+  // `pendingOmDeal` = an OM-path extraction held back (the owner's override saves it);
+  // `docOnly` = paperwork with no reader (tax bill, contract…) that can only be filed.
+  pendingOmDeal?: Deal;
+  docOnly?: boolean;
+  /** Explicit outcome for the upload log (else inferred from the final status). */
+  result?: "created" | "attached" | "skipped" | "rejected" | "failed";
 }
 
 /** The person's answer to "this looks like a property already in the library". */
@@ -69,6 +77,8 @@ interface Props {
   getLatestDeal?: (id: string) => Deal | undefined;
   onOpenDeal: (id: string) => void;
   existingDeals: Deal[];
+  /** Eric's own account: may override "Not an OM — not added" and create the deal anyway. */
+  isOwner?: boolean;
   // Reports the open import panel's height (0 when hidden) so the feedback flag
   // can sit just above it instead of overlapping the queue.
   onPanelHeightChange?: (h: number) => void;
@@ -310,7 +320,7 @@ const REFRESH_FLAG_FIELDS: { key: string; label: string; type: "number" | "text"
 
 const MAX_CONCURRENT = 3;
 
-export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdded, onDealUpdated, getLatestDeal, onOpenDeal, existingDeals, onPanelHeightChange }: Props) {
+export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdded, onDealUpdated, getLatestDeal, onOpenDeal, existingDeals, isOwner = false, onPanelHeightChange }: Props) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [queueOpen, setQueueOpen] = useState(true);
   // Tick once a second while anything is actively processing, to drive each
@@ -458,21 +468,30 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     // still-settling background work so it can't reappear as processing/done.
     if (cancelledRef.current.has(itemId)) return;
     setQueue(q => q.map(x => x.id === itemId ? { ...x, ...patch } : x));
-    if ((patch.status === "done" || patch.status === "error") && !loggedRef.current.has(itemId)) {
-      loggedRef.current.add(itemId);
-      // Quick notification ping: ding on success, soft low ping on failure.
-      if (patch.status === "done") playUploadSuccess(); else playUploadError();
+    // One log row per OUTCOME (created / attached / skipped / rejected / failed): a file
+    // turned away and later filed by its drop's OM logs both, nothing logs twice.
+    if (patch.status === "done" || patch.status === "error" || patch.status === "not_added") {
       const it = queueRef.current.find(x => x.id === itemId);
-      const detail = patch.status === "error"
-        ? (patch.error || it?.error || patch.msg || it?.msg || "")
-        : (patch.matchedDealName || (patch.deal as Deal | undefined)?.propertyName || it?.matchedDealName || it?.deal?.propertyName || patch.msg || it?.msg || "");
-      apiRecordUpload({
-        fileName: it?.name || "(file)",
-        docType: patch.routedType || it?.routedType || "om",
-        status: patch.status === "done" ? "success" : "failed",
-        detail,
-        dealId: (patch.deal as Deal | undefined)?.id || it?.deal?.id || it?.tempDealId || null,
-      });
+      const merged = { ...(it || {}), ...patch } as QueueItem;
+      const result = uploadResultFor(merged);
+      const key = `${itemId}:${result}`;
+      if (!loggedRef.current.has(key)) {
+        loggedRef.current.add(key);
+        // Quick notification ping: ding on success, soft low ping on failure / turned away.
+        if (result === "created" || result === "attached") playUploadSuccess(); else if (result !== "skipped") playUploadError();
+        const detail = result === "failed"
+          ? (merged.error || merged.msg || "")
+          : result === "rejected" || result === "skipped" ? (merged.msg || "")
+          : (merged.matchedDealName || merged.deal?.propertyName || merged.msg || "");
+        apiRecordUpload({
+          fileName: merged.name || "(file)",
+          docType: merged.routedType || "om",
+          status: result,
+          detail,
+          // Only a deal the file actually landed on — never the temp id of a deal that was never kept.
+          dealId: result === "created" || result === "attached" ? (merged.appliedDealId || merged.deal?.id || null) : (merged.deal?.id || null),
+        });
+      }
     }
   };
 
@@ -483,7 +502,13 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   // cause (size limit vs server error) is diagnosable. Never throws.
   const saveImagesNoting = async (id: string, bundle: ImageBundle, itemId: string): Promise<boolean> => {
     try {
-      await apiSaveImages(id, bundle);
+      // A file with no real property photo (or no site plan) leaves those slots ALONE —
+      // never clears a cover the deal already has (Eric, 10/19/26).
+      const b: ImageBundle = { ...bundle };
+      if (!b.cover) { delete b.cover; delete b.coverThumb; }
+      if (!b.sitePlan || !b.sitePlan.length) delete b.sitePlan;
+      if (!b.pagePicks || !b.pagePicks.length) delete b.pagePicks;
+      await apiSaveImages(id, b);
       return true;
     } catch {
       const cur = queueRef.current.find(x => x.id === itemId);
@@ -866,11 +891,13 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     let working = deal;
     let lastApplied: string | null = null;
     for (const it of queueRef.current) {
-      if (it.status !== "awaiting_match" || !it.matchHint || !it.pendingExtracted) continue;
+      if ((it.status !== "awaiting_match" && it.status !== "not_added") || !it.matchHint || !it.pendingExtracted || it.pendingOmDeal) continue;
       const m = matchDeal(it.matchHint, [working]);
       if (!m.deal || m.confidence === "none") continue;
       try {
-        if (it.routedType === "rent-roll") {
+        if (it.docOnly && it.routedType) {
+          fileDocOnly(it.id, it.routedType, working);
+        } else if (it.routedType === "rent-roll") {
           working = await applyRosterToDeal(it.id, working, it.pendingExtracted as unknown as { asOf: string | null; tenants: NonNullable<Deal["tenants"]> });
           lastApplied = it.id;
         } else if (it.routedType === "lease-options") {
@@ -906,6 +933,29 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   const assignMatch = async (itemId: string, deal: Deal) => {
     const item = queue.find(q => q.id === itemId);
     if (!item) return;
+    if (item.docOnly && item.routedType) { fileDocOnly(itemId, item.routedType, deal); return; }
+    if (item.pendingOmDeal) {
+      // A held-back OM-path read, now pointed at an existing deal: the same keep-and-flag merge a re-upload gets.
+      updateItem(itemId, { status: "extracting", msg: `Adding to “${deal.propertyName || "deal"}”…`, progress: 70 });
+      try {
+        const fresh = await ensureFullDeal(getLatestDeal?.(deal.id) ?? deal);
+        const { id: _drop, ...incoming } = item.pendingOmDeal as Deal & Record<string, unknown>;
+        void _drop;
+        const keptMeta = { ...(fresh.imageMeta || {}), cover: !!item.pendingOmDeal.imageMeta?.cover || !!fresh.imageMeta?.cover };
+        const refreshed = reconcileRefresh(fresh, { ...incoming, imageMeta: keptMeta } as Record<string, unknown>);
+        refreshed.lastUploadAt = new Date().toISOString();
+        await apiSaveDeal(refreshed);
+        if (item.pendingText) await apiSaveSource(refreshed.id, item.pendingText).catch(() => {});
+        if (item.pendingImages) await saveImagesNoting(refreshed.id, item.pendingImages, itemId);
+        updateItem(itemId, { status: "done", progress: 100, deal: refreshed, matchedDealName: refreshed.propertyName, priorDeal: fresh, appliedDealId: refreshed.id, createdNew: false, result: "attached", pendingOmDeal: undefined,
+          msg: `Added to existing “${refreshed.propertyName || "deal"}” · review any flagged conflicts` });
+        onDealUpdated?.(refreshed);
+        await registerCreatedDeal(refreshed);
+      } catch (err) {
+        updateItem(itemId, { status: "error", msg: "Couldn't add it", error: err instanceof Error ? err.message : "failed" });
+      }
+      return;
+    }
     if (item.routedType === "rent-roll" && item.pendingExtracted) {
       updateItem(itemId, { status: "extracting", msg: "Updating roster…", progress: 60 });
       try {
@@ -1062,8 +1112,41 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     });
   };
 
-  // The "create new" button on the match-or-create prompt.
+  // The owner's override on "Not an OM — not added": create the deal anyway.
+  const overrideNotAdded = async (itemId: string) => {
+    if (!isOwner) return;
+    const item = queueRef.current.find(q => q.id === itemId);
+    if (!item) return;
+    if (item.pendingOmDeal) {
+      const deal: Deal = { ...item.pendingOmDeal, lastUploadAt: new Date().toISOString() };
+      updateItem(itemId, { status: "extracting", msg: "Saving as a new deal (owner override)…", progress: 80 });
+      try {
+        await apiSaveDeal(deal);
+        if (item.pendingText) await apiSaveSource(deal.id, item.pendingText).catch(() => {});
+        if (item.pendingImages) await saveImagesNoting(deal.id, item.pendingImages, itemId);
+        updateItem(itemId, { status: "done", progress: 100, deal, matchedDealName: deal.propertyName, createdNew: true, priorDeal: null, appliedDealId: deal.id, result: "created", pendingOmDeal: undefined,
+          msg: `${deal.propertyName || "Saved"} · created by owner override` });
+        onDealsAdded([deal]);
+        await registerCreatedDeal(deal);
+      } catch (err) {
+        updateItem(itemId, { status: "error", msg: "Couldn't save", error: err instanceof Error ? err.message : "failed" });
+      }
+      return;
+    }
+    if (item.docOnly || !item.pendingExtracted) {
+      // Never read (paperwork / turned away before extraction) → read it as an OM now.
+      if (!item.file) { updateItem(itemId, { msg: "The file is no longer in this session — drop it again to override." }); return; }
+      updateItem(itemId, { status: "extracting", progress: 5, result: undefined, docOnly: false, msg: "Reading it as an OM (owner override)…" });
+      activeCountRef.current++;
+      try { await processFile(item.file, itemId, { forceOm: true }); } finally { activeCountRef.current--; }
+      return;
+    }
+    await createPropertyFromDoc(item.id, item.routedType, item.pendingExtracted, item.matchHint, item.tempDealId, item.pendingImages);
+  };
+
+  // The "create new" button on the match-or-create prompt (owner only — see overrideNotAdded).
   const createNewFromDoc = async (itemId: string) => {
+    if (!isOwner) return;
     const item = queueRef.current.find(q => q.id === itemId);
     if (!item || !item.pendingExtracted) return;
     await createPropertyFromDoc(item.id, item.routedType, item.pendingExtracted, item.matchHint, item.tempDealId, item.pendingImages);
@@ -1111,9 +1194,10 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     return null;
   };
 
-  // No confident match AND no possible overlap → create the property automatically.
-  // But if another file in this batch is already creating the SAME property, wait
-  // for that deal and attach to it instead of forking a duplicate.
+  // No confident match AND no possible overlap. A supporting document never creates a
+  // deal on its own any more (Eric, 10/19/26): it is "Not an OM — not added", and waits —
+  // if an OM in this same drop creates its property, registerCreatedDeal files it there.
+  // If another file in this batch is already creating the SAME property, attach to it.
   const autoCreateOrAttach = async (
     itemId: string, routedType: DocType | undefined,
     pendingExtracted: Record<string, unknown>, hint: QueueItem["matchHint"] | undefined,
@@ -1129,15 +1213,41 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         updateItem(itemId, { status: "extracting", msg: "Waiting for the new property…", progress: 70, routedType, matchHint: hint, pendingExtracted, pendingImages: imgs ?? null });
         const target = await waitForCreatedDeal(claimedId);
         if (target) { await attachDocToDeal(itemId, routedType, target, pendingExtracted, imgs); return; }
-        // winner never materialized — fall through and create it ourselves.
-      } else {
-        const id = tempDealId || uid();
-        pendingCreatesRef.current.set(key, id);   // claim synchronously (no await before this)
-        await createPropertyFromDoc(itemId, routedType, pendingExtracted, hint, id, imgs);
-        return;
       }
     }
-    await createPropertyFromDoc(itemId, routedType, pendingExtracted, hint, tempDealId, imgs);
+    markNotAdded(itemId, { routedType, pendingExtracted, matchHint: hint, tempDealId, pendingImages: imgs ?? null });
+  };
+
+  // "Not an OM — not added": nothing in the library matched, so nothing was saved. The
+  // item keeps what was read (so the owner's override, a manual "file under…", or this
+  // drop's OM can still use it) and the outcome is logged as rejected.
+  const markNotAdded = (itemId: string, patch: Partial<QueueItem>, why?: string) => {
+    const t = (patch.routedType ?? "unknown") as DocType;
+    const label = t === "unknown" ? "Document" : DOC_TYPE_LABEL[t] || "Document";
+    updateItem(itemId, {
+      ...patch, status: "not_added", progress: 100, result: "rejected",
+      msg: `${NOT_ADDED_MSG} ${why || `${label} — no matching property in the library (checked name, address and also-known-as). Nothing was saved. If an OM in this drop creates the property, it's filed there automatically; or pick the deal below.`}`,
+    });
+  };
+
+  // Paperwork the site has no reader for (tax / utility bill, contract, estoppel, lease,
+  // REA): it is FILED against the matching deal — recorded in that deal's Upload history —
+  // and changes nothing in the deal. No match → Not an OM — not added.
+  const fileDocOnly = (itemId: string, type: DocType, deal: Deal) => {
+    const label = type === "unknown" ? "Document" : DOC_TYPE_LABEL[type] || "Document";
+    const name = deal.propertyName || deal.fileName || "deal";
+    const extra = type === "lease" ? " To load its terms, abstract it in Claude Code and use “Upload abstracts” on the deal."
+      : type === "rea" ? " To load it, run it through Claude Code and add it in the deal’s Site Agreements section." : "";
+    updateItem(itemId, {
+      status: "done", progress: 100, routedType: type, deal, matchedDealName: name, result: "attached", docOnly: true,
+      msg: `${label} → filed under “${name}” (in its Upload history — nothing in the deal was changed).${extra}`,
+    });
+  };
+  const routeDocumentOnly = (itemId: string, type: DocType, fileName: string, propertyName: string | null, address: string | null) => {
+    const hint = { propertyName, address, fileName };
+    const m = matchDeal(hint, [...existingDeals, ...createdDealsRef.current]);
+    if (m.deal && m.confidence !== "none") { fileDocOnly(itemId, type, m.deal); return; }
+    markNotAdded(itemId, { routedType: type, matchHint: hint, docOnly: true, pendingExtracted: { docOnly: true } });
   };
 
   // Attach cover/site-plan images to a deal that's ALREADY saved. Used when image
@@ -1154,8 +1264,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         if (st && !st.processing && st.deal) {
           await commitPatch(st.deal as Deal, { imageMeta: {
             ...(st.deal.imageMeta || {}),
-            cover: !!late.cover,
-            sitePlan: late.sitePlan ? late.sitePlan.length : 0,
+            cover: !!late.cover || !!st.deal.imageMeta?.cover,
+            sitePlan: (late.sitePlan ? late.sitePlan.length : 0) || st.deal.imageMeta?.sitePlan || 0,
             needsSitePlanPick: late.needsSitePlanPick || false,
           } });
         }
@@ -1163,7 +1273,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
     }).catch(() => {});
   };
 
-  const processFile = async (file: File, itemId: string) => {
+  // opts.forceOm = the owner's override on "Not an OM — not added": skip the type routing and read it as an OM.
+  const processFile = async (file: File, itemId: string, opts: { forceOm?: boolean } = {}) => {
     const dealId = uid();
     updateItem(itemId, { tempDealId: dealId, startedAt: Date.now() });
 
@@ -1185,36 +1296,43 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       updateItem(itemId, { msg: "Identifying document…", progress: 30 });
       const cls = await classifyDocument(text, file.name, pages);
       if (isCancelled(itemId)) return;
+      const forceOm = !!opts.forceOm;
 
-      if (cls.type === "rent-roll") {
+      // Paperwork with no reader (tax / utility bill, contract, estoppel, lease) — classified
+      // BEFORE anything is saved; it only files against an existing deal.
+      if (!forceOm && DOCUMENT_ONLY_TYPES.has(cls.type)) {
+        routeDocumentOnly(itemId, cls.type, file.name, cls.propertyName, cls.address);
+        return;
+      }
+      if (!forceOm && cls.type === "rent-roll") {
         await routeRentRoll(itemId, dealId, text, fileName, cls.propertyName, cls.address);
         return;
       }
-      if (cls.type === "lease-options") {
+      if (!forceOm && cls.type === "lease-options") {
         await routeLeaseOptions(itemId, text, fileName, cls.propertyName, cls.address);
         return;
       }
-      if (cls.type === "sales") {
+      if (!forceOm && cls.type === "sales") {
         await routeSales(itemId, text, fileName, cls.propertyName, cls.address);
         return;
       }
       // SAFEGUARD 5 — final routing gate. Even if classification says "flyer", never
       // ACT on it for a document that carries sale-OM signals or is long: an OM must
       // never be treated as a leasing flyer. Fall through to the full OM path instead.
-      if (cls.type === "flyer" && !hasOmSaleSignals(text) && !(pages != null && pages >= 8)) {
+      if (!forceOm && cls.type === "flyer" && !hasOmSaleSignals(text) && !(pages != null && pages >= 8)) {
         const flyerImgs = xls ? Promise.resolve(null) : extractFlyerImages(buf.slice(0)).then(i => i as unknown as ImageBundle).catch(() => null);
         await routeFlyer(itemId, dealId, fileName, cls.propertyName, cls.address, flyerImgs);
         return;
       }
-      if (cls.type === "swap") {
+      if (!forceOm && cls.type === "swap") {
         await routeSwap(itemId, dealId, text, fileName, cls.propertyName, cls.address);
         return;
       }
-      if (cls.type === "loan") {
+      if (!forceOm && cls.type === "loan") {
         await routeLoan(itemId, dealId, text, fileName, cls.propertyName, cls.address);
         return;
       }
-      if (cls.type === "amort") {
+      if (!forceOm && cls.type === "amort") {
         await routeAmort(itemId, dealId, text, fileName, cls.propertyName, cls.address);
         return;
       }
@@ -1222,9 +1340,15 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
       // handle it (Claude Code → JSON import) instead of mis-reading it as an OM.
       // The detector is guarded by hasOmSaleSignals, so a real sale OM is never
       // caught; this only fires on the fall-through (nothing else claimed the doc).
-      const unsupported = detectUnsupportedDoc(text, file.name);
+      const unsupported = forceOm ? null : detectUnsupportedDoc(text, file.name);
       if (unsupported) {
-        updateItem(itemId, { status: "advisory", progress: 100, msg: unsupported.message });
+        routeDocumentOnly(itemId, unsupported.kind, file.name, cls.propertyName, cls.address);
+        return;
+      }
+      // A short file nothing recognised and with no sale-OM signal is not read as an OM
+      // (that read is what turned a bill into a deal) — turned away before any AI spend.
+      if (!forceOm && cls.type === "unknown" && !hasOmSaleSignals(text) && (pages ?? 0) <= 2 && detectPackageRole(fileName, text) === "om") {
+        routeDocumentOnly(itemId, "unknown", file.name, cls.propertyName, cls.address);
         return;
       }
 
@@ -1392,11 +1516,11 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
           }
         }
         if (choice?.kind === "skip") {
-          await apiDeleteDeal(dealId).catch(() => {});
+          await apiDiscardUpload(dealId);
           if (!isCancelled(itemId)) updateItem(itemId, { status: "done", progress: 100, msg: "Discarded — nothing was saved" });
           return;
         }
-        if (isCancelled(itemId)) { await apiDeleteDeal(dealId).catch(() => {}); return; }
+        if (isCancelled(itemId)) { await apiDiscardUpload(dealId); return; }
         updateItem(itemId, { status: "extracting", msg: "Saving…" });
       }
       const chosen = choice;
@@ -1415,14 +1539,16 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         else if (!chosen) dup = findDuplicate(fileName, extracted, createdDealsRef.current) || findRosterStubMatch(extracted, createdDealsRef.current);
 
         if (dup) {
-          await apiDeleteDeal(dealId).catch(() => {});   // drop the temp deal we were creating
+          await apiDiscardUpload(dealId);   // drop the temp deal we were creating
           // Re-base on the LATEST version of the matched deal: it may have just had a
           // sales report / roster / swap / another package file applied earlier in
           // this SAME drop. Merging onto a stale snapshot here would overwrite that.
           // …and on its COMPLETE record: the library list leaves detail blocks out, and the
           // merge below decides per block what to keep.
           const freshDup = await ensureFullDeal(getLatestDeal?.(dup.id) ?? dup);
-          const incoming = { ...extracted, imageMeta, fileName, pdfPages: pages };
+          // No photo / site plan in this file → keep the deal's own (never clear them).
+          const keptMeta = imageMeta ? { ...imageMeta, cover: imageMeta.cover || !!freshDup.imageMeta?.cover, sitePlan: imageMeta.sitePlan || freshDup.imageMeta?.sitePlan || 0 } : freshDup.imageMeta;
+          const incoming = { ...extracted, imageMeta: keptMeta, fileName, pdfPages: pages };
           // Another file of the same broker package → each part of the deal comes
           // from the file that is best at it, whatever order they finished in.
           // Otherwise (a re-upload / new vintage) → the conservative keep-and-flag merge.
@@ -1446,7 +1572,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
           });
           onDealUpdated?.(refreshed);
           await registerCreatedDeal(refreshed);
-          return { merged: refreshed, doneMsg };
+          return { merged: refreshed, doneMsg, rejected: false };
         }
 
         const finalDeal: Deal = {
@@ -1455,13 +1581,22 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
           propertyName: (resolvedDeal!.propertyName || "").trim() || nameFromFileName(fileName) || fileName.replace(/\.pdf$/i, "").trim() || "Untitled property",
           packageSources: initialPackageSources(role),
         };
+        // LAST GATE before a new deal exists (Eric, 10/19/26): a file that matched nothing
+        // and doesn't read like an offering package never creates one. The read is held
+        // (not saved) so the owner can still override, or it can be pointed at a deal.
+        if (!forceOm && !(chosen?.kind === "new" && isOwner) && !looksLikeOm(text, pages, resolvedDeal as { tenants?: unknown[] })) {
+          await apiDiscardUpload(dealId);   // this upload's own in-flight record — never kept
+          markNotAdded(itemId, { routedType: "om", pendingOmDeal: finalDeal, pendingImages: imgs, pendingText: text, matchHint: { propertyName: finalDeal.propertyName || null, address: finalDeal.address || null, fileName } },
+            "It doesn’t read like an offering memorandum (no sale financials or real rent roll) and matches no property in the library. Nothing was saved — pick the deal it belongs to below.");
+          return { merged: null, doneMsg: null, rejected: true };
+        }
         await apiSaveDeal(finalDeal).catch(() => {});
 
         updateItem(itemId, { status: "done", msg: finalDeal.propertyName || finalDeal.fileName || "Saved", progress: 100, deal: finalDeal,
           routedType: "om", matchedDealName: finalDeal.propertyName || finalDeal.fileName, createdNew: true, priorDeal: null, appliedDealId: finalDeal.id });
         onDealsAdded([finalDeal]);
         await registerCreatedDeal(finalDeal);
-        return { merged: null, doneMsg: null };
+        return { merged: null, doneMsg: null, rejected: false };
       });
 
       if (outcome.merged) {
@@ -1472,18 +1607,18 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         updateItem(itemId, { msg: `${outcome.doneMsg} · analysis refreshed` });
         return;
       }
-      if (imagesDeferred) attachImagesLater(dealId, imgPromise, itemId);
+      if (imagesDeferred && !outcome.rejected) attachImagesLater(dealId, imgPromise, itemId);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Extraction failed";
       updateItem(itemId, { status: "error", msg: "Failed", error: msg, progress: 0 });
-      await apiDeleteDeal(dealId).catch(() => {});
+      await apiDiscardUpload(dealId);
     }
   };
 
   const handleDupUpdate = async (itemId: string) => {
     const item = queue.find(x => x.id === itemId);
     if (!item?.dupCandidate || !item.pendingExtracted) return;
-    if (item.tempDealId) await apiDeleteDeal(item.tempDealId).catch(() => {});
+    if (item.tempDealId) await apiDiscardUpload(item.tempDealId);
     // Re-base on the latest copy of the target (same-drop sales/roster may have
     // landed since the dup was flagged) so the merge doesn't overwrite it.
     const freshDup = getLatestDeal?.(item.dupCandidate.id) ?? item.dupCandidate;
@@ -1517,7 +1652,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
 
   const handleDupCancel = async (itemId: string) => {
     const item = queue.find(x => x.id === itemId);
-    if (item?.tempDealId) await apiDeleteDeal(item.tempDealId).catch(() => {});
+    if (item?.tempDealId) await apiDiscardUpload(item.tempDealId);
     setQueue(q => q.filter(x => x.id !== itemId));
   };
 
@@ -1535,7 +1670,8 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
   const failed = queue.filter(q => q.status === "error").length;
   const working = queue.filter(q => q.status === "pending" || q.status === "extracting").length;
   const waiting = queue.filter(q => q.status === "awaiting_dup").length;
-  const pct = queue.length ? Math.round(((done + failed) / queue.length) * 100) : 0;
+  const notAdded = queue.filter(q => q.status === "not_added").length;
+  const pct = queue.length ? Math.round(((done + failed + notAdded) / queue.length) * 100) : 0;
 
   return (
     <>
@@ -1551,6 +1687,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                   <span style={{ color: "#0f9d63", fontWeight: 600 }}>{done} done</span>
                   {failed > 0 && <> · <span style={{ color: "#dc2626", fontWeight: 600 }}>{failed} failed</span></>}
                   {waiting > 0 && <> · <span style={{ color: "#d9890c", fontWeight: 600 }}>{waiting} need review</span></>}
+                  {notAdded > 0 && <> · <span style={{ color: "#8a5a08", fontWeight: 600 }}>{notAdded} not added</span></>}
                   {working > 0 && <> · {working} remaining</>}
                   {paused && working > 0 && <> · <span style={{ color: "#d9890c", fontWeight: 600 }}>paused</span></>}
                 </span>
@@ -1574,7 +1711,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                     Retry {failed} failed
                   </button>
                 )}
-                {(done > 0 || failed > 0) && (
+                {(done > 0 || failed > 0 || notAdded > 0) && (
                   <button onClick={() => setQueue(q => q.filter(x => x.status === "pending" || x.status === "extracting" || x.status === "awaiting_dup" || x.status === "awaiting_confirm"))}
                     style={{ background: "transparent", border: "1px solid #dfddd6", color: "#837c6e", padding: "6px 12px", borderRadius: 7, cursor: "pointer", fontSize: 11, fontFamily: "'Roboto',sans-serif" }}>
                     Clear completed
@@ -1621,6 +1758,39 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                       </button>
                     </div>
                   </div>
+                ) : item.status === "not_added" ? (
+                  <div style={{ padding: "14px 28px", borderBottom: "1px solid #f4f6f7", background: "#fbf7ef" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#8a5a08", marginBottom: 4 }}>
+                      Not an OM — not added
+                      {item.routedType && item.routedType !== "om" && item.routedType !== "unknown" && (
+                        <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "#676767", background: "#efede6", padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>{DOC_TYPE_LABEL[item.routedType]}</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 12.5, color: "#5f5a50", marginBottom: 9, lineHeight: 1.45, overflowWrap: "break-word" }}>
+                      <strong style={{ color: "#383a37" }}>{item.name}</strong> — {item.msg.replace(NOT_ADDED_MSG, "").trim()}
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      <select defaultValue="" aria-label="Add this file to an existing deal"
+                        onChange={e => { const d = [...existingDeals, ...createdDealsRef.current].find(x => x.id === e.target.value); if (d) assignMatch(item.id, d); }}
+                        style={{ fontSize: 12, padding: "8px 10px", minHeight: 36, border: "1px solid #c4c1b8", borderRadius: 7, background: "#fff", fontFamily: "'Roboto',sans-serif", maxWidth: "100%", flex: "1 1 220px" }}>
+                        <option value="" disabled>Add it to an existing deal…</option>
+                        {[...existingDeals, ...createdDealsRef.current.filter(c => !existingDeals.some(e => e.id === c.id))].filter(d => !d.trashedAt)
+                          .sort((a, b) => (a.propertyName || a.fileName || "").localeCompare(b.propertyName || b.fileName || ""))
+                          .map(d => <option key={d.id} value={d.id}>{d.propertyName || d.fileName || "Untitled"}{d.city || d.state ? ` — ${[d.city, d.state].filter(Boolean).join(", ")}` : ""}</option>)}
+                      </select>
+                      {isOwner && (
+                        <button onClick={() => overrideNotAdded(item.id)}
+                          title="Owner only: create a new deal from this file anyway"
+                          style={{ background: "#fff", color: "#383a37", border: "1px solid #c9b48a", borderRadius: 7, padding: "9px 14px", minHeight: 36, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
+                          Add as a new deal anyway
+                        </button>
+                      )}
+                      <button onClick={() => setQueue(q => q.filter(x => x.id !== item.id))}
+                        style={{ background: "transparent", color: "#9b9992", border: "none", padding: "9px 10px", minHeight: 36, fontSize: 12, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
                 ) : item.status === "awaiting_match" ? (
                   <div style={{ padding: "14px 28px", borderBottom: "1px solid #f4f6f7", background: "#fffbf0" }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: "#a06208", marginBottom: 4 }}>Which property is this for?</div>
@@ -1635,10 +1805,12 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                           <option key={d.id} value={d.id}>{d.propertyName || d.fileName || "Untitled"}</option>
                         ))}
                       </select>
-                      <button onClick={() => createNewFromDoc(item.id)}
-                        style={{ background: "#232422", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
-                        + Create new property
-                      </button>
+                      {isOwner && (
+                        <button onClick={() => createNewFromDoc(item.id)} title="Owner only: a supporting document never creates a deal unless you say so"
+                          style={{ background: "#232422", color: "#fff", border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
+                          + Create new property
+                        </button>
+                      )}
                       <button onClick={() => setQueue(q => q.filter(x => x.id !== item.id))}
                         style={{ background: "transparent", color: "#9b9992", border: "none", padding: "7px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
                         Dismiss
@@ -1687,7 +1859,7 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
                                 <option value="" disabled>Add this file to an existing deal…</option>
                                 {pickable.map(d => <option key={d.id} value={d.id}>{d.propertyName || d.fileName || "Untitled"}{d.city || d.state ? ` — ${[d.city, d.state].filter(Boolean).join(", ")}` : ""}</option>)}
                               </select>
-                              <button onClick={() => answerConfirm(item.id, { kind: "new" })} style={btn(false)}>Save as a new deal</button>
+                              {isOwner && <button onClick={() => answerConfirm(item.id, { kind: "new" })} style={btn(false)} title="Owner only">Save as a new deal</button>}
                               <button onClick={() => answerConfirm(item.id, { kind: "skip" })} style={quiet}>Discard</button>
                             </div>
                           );

@@ -131,6 +131,7 @@ function AppInner() {
     return null;
   });
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   // Filtered vs total deal count from DealGrid, for the "39 of 94 …" header.
   const [dealCounts, setDealCounts] = useState<{ shown: number; total: number } | null>(null);
   const handleDealCounts = useCallback((shown: number, total: number) => {
@@ -306,9 +307,10 @@ function AppInner() {
   }, []);
 
   const checkAuth = useCallback(() => {
-    apiCheckAuth().then(({ authenticated, isAdmin, email, twoFactorPending, needs2faSetup, needs2faReverify }) => {
+    apiCheckAuth().then(({ authenticated, isAdmin, isOwner, email, twoFactorPending, needs2faSetup, needs2faReverify }) => {
       setAuth(authenticated ? "authenticated" : "unauthenticated");
       setIsAdmin(isAdmin);
+      setIsOwner(!!isOwner);
       setUserEmail(email);
       setTwoFAPending(!!twoFactorPending);
       setNeeds2fa(!!needs2faSetup);
@@ -632,6 +634,7 @@ function AppInner() {
         onAdminChange={checkAuth}
         onAnalyticsNav={onAnalyticsNav}
         onOpenSearch={() => setSearchOpen(true)}
+        onOpenDeal={handleOpenDeal}
         currentDeal={currentDeal ? { name: currentDeal.propertyName || currentDeal.fileName || "this deal", noi: currentDeal.noi != null ? Number(currentDeal.noi) : null,
           price: currentDeal.txnPurchasePrice != null ? Number(currentDeal.txnPurchasePrice) : currentDeal.askingPrice != null ? Number(currentDeal.askingPrice) : null } : null}
       />
@@ -957,6 +960,7 @@ function AppInner() {
         getLatestDeal={getLatestDeal}
         onOpenDeal={handleOpenDeal}
         existingDeals={deals}
+        isOwner={isOwner}
         onPanelHeightChange={setUploadPanelH}
       /></Suspense>}
       <SaveStatusIndicator />
