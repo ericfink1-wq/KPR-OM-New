@@ -397,6 +397,17 @@ function AppInner() {
     });
   }, []);
 
+  // A save refused because the deal was deleted (410) → drop it from this tab, so nothing
+  // here keeps trying to save it back (Eric, 10/19/26: a deleted deal came back 20 min later).
+  useEffect(() => {
+    const onDeleted = (e: Event) => {
+      const id = (e as CustomEvent<{ id?: string }>).detail?.id;
+      if (id) setDeals(prev => prev.filter(d => d.id !== id));
+    };
+    window.addEventListener("kpr:deal-deleted", onDeleted);
+    return () => window.removeEventListener("kpr:deal-deleted", onDeleted);
+  }, []);
+
   const handleDealUpdated = useCallback((updated: Deal) => {
     // Upsert — if the deal isn't in the list yet (e.g. an auto-merge target that
     // wasn't loaded), add it so the result shows immediately without a refresh.

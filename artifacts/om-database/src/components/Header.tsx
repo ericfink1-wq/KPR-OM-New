@@ -531,7 +531,8 @@ export default function Header({ tab, onTab, deals, queueLen, onLogout, onFiles,
 
       await apiCreateSnapshot("before-restore").catch(() => {});
 
-      await Promise.all(incoming.filter(d => !!d.id).map(d => apiSaveDeal(d).catch(() => {})));
+      // A deliberate admin restore may bring back deals that were deleted since the backup.
+      await Promise.all(incoming.filter(d => !!d.id).map(d => apiSaveDeal(d, { restoreDeleted: true }).catch(() => {})));
 
       const srcMap: Record<string, string> = (raw && typeof raw === "object" && !Array.isArray(raw)) ? (raw.sources || {}) : {};
       const imgMap: Record<string, unknown> = (raw && typeof raw === "object" && !Array.isArray(raw)) ? (raw.images || {}) : {};

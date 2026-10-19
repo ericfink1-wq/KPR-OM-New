@@ -2,6 +2,19 @@
 
 Persistent context for this repo. Read this fully at the start of every session.
 
+## DELETED DEALS STAY DELETED — TOMBSTONES (10/19/26)
+Deal 1792431501111-hp3bsxm came back ~20 min after DELETE under the same id: PUT /deals/:id is an UPSERT, so any late
+save from a tab still holding it (upload queue's deferred image / analysis saves, an open deal page) re-inserted it.
+`api lib/dealTombstone.ts`: DELETE, purge-trashed and discard-ingest write a tombstone (am_records kind
+`deal_tombstone`, id `deal_tombstone:<dealId>` — NO new table, not in ENTRY_KINDS). `refuseDeletedDealWrites`
+(routes/index.ts, before every deal router) answers 410 `deal_deleted` to ANY non-GET under /deals/<tombstoned id>
+(PUT, images, source, refresh-analysis, lease abstracts…); POST /deals, /deals/ingest and /deals/import check the body
+id; recordedSales' startup re-add skips tombstoned ids. Background writers (runBackgroundExtraction, reanalyze) UPDATE
+only and skip the index rebuild when 0 rows matched. Only an admin restore clears one: `?restoreDeleted=1` (Header backup
+restore passes it) or a snapshot restore. Client: `putDealWithRetry` treats 410 as final (`DealDeletedError`, no retry
+button) and fires `kpr:deal-deleted` → App drops the deal from state. A NEW route that inserts deal rows must check
+`isTombstoned`. Verified live: create → delete → PUT / POST / ingest / import / images / source / refresh all 410, 0 rows.
+
 ## UPLOAD GATE + PROVENANCE (Eric, 10/19/26) — classify first; paperwork never becomes a deal
 Jacob's Project Evergreen drop made 4 junk deals (tax bill, utility bill, portfolio sales report, signed contract read as
 "om", each with a random page as cover). Now: `docClassify.ts` detectors (`detectTaxBill` / `detectUtilityBill` /

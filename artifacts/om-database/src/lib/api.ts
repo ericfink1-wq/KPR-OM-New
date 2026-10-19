@@ -420,13 +420,19 @@ export async function ensureFullDeal(d: Deal): Promise<Deal> {
 
 // Save a deal, retrying transient failures (network drop, 5xx) with backoff. A 4xx
 // is a real rejection — don't retry it. Throws after the final attempt fails.
-async function putDealWithRetry(id: string, rest: Record<string, unknown>): Promise<void> {
+/** The server refused a save because the deal was DELETED (410). Final — never retried. */
+export class DealDeletedError extends Error {
+  constructor(public dealId: string) { super("This deal was deleted, so it wasn't saved again."); }
+}
+async function putDealWithRetry(id: string, rest: Record<string, unknown>, restoreDeleted = false): Promise<void> {
   const delays = [400, 1200, 3000];
   let lastErr = "Failed to save deal";
   for (let attempt = 0; attempt <= delays.length; attempt++) {
     try {
-      const resp = await apiFetch(`/deals/${id}`, { method: "PUT", body: JSON.stringify(rest) });
+      const resp = await apiFetch(`/deals/${id}${restoreDeleted ? "?restoreDeleted=1" : ""}`, { method: "PUT", body: JSON.stringify(rest) });
       if (resp.ok) return;
+      // Deleted (Eric, 10/19/26): a late save from this tab must not bring it back — drop it everywhere.
+      if (resp.status === 410) throw new DealDeletedError(id);
       if (resp.status >= 400 && resp.status < 500) {
         // Surface the server's own reason (e.g. "mark Sold only once the sale has closed").
         let why = "";
@@ -436,7 +442,7 @@ async function putDealWithRetry(id: string, rest: Record<string, unknown>): Prom
       lastErr = `Server error (HTTP ${resp.status}).`;
     } catch (e) {
       // A thrown 4xx above is final; rethrow it rather than retrying.
-      if (e instanceof Error && /Signed out|Save rejected/.test(e.message)) throw e;
+      if (e instanceof DealDeletedError || (e instanceof Error && /Signed out|Save rejected/.test(e.message))) throw e;
       lastErr = "Network error — couldn't reach the server.";
     }
     if (attempt < delays.length) await new Promise(r => setTimeout(r, delays[attempt]));
@@ -444,13 +450,20 @@ async function putDealWithRetry(id: string, rest: Record<string, unknown>): Prom
   throw new Error(lastErr);
 }
 
-export async function apiSaveDeal(deal: Deal): Promise<void> {
+/** `opts.restoreDeleted` (admin backup restore only) deliberately brings back a deleted id. */
+export async function apiSaveDeal(deal: Deal, opts: { restoreDeleted?: boolean } = {}): Promise<void> {
   const { id, ...rest } = deal;
   beginSave();
   try {
-    await putDealWithRetry(id, rest);
+    await putDealWithRetry(id, rest, !!opts.restoreDeleted);
     endSaveOk(id);
   } catch (e) {
+    if (e instanceof DealDeletedError) {
+      // Not an error to retry: the deal is gone. Clear the indicator and tell the app to forget it.
+      endSaveOk(id);
+      try { window.dispatchEvent(new CustomEvent("kpr:deal-deleted", { detail: { id } })); } catch { /* non-browser */ }
+      throw e;
+    }
     const msg = e instanceof Error ? e.message : "Failed to save deal";
     endSaveError(id, () => apiSaveDeal(deal), msg);
     reportClientError("Deal save failed", `${id}: ${msg}`);

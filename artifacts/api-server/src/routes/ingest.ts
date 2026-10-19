@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, dealsTable, dealImagesTable, dealSourcesTable, tenantIndexTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { runBackgroundExtraction } from "../lib/extract";
+import { isTombstoned, tombstoneDeal, GONE_BODY } from "../lib/dealTombstone";
 
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rateLimit";
@@ -43,6 +44,8 @@ router.post("/deals/ingest", requireAuth, ingestLimit, async (req, res) => {
   };
 
   try {
+    // A deleted id is never re-created — not even by a retried upload of the same file.
+    if (await isTombstoned(id)) { res.status(410).json(GONE_BODY); return; }
     await db.insert(dealsTable)
       .values({ id, data: processingData })
       .onConflictDoUpdate({ target: dealsTable.id, set: { data: processingData, updatedAt: new Date() } });
@@ -111,6 +114,8 @@ router.post("/deals/:id/discard-ingest", requireAuth, async (req, res) => {
     await db.delete(dealSourcesTable).where(eq(dealSourcesTable.id, id));
     await db.delete(tenantIndexTable).where(eq(tenantIndexTable.dealId, id));
     await db.delete(dealsTable).where(eq(dealsTable.id, id));
+    // The uploading tab may still hold this record (deferred image / analysis saves) — keep it gone.
+    await tombstoneDeal(id, req.session.userEmail ?? null, "discarded upload");
     res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "discard-ingest failed");

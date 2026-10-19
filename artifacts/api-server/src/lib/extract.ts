@@ -1136,9 +1136,12 @@ export async function runBackgroundExtraction(
     } catch { /* validators must never break an upload */ }
     ensurePropertyName(dealData);
     try { applyAnalysisGuardrails(dealData, dealData); } catch { /* never break an upload */ }
-    await db.update(dealsTable)
+    // UPDATE only (never insert): a row deleted while this ran stays deleted — 0 rows → stop.
+    const wrote = await db.update(dealsTable)
       .set({ data: dealData, updatedAt: new Date() })
-      .where(eq(dealsTable.id, id));
+      .where(eq(dealsTable.id, id))
+      .returning({ id: dealsTable.id });
+    if (!wrote.length) { log.info({ id }, "Background extraction finished for a deal deleted meanwhile — not written"); return; }
     await rebuildTenantIndex(id, dealData);
     log.info({ id }, "Background extraction complete");
   } catch (err) {

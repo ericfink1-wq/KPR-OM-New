@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { clearTombstone } from "../lib/dealTombstone";
 import { db } from "@workspace/db";
 import { dealsTable, dealSourcesTable, snapshotsTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
@@ -139,6 +140,8 @@ router.post("/snapshots/:id/restore", requireAdmin, async (req, res) => {
     let updated = 0;
 
     for (const deal of deals) {
+      // Restoring a snapshot is an explicit admin act: a deal it brings back is no longer "deleted".
+      await clearTombstone(deal.id);
       const existing = await db
         .select({ id: dealsTable.id })
         .from(dealsTable)

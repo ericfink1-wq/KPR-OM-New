@@ -26,6 +26,7 @@ import mcpRouter, { mcpAdminRouter } from "./mcp";
 import datexIngestRouter from "./datexIngest";
 import { needs2faReverify } from "./../lib/twoFactorPolicy";
 import { docPrivacyMiddleware } from "../lib/docPrivacy";
+import { refuseDeletedDealWrites } from "../lib/dealTombstone";
 
 const router: IRouter = Router();
 
@@ -59,6 +60,8 @@ router.use((req, res, next) => {
 // Drive / SharePoint links and ids are Eric's only (10/19/26): every response below is scrubbed
 // for any other account. Mounted after the auth + 2FA gate so the session user is known.
 router.use(docPrivacyMiddleware as unknown as Parameters<typeof router.use>[0]);
+// A deleted deal stays deleted: no write under /deals/<deleted id> can re-create it (lib/dealTombstone.ts).
+router.use(refuseDeletedDealWrites as unknown as Parameters<typeof router.use>[0]);
 router.use(ingestRouter);
 router.use(dealsRouter);
 router.use(aliasesRouter);

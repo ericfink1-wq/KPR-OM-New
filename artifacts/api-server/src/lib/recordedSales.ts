@@ -1,4 +1,5 @@
 import { db, dealsTable } from "@workspace/db";
+import { isTombstoned } from "./dealTombstone";
 import { inArray, sql } from "drizzle-orm";
 import { updateDealSafely } from "./dealWrite";
 import { autoMaintainDealData } from "./dealMaintenance";
@@ -87,6 +88,7 @@ export async function addMissingProperties(): Promise<number> {
     const [hit] = await db.select({ n: sql<number>`count(*)::int` }).from(dealsTable).where(
       sql`${dealsTable.id} = ${p.id} OR (lower(trim(${dealsTable.data}->>'propertyName')) = lower(${name}) AND ${dealsTable.data}->>'trashedAt' IS NULL)`);
     if ((hit?.n ?? 0) > 0) continue;
+    if (await isTombstoned(p.id)) continue;   // deleted on purpose → never re-added at startup
     const now = new Date().toISOString();
     const data = autoMaintainDealData({ ...p.data, uploadedAt: now, tenants: [] }).data;
     await db.insert(dealsTable).values({ id: p.id, data }).onConflictDoNothing();

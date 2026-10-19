@@ -2,6 +2,7 @@ import { stampStatusChange } from "../lib/statusSince";
 import { JSON_REPAIR_VERSION } from "../lib/jsonRepair";
 import express, { Router } from "express";
 import { db, pool } from "@workspace/db";
+import { isTombstoned, clearTombstone, tombstoneDeal, GONE_BODY } from "../lib/dealTombstone";
 import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable, compsIndexTable, leaseAbstractsTable } from "@workspace/db";
 import { eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { runOmExtraction, runRosterAnalysis, loadLeaseRiskSummary, autoUpdateHouseViewOnReview,
@@ -350,6 +351,11 @@ router.post("/deals/import", requireAuth, async (req, res) => {
     req.log.info({ propertyName: body.propertyName, keys: Object.keys(body).length }, "import deal request");
 
     const { id: uploadedId, ...uploadedData } = body;
+    // A deleted deal's id never comes back through an import (only an admin restore can).
+    if (typeof uploadedId === "string" && uploadedId && await isTombstoned(uploadedId)) {
+      if (req.query.restoreDeleted === "1" && req.session?.isAdmin) await clearTombstone(uploadedId);
+      else { res.status(410).json(GONE_BODY); return; }
+    }
 
     const normName = typeof uploadedData.propertyName === "string"
       ? uploadedData.propertyName.trim().toLowerCase() : null;
@@ -556,6 +562,7 @@ router.post("/deals", requireAuth, async (req, res) => {
       res.status(400).json({ error: "id is required" });
       return;
     }
+    if (await isTombstoned(id)) { res.status(410).json(GONE_BODY); return; }
     const rest = coerceDealArrays(rest0);
     delete rest._summary;         // a list-view marker is never stored
     normalizeDealAddress(rest);   // street-only address + backfill blank city/state/zip
@@ -678,6 +685,8 @@ router.delete("/deals/:id", requireAdmin, async (req, res) => {
     // new id can't collide with orphaned rows (and the DB doesn't slowly bloat).
     await db.delete(leaseAbstractsTable).where(eq(leaseAbstractsTable.dealId, id));
     await db.delete(dealsTable).where(eq(dealsTable.id, id));
+    // Tombstone it, so a late save from a tab / queue that still held the deal can't re-create it.
+    await tombstoneDeal(id, req.session?.userEmail ?? null, "deleted");
     res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Failed to delete deal");
@@ -705,6 +714,7 @@ router.post("/deals/purge-trashed", requireAdmin, async (req, res) => {
       await db.delete(compsIndexTable).where(eq(compsIndexTable.sourceDealId, id));
       await db.delete(leaseAbstractsTable).where(eq(leaseAbstractsTable.dealId, id));
       await db.delete(dealsTable).where(eq(dealsTable.id, id));
+      await tombstoneDeal(id, req.session?.userEmail ?? null, "purged from Trash");
     }
     req.log.info({ purged: trashedIds.length }, "Purged trashed deals");
     res.json({ ok: true, purged: trashedIds.length, snapshot: snap });
@@ -1220,9 +1230,11 @@ router.post("/deals/:id/reanalyze", requireAuth, async (req, res) => {
             lastScoredDealCount: totalCount,
             analysisVersion: ANALYSIS_VERSION,
           };
-          await db.update(dealsTable)
+          const wrote = await db.update(dealsTable)
             .set({ data: dealData, updatedAt: new Date() })
-            .where(eq(dealsTable.id, id));
+            .where(eq(dealsTable.id, id))
+            .returning({ id: dealsTable.id });
+          if (!wrote.length) { req.log.info({ id }, "Re-analysis finished for a deal deleted meanwhile — not written"); return; }
           await rebuildTenantIndex(id, dealData);
           req.log.info({ id }, "Re-analysis complete");
         } catch (err) {
