@@ -47,7 +47,7 @@ curl -s -H "Authorization: Bearer $DATEX_INGEST_TOKEN" https://kpr-oms.replit.ap
 python3 job_kit.py state --out state.json
 python3 job_kit.py plan --state state.json [--mode weekly|monthly]          # phase 1: the one Occupancy call
 #   make it; then extract the session's Datex results:
-python3 job_kit.py extract --transcript "/root/.claude/projects/*/<session-id>.jsonl" --out calls.jsonl
+python3 job_kit.py extract --out calls.jsonl   # reads THIS session's transcript (newest .jsonl under /root/.claude/projects/) and prints the path + result count
 python3 job_kit.py plan --state state.json --calls calls.jsonl [--mode …]  # phase 2: every remaining call
 #   make those (follow nextCursor while hasMore), extract again, then:
 python3 job_kit.py build --state state.json --calls calls.jsonl --out payload.json

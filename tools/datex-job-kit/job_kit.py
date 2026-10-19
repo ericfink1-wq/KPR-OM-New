@@ -9,17 +9,20 @@ Python 3 standard library only. The task's loop:
   python3 job_kit.py state --out state.json                       # 1. what the site has
   python3 job_kit.py plan --state state.json                      # 2a. the Occupancy call
       ... make that Datex MCP call ...
-  python3 job_kit.py extract --transcript <session.jsonl> --out calls.jsonl
+  python3 job_kit.py extract --out calls.jsonl
   python3 job_kit.py plan --state state.json --calls calls.jsonl  # 2b. the remaining calls
       ... make those calls (follow nextCursor while hasMore) ...
-  python3 job_kit.py extract --transcript <session.jsonl> --out calls.jsonl
+  python3 job_kit.py extract --out calls.jsonl
   python3 job_kit.py build --state state.json --calls calls.jsonl --out payload.json
   python3 job_kit.py post --payload payload.json --dry-run        # 5. preview
   python3 job_kit.py post --payload payload.json                  #    then write
 
 calls.jsonl is one JSON object per line: {"entity", "tool", "filters", "rows": [...]}. The
-`extract` command builds it from the task's own transcript (/root/.claude/projects/*/<id>.jsonl);
-a hand-written file in the same shape works too.
+`extract` command builds it from the task's OWN transcript: by default the single most recently
+modified .jsonl under /root/.claude/projects/ (the running session writes to it, so it is the
+newest) — never a wildcard over every past session, which would mix in stale results. It prints
+the file it read and how many Datex results it found. `--transcript <file>` overrides the default.
+A hand-written calls.jsonl in the same shape works too.
 
 The kit builds a DELTA payload: a block is sent for a deal only when the calls actually
 covered that deal's buildings. The site keeps every block that isn't sent. All guardrails
@@ -39,7 +42,8 @@ import sys
 import urllib.error
 import urllib.request
 
-KIT_VERSION = "2026-10-18.2"
+KIT_VERSION = "2026-10-19.1"
+TRANSCRIPT_ROOT = os.environ.get("KPR_TRANSCRIPT_ROOT", "/root/.claude/projects")
 DEFAULT_BASE = os.environ.get("KPR_BASE_URL", "https://kpr-oms.replit.app")
 
 # The field that names the building, per entity (Datex ids are fixed-width: always trim).
@@ -153,6 +157,23 @@ def _parse_result(text):
         return json.loads(t)
     except json.JSONDecodeError:
         return None
+
+
+def latest_transcript(root=None):
+    """The single most recently modified .jsonl under root (recursive) — this session's own transcript."""
+    root = root or TRANSCRIPT_ROOT
+    best, best_m = None, -1.0
+    for dirpath, _dirs, files in os.walk(root):
+        for f in files:
+            if f.endswith(".jsonl"):
+                p = os.path.join(dirpath, f)
+                try:
+                    m = os.path.getmtime(p)
+                except OSError:
+                    continue
+                if m > best_m:
+                    best, best_m = p, m
+    return best
 
 
 def extract_calls(transcript_path):
@@ -708,7 +729,7 @@ def main(argv=None):
             sp.add_argument("--payload", default="payload.json")
             sp.add_argument("--dry-run", action="store_true")
     ex = sub.add_parser("extract")
-    ex.add_argument("--transcript", required=True, help="session transcript .jsonl (a glob is fine)")
+    ex.add_argument("--transcript", help="override: a transcript .jsonl to read (default: the newest .jsonl under /root/.claude/projects/)")
     ex.add_argument("--out", default="calls.jsonl")
     pl = sub.add_parser("plan")
     pl.add_argument("--state", required=True)
@@ -735,8 +756,19 @@ def main(argv=None):
             json.dump(data, fh, indent=1)
         print(f"wrote {a.out}: {len(data.get('deals') or [])} properties")
     elif a.cmd == "extract":
-        paths = sorted(glob.glob(a.transcript)) or [a.transcript]
-        calls = [c for p in paths for c in extract_calls(p)]
+        if a.transcript:
+            # Override: a file, or a glob that must resolve to ONE file (the newest match).
+            hits = glob.glob(a.transcript)
+            path = max(hits, key=os.path.getmtime) if hits else a.transcript
+        else:
+            path = latest_transcript()
+            if not path:
+                sys.exit(f"no .jsonl transcript found under {TRANSCRIPT_ROOT} — pass --transcript <file>")
+        if not os.path.exists(path):
+            sys.exit(f"transcript not found: {path}")
+        calls = extract_calls(path)
+        print(f"read transcript: {path}")
+        print(f"extracted {len(calls)} Datex MCP result{'' if len(calls) == 1 else 's'}")
         with open(a.out, "w", encoding="utf-8") as fh:
             for c in calls:
                 fh.write(json.dumps(c) + "\n")

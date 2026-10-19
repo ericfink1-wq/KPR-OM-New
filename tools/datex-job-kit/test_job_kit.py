@@ -222,6 +222,28 @@ class ExtractTest(unittest.TestCase):
         self.assertEqual([(c["entity"], c["tool"], len(c["rows"])) for c in calls], [("Occupancy", "read", 1), ("TenantLedger", "aggregate", 1)])
         self.assertEqual(calls[1]["rows"][0], {"BuildingId": "brunswic", "TenantId": "t1", "value": 5})
 
+    def test_extract_defaults_to_newest_transcript_only(self):
+        import subprocess, sys, time
+        use = {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "a", "name": "mcp__Datex_MCP__read_records", "input": {"entity": "Occupancy"}}]}}
+        res = lambda n: {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "a", "content": json.dumps({"items": [{"BuildingId": f"b{i}"} for i in range(n)]})}]}}
+        with tempfile.TemporaryDirectory() as tmp:
+            old = os.path.join(tmp, "proj-a", "old-session.jsonl"); new = os.path.join(tmp, "proj-b", "this-session.jsonl")
+            for path, n in ((old, 5), (new, 2)):
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(json.dumps(use) + "\n" + json.dumps(res(n)) + "\n")
+            os.utime(old, (time.time() - 3600, time.time() - 3600))
+            self.assertEqual(K.latest_transcript(tmp), new)
+            out = os.path.join(tmp, "calls.jsonl")
+            kit = os.path.join(os.path.dirname(os.path.abspath(__file__)), "job_kit.py")
+            r = subprocess.run([sys.executable, kit, "extract", "--out", out], env={**os.environ, "KPR_TRANSCRIPT_ROOT": tmp}, capture_output=True, text=True, check=True)
+            self.assertIn(f"read transcript: {new}", r.stdout)
+            self.assertIn("extracted 1 Datex MCP result", r.stdout)
+            self.assertEqual(sum(len(json.loads(l)["rows"]) for l in open(out)), 2)  # the old session's 5 rows are NOT mixed in
+            r2 = subprocess.run([sys.executable, kit, "extract", "--transcript", old, "--out", out], capture_output=True, text=True, check=True)
+            self.assertIn(f"read transcript: {old}", r2.stdout)
+            self.assertEqual(sum(len(json.loads(l)["rows"]) for l in open(out)), 5)
+
 
 if __name__ == "__main__":
     unittest.main()

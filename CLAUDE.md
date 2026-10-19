@@ -92,7 +92,9 @@ it through these. Boundary tests: `__tests__/money.test.ts`.
   field — now in the file import too. Roster hash formula is in `rosterHash` + the doc; the job must match it.
 - Status: `/am/datex-auto/status` → "Last auto-refresh" line on Properties. Recipe: docs/datex-refresh.md.
 - JOB KIT: `tools/datex-job-kit/job_kit.py` (stdlib Python; served at `GET /api/datex/job-kit`, copied into
-  dist/docs by build.mjs) — `state` / `plan` / `extract` (from the session transcript) / `build` / `post`.
+  dist/docs by build.mjs) — `state` / `plan` / `extract` / `build` / `post`. `extract` (kit 2026-10-19.1) reads ONLY the
+  newest .jsonl under /root/.claude/projects/ (this session; `KPR_TRANSCRIPT_ROOT` overrides the root, `--transcript` the
+  file) and prints the path + result count — never a wildcard over past sessions. Job prompt: `extract --out calls.jsonl`.
   Live-Datex facts it encodes: Period/SalesPeriod are TEXT (no gt — use eq/startsWith), Basis is "C"/"A"
   (server now stores Cash/Accrual), ids fixed-width. `rosterHash` (TS) and `roster_hash` (py) MUST agree —
   `datexJobKit.test.ts` pins it and runs the Python unit tests; change both or neither.
