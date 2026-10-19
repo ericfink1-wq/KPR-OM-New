@@ -1291,7 +1291,8 @@ export async function apiAmDeleteRecord(id: string): Promise<void> {
   const r = await apiFetch(`/am/records/${encodeURIComponent(id)}`, { method: "DELETE" });
   if (!r.ok) throw new Error("Couldn't delete");
 }
-export interface AmImportResult { applied: boolean; rows: Array<{ kind: string; id: string; dealId: string; property: string; data: Record<string, unknown>; sourceNote: string | null; action: "create" | "update" }>; rejected: Array<{ row: number; problem: string }> }
+export interface AmImportChange { field: string; label: string; from: unknown; to: unknown }
+export interface AmImportResult { applied: boolean; rows: Array<{ kind: string; id: string; dealId: string; property: string; data: Record<string, unknown>; sourceNote: string | null; action: "create" | "update"; changes?: AmImportChange[]; matchNote?: string }>; rejected: Array<{ row: number; problem: string }> }
 export async function apiAmImport(text: string, apply: boolean): Promise<AmImportResult> {
   const r = await apiFetch("/am/records/import", { method: "POST", body: JSON.stringify({ text, apply }) });
   const j = await r.json().catch(() => ({})) as AmImportResult & { error?: string };

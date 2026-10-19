@@ -157,7 +157,7 @@ export interface LoanRec {
 export interface SwapRec {
   loanId?: string; counterparty?: string; notional?: number; fixedSwapRatePct?: number; spreadBps?: number; allInFixedPct?: number;
   tradeDate?: string; effectiveDate?: string; maturityDate?: string; index?: string; payFixed?: boolean; notes?: string;
-  loanLabel?: string; openQuestions?: string; confidence?: string;
+  loanLabel?: string; swapLabel?: string; openQuestions?: string; confidence?: string;
   /** Hedge known to exist but notional / rate / maturity not documented yet — shown, never priced. */
   termsPending?: boolean;
 }
@@ -209,7 +209,7 @@ export function sanitizeSwap(r: Record<string, unknown>): SwapRec {
     fixedSwapRatePct: pct(r.fixedSwapRatePct ?? r.swapRate ?? r.fixedRate), spreadBps, allInFixedPct: pct(r.allInFixedPct ?? r.allIn),
     tradeDate: isoDate(r.tradeDate), effectiveDate: isoDate(r.effectiveDate), maturityDate: isoDate(r.maturityDate ?? r.terminationDate ?? r.maturity),
     index: normIndex(r.index ?? r.floatingIndex), payFixed: bool(r.payFixed), notes: text(r.notes),
-    loanLabel: str(r.loanLabel ?? r.label, 120), openQuestions: text(r.openQuestions), confidence: str(r.confidence, 60),
+    loanLabel: str(r.loanLabel ?? r.label, 120), swapLabel: str(r.swapLabel ?? r.swapName, 120), openQuestions: text(r.openQuestions), confidence: str(r.confidence, 60),
   });
 }
 export function sanitizePref(r: Record<string, unknown>): PrefRec {
@@ -415,7 +415,12 @@ export function resolveDeal(raw: Record<string, unknown>, owned: OwnedDealRef[])
   return { problem: "row has no dealId, bldgId or property" };
 }
 
-export interface ImportPlanRow { kind: string; id: string; dealId: string; property: string; data: Record<string, unknown>; sourceNote: string | null; action: "create" | "update" }
+export interface ImportFieldChange { field: string; label: string; from: unknown; to: unknown }
+export interface ImportPlanRow { kind: string; id: string; dealId: string; property: string; data: Record<string, unknown>; sourceNote: string | null; action: "create" | "update";
+  /** For an update: each field the import changes, old → new (what the preview shows). */
+  changes?: ImportFieldChange[];
+  /** Why this row matched / didn't match an existing one, when that isn't obvious. */
+  matchNote?: string }
 /** What makes two rows the SAME instrument regardless of wording (Eric, 10/18/26: a re-import
  *  with "label"→"loanLabel" or retyped investor text duplicated Rockaway swaps and the
  *  Knollwood pref). Swap / pref = property + loan label + amount; null when too thin to say. */
@@ -426,24 +431,96 @@ export function naturalKey(kind: string, dealId: string | null, d: Record<string
   if (kind === "pref") { const a = amt(d.amount); return lbl || a ? `pref|${dealId}|${lbl}|${a}` : null; }
   return null;
 }
+
+// ── Identity match (Eric, 10/19/26) ──────────────────────────────────────────
+// A corrected maturity, lender or amount used to change the id (built from those very
+// fields) and the import created a TWIN loan — Chili, Amberly, Cooks, the Overland swap. The
+// instrument's identity is its PROPERTY + LABEL, not its terms: a loan = property + loan label,
+// a swap = property + swap label (else its loan label), a covenant = property + covenant type
+// (+ loan label when both name one). One existing match → that row is UPDATED. Several → it is
+// ambiguous (already-duplicated rows): nothing is guessed, the preview says so.
+const normLabel = (v: unknown) => String(v ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+export function identityCandidates(kind: string, dealId: string, d: Record<string, unknown>, existing: AmRecord[]): AmRecord[] | null {
+  const same = existing.filter(e => e.kind === kind && e.dealId === dealId);
+  if (kind === "loan") {
+    const l = normLabel(d.loanLabel ?? d.loanName);
+    return l ? same.filter(e => normLabel(e.data.loanLabel ?? e.data.loanName) === l) : null;
+  }
+  if (kind === "swap") {
+    const sl = normLabel(d.swapLabel);
+    if (sl) return same.filter(e => normLabel(e.data.swapLabel) === sl);
+    const l = normLabel(d.loanLabel);
+    return l ? same.filter(e => !normLabel(e.data.swapLabel) && normLabel(e.data.loanLabel) === l) : null;
+  }
+  if (kind === "covenant") {
+    if (!d.type) return null;
+    let c = same.filter(e => e.data.type === d.type);
+    const l = normLabel(d.loanLabel ?? d.loanId);
+    if (l) c = c.filter(e => { const el = normLabel(e.data.loanLabel ?? e.data.loanId); return !el || el === l; });
+    // Two covenants of one type on a property are told apart by the tenant they hang on.
+    if (c.length > 1 && d.linkedTenant) c = c.filter(e => normLabel(e.data.linkedTenant) === normLabel(d.linkedTenant));
+    return c;
+  }
+  return null;
+}
+
+const FIELD_LABEL: Record<string, string> = {
+  maturityDate: "maturity", lender: "lender", originalBalance: "original amount", currentBalance: "current balance", balanceAsOf: "balance as of",
+  allInRatePct: "all-in rate %", fixedRatePct: "fixed rate %", spreadBps: "spread (bps)", index: "index", rateType: "rate type", loanName: "loan name",
+  originationDate: "origination", extensionOptions: "extensions", ioUntil: "IO until", amortization: "amortization", amortYears: "amort years",
+  counterparty: "counterparty", notional: "notional", fixedSwapRatePct: "swap rate %", allInFixedPct: "all-in fixed %", effectiveDate: "effective date",
+  tradeDate: "trade date", threshold: "threshold", sweepBelow: "sweep below", testFrequency: "test frequency", firstTestDate: "first test",
+  triggerDate: "trigger date", type: "type", loanLabel: "loan label", swapLabel: "swap label", linkedTenant: "tenant", termsPending: "terms pending",
+};
+const SKIP_DIFF = new Set(["amortizationText", "sourceDocs"]);
+export function fieldChanges(before: Record<string, unknown>, incoming: Record<string, unknown>): ImportFieldChange[] {
+  const out: ImportFieldChange[] = [];
+  for (const [k, v] of Object.entries(incoming)) {
+    if (SKIP_DIFF.has(k) || v == null || v === "") continue;
+    if (JSON.stringify(before[k] ?? null) !== JSON.stringify(v)) out.push({ field: k, label: FIELD_LABEL[k] ?? k, from: before[k] ?? null, to: v });
+  }
+  return out;
+}
+
 export function planImport(text: string, owned: OwnedDealRef[], existingIds: Set<string>, existing: AmRecord[] = []): { rows: ImportPlanRow[]; rejected: Array<{ row: number; problem: string }>; problem?: string } {
   const { rows, problem } = readImportText(text);
   if (problem) return { rows: [], rejected: [], problem };
   const out: ImportPlanRow[] = [], rejected: Array<{ row: number; problem: string }> = [];
+  const byId = new Map(existing.map(e => [e.id, e]));
   rows.forEach((r, i) => {
     const deal = resolveDeal(r.raw, owned);
     if ("problem" in deal) { rejected.push({ row: i + 1, problem: deal.problem }); return; }
     const data = SANITIZE[r.kind](r.raw);
     const bad = validateRecord(r.kind, data);
     if (bad) { rejected.push({ row: i + 1, problem: bad }); return; }
-    let id = str(r.raw.id, 120) ?? recordId(r.kind, deal.dealId, data);
-    // Same instrument already on file under another id → update it rather than add a twin.
-    const nk = naturalKey(r.kind, deal.dealId, data);
-    if (!existingIds.has(id) && nk) {
-      const twin = existing.find(e => e.kind === r.kind && naturalKey(e.kind, e.dealId, e.data) === nk && !out.some(o => o.id === e.id));
-      if (twin) id = twin.id;
+    const explicitId = str(r.raw.id, 120);
+    let id = explicitId ?? recordId(r.kind, deal.dealId, data);
+    let matchNote: string | undefined;
+    const taken = (eid: string) => out.some(o => o.id === eid);
+    if (!explicitId) {
+      // 1) Property + label (+ type for covenants): the instrument's identity.
+      const cands = identityCandidates(r.kind, deal.dealId, data, existing)?.filter(e => !taken(e.id));
+      if (cands && cands.length === 1) id = cands[0].id;
+      else if (cands && cands.length > 1) {
+        matchNote = `${cands.length} saved ${r.kind}s already share this ${r.kind === "covenant" ? "type" : "label"} on this property (duplicates?) — not guessing which to update; delete the extras on the Debt tab and re-import`;
+        if (!existingIds.has(id)) {
+          rejected.push({ row: i + 1, problem: `${owned.find(d => d.id === deal.dealId)!.name}: ${matchNote}` });
+          return;
+        }
+      } else if (!existingIds.has(id)) {
+        // 2) Fallback for unlabelled swaps / prefs: label + amount, as before.
+        const nk = naturalKey(r.kind, deal.dealId, data);
+        const twin = nk ? existing.find(e => e.kind === r.kind && naturalKey(e.kind, e.dealId, e.data) === nk && !taken(e.id)) : undefined;
+        if (twin) id = twin.id;
+      }
     }
-    out.push({ kind: r.kind, id, dealId: deal.dealId, property: owned.find(d => d.id === deal.dealId)!.name, data, sourceNote: str(r.raw.source ?? r.raw.sourceNote, 300) ?? null, action: existingIds.has(id) ? "update" : "create" });
+    const prev = byId.get(id);
+    const isUpdate = existingIds.has(id);
+    // An update MERGES: a field the import doesn't carry keeps its saved value.
+    const merged = prev ? { ...prev.data, ...data } : data;
+    out.push({ kind: r.kind, id, dealId: deal.dealId, property: owned.find(d => d.id === deal.dealId)!.name, data: merged,
+      sourceNote: str(r.raw.source ?? r.raw.sourceNote, 300) ?? prev?.sourceNote ?? null, action: isUpdate ? "update" : "create",
+      changes: prev ? fieldChanges(prev.data, data) : undefined, matchNote });
   });
   return { rows: out, rejected };
 }

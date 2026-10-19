@@ -650,7 +650,11 @@ Financing (owned) = `OwnedFinancing` from am_records (manual form folded away); 
 `annualDebtService` (IO until `ioUntil`, then amortizing; a covenant's own test amort overrides),
 `actualNoi` (Datex TTM → YTD annualised → budget → deal NOI, always labelled), `buildCovenantRows`,
 `planVsActual`, `sinceAcquisition`, `nextCovenantTest`. Covenant triggers/tests are on the Dates calendar.
-Importer now KEEPS unknown columns (`withExtras`) and reads Drive ids (`extractDocs` → `sourceDocs`).
+Import IDENTITY (10/19/26, `identityCandidates` in api lib/assetMgmt.ts): loan = property + loanLabel (else loanName),
+swap = property + swapLabel (else loanLabel), covenant = property + type (+ loanLabel, then linkedTenant to split ties).
+One match → UPDATE that row, data MERGED (unsent fields kept), preview `changes` old→new; several matches → row
+REJECTED with the reason (never guess between duplicates); no label → old recordId/naturalKey fallback.
+Tests: `amImportMatch.test.ts`. Importer now KEEPS unknown columns (`withExtras`) and reads Drive ids (`extractDocs` → `sourceDocs`).
 Roster: `isNonGLA` (ATM/utility/license/sub-150 SF vacant sliver — rent counts, SF never GLA/vacancy),
 `isHoldover`, `passedOptionNotices`, `reimbursementChips` + side drawer. Owned deals are SKIPPED by
 the background re-analysis batch (asset brief regenerates on demand only). Admin docs:

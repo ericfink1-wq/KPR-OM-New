@@ -188,7 +188,16 @@ function ImportBox({ onDone, onClose }: { onDone: () => void; onClose: () => voi
       {plan && (
         <div style={{ fontSize: 12.5 }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>{plan.applied ? "Saved." : "Preview:"} {plan.rows.filter(r => r.action === "create").length} new, {plan.rows.filter(r => r.action === "update").length} updated, {plan.rejected.length} rejected</div>
-          {plan.rows.slice(0, 40).map(r => <div key={r.id} style={{ color: K.ink }}>{r.action === "create" ? "＋" : "↻"} {r.kind === "pref" ? "preferred equity" : r.kind}{r.data.termsPending ? " (terms pending)" : ""} · {r.property}{r.data.loanLabel ? ` · ${r.data.loanLabel}` : ""} · {String(r.data.lender ?? r.data.counterparty ?? r.data.investor ?? r.data.type ?? "")} {r.data.maturityDate || r.data.date ? `· ${r.data.maturityDate ?? r.data.date}` : ""}</div>)}
+          {plan.rows.slice(0, 40).map(r => (
+            <div key={r.id} style={{ color: K.ink, padding: "3px 0", borderTop: `1px solid ${K.line}` }}>
+              <div>{r.action === "create" ? "＋ new" : "↻ update"} · {r.kind === "pref" ? "preferred equity" : r.kind}{r.data.termsPending ? " (terms pending)" : ""} · {r.property}{r.data.swapLabel ? ` · ${r.data.swapLabel}` : r.data.loanLabel ? ` · ${r.data.loanLabel}` : ""} · {String(r.data.lender ?? r.data.counterparty ?? r.data.investor ?? r.data.type ?? "")} {r.data.maturityDate || r.data.date ? `· ${r.data.maturityDate ?? r.data.date}` : ""}</div>
+              {r.action === "update" && (r.changes?.length
+                ? <div style={{ paddingLeft: 14, color: K.gray, fontVariantNumeric: "tabular-nums" }}>{r.changes.map(c => (
+                    <span key={c.field} style={{ display: "inline-block", marginRight: 12 }}>{c.label}: <s>{fmtChange(c.field, c.from)}</s> → <b style={{ color: K.ink }}>{fmtChange(c.field, c.to)}</b></span>))}</div>
+                : <div style={{ paddingLeft: 14, color: K.gray }}>no field changes</div>)}
+              {r.matchNote && <div style={{ paddingLeft: 14, color: K.amber }}>{r.matchNote}</div>}
+            </div>
+          ))}
           {plan.rejected.map(r => <div key={r.row} style={{ color: K.red }}>Row {r.row}: {r.problem}</div>)}
         </div>
       )}
@@ -429,6 +438,14 @@ function ArCell({ ar }: { ar: NonNullable<ReturnType<typeof splitArAging>> }) {
         : <Src>current tenants</Src>}
     </>
   );
+}
+
+/** Old → new values in the import preview: money as $, dates as written, else plain. */
+function fmtChange(field: string, v: unknown): string {
+  if (v == null || v === "") return "—";
+  if (typeof v === "number" && /balance|amount|notional/i.test(field)) return `$${Math.round(v).toLocaleString()}`;
+  if (typeof v === "boolean") return v ? "yes" : "no";
+  return typeof v === "object" ? JSON.stringify(v).slice(0, 60) : String(v);
 }
 
 // ── Properties tab ────────────────────────────────────────────────────────────

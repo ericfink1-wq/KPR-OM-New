@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-19-am-import-match",
+    date: "2026-10-19",
+    category: "fixed",
+    adminOnly: true,
+    title: "Importing loans, swaps and covenants updates them instead of adding duplicates",
+    detail: "A re-import now recognises a loan by its property and loan label, a swap by its property and swap (or loan) label, and a covenant by its property and type. A corrected maturity, lender, amount or covenant level updates the saved row, and anything the import doesn't include is kept. The preview shows each change as old → new before you save. If a property already has two rows with the same label, the import holds that row back and tells you, so you can delete the extra first.",
+    where: "Asset Mgmt → Debt → Import loans & swaps",
+  },
+  {
     id: "2026-10-18-roster-scrub",
     date: "2026-10-18",
     category: "new",
