@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-19-am-sorting",
+    date: "2026-10-19",
+    category: "improved",
+    title: "Every Asset Mgmt table sorts",
+    detail: "Click any column header on the Debt (loans, swaps, preferred equity), Dates, Properties and Credit Watch tables to sort it; click again to flip it. An arrow marks the active column. Amounts, rates and dates sort by their real values, and blanks always stay at the bottom. Each table remembers your last sort on this device. On a phone, use the small \"Sort by\" menu above the cards.",
+    where: "Asset Mgmt",
+  },
+  {
     id: "2026-10-19-debt-sources",
     date: "2026-10-19",
     category: "new",

@@ -1,4 +1,6 @@
 import { fmtMoney } from "../lib/money";
+import { useTableSort, type SortCol } from "../lib/tableSort";
+import { SortTh, SortSelect } from "./SortControls";
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
@@ -384,9 +386,43 @@ function ImportBox({ onDone, onClose }: { onDone: () => void; onClose: () => voi
 }
 
 // ── Debt tab ──────────────────────────────────────────────────────────────────
-const LOAN_COLS = ["Property", "Lender", "Balance", "Rate", "All-in", "IO / Amort", "Maturity", "Extension", "Recourse"];
-const SWAP_COLS = ["Property", "Counterparty", "Notional", "Fixed swap", "All-in fixed", "Effective", "Maturity", "Market (remaining term)", "Mark-to-market", "Sources", ""];
-const PREF_COLS = ["Property", "Investor", "Amount", "Current pay", "All-in", "Current pay / yr", "Accrues / yr", "Redemption"];
+// Sortable columns: each sorts on the underlying value (numbers, ISO dates), blanks last.
+const propKey = (p: string, l: string | null) => `${p}${l ? ` · ${l}` : ""}`;
+const LOAN_COLS: SortCol<DebtRow>[] = [
+  { key: "property", label: "Property", value: r => propKey(r.property, r.loanLabel) },
+  { key: "lender", label: "Lender", value: r => r.lender },
+  { key: "balance", label: "Balance", value: r => r.balance },
+  { key: "rate", label: "Rate", value: r => r.rateClass ? rateLabel(r) : r.rateType },
+  { key: "allIn", label: "All-in", value: r => r.allInPct },
+  { key: "ioAmort", label: "IO / Amort", value: r => r.ioAmort },
+  { key: "maturity", label: "Maturity", value: r => r.maturity },
+  { key: "extension", label: "Extension", value: r => s(r.record.data.extensionOptions) },
+  { key: "recourse", label: "Recourse", value: r => [r.record.data.recourse, r.record.data.guarantor].filter(Boolean).map(String).join(" · ") || null },
+];
+const SWAP_COLS: SortCol<SwapRow>[] = [
+  { key: "property", label: "Property", value: w => propKey(w.property, w.loanLabel) },
+  { key: "counterparty", label: "Counterparty", value: w => w.counterparty },
+  { key: "notional", label: "Notional", value: w => w.notional },
+  { key: "fixed", label: "Fixed swap", value: w => w.fixedSwapRatePct },
+  { key: "allInFixed", label: "All-in fixed", value: w => w.allInFixedPct },
+  { key: "effective", label: "Effective", value: w => w.effective },
+  { key: "maturity", label: "Maturity", value: w => w.maturity },
+  { key: "market", label: "Market (remaining term)", value: w => w.marketRatePct },
+  { key: "mtm", label: "Mark-to-market", value: w => w.mtm },
+];
+const SWAP_HEAD: Array<[string, string]> = [...SWAP_COLS.map(c => [c.key, c.label] as [string, string]), ["sources", "Sources"], ["actions", ""]];
+const PREF_COLS: SortCol<PrefRow>[] = [
+  { key: "property", label: "Property", value: p => propKey(p.property, p.loanLabel) },
+  { key: "investor", label: "Investor", value: p => p.investor },
+  { key: "amount", label: "Amount", value: p => p.amount },
+  { key: "currentPay", label: "Current pay", value: p => p.currentPayPct },
+  { key: "allIn", label: "All-in", value: p => p.ratePct },
+  { key: "currentPayYr", label: "Current pay / yr", value: p => p.annualCurrentPay },
+  { key: "accrualYr", label: "Accrues / yr", value: p => p.annualAccrual },
+  { key: "redemption", label: "Redemption", value: p => p.redemptionDate ?? p.maturity },
+];
+const DEF_MATURITY = { key: "maturity", dir: "asc" } as const;
+const DEF_PROPERTY = { key: "property", dir: "asc" } as const;
 const s = (v: unknown): string | null => (v == null || String(v).trim() === "" ? null : String(v));
 export function Clamp({ children }: { children: ReactNode }) {
   return <div style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontSize: 12.5 }}>{children}</div>;
@@ -427,6 +463,10 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
   const [prefDrawer, setPrefDrawer] = useState<string | null>(null);
   const [swapDrawer, setSwapDrawer] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const loanSort = useTableSort("am_loans", LOAN_COLS, DEF_MATURITY), swapSort = useTableSort("am_swaps", SWAP_COLS, DEF_MATURITY), prefSort = useTableSort("am_prefs", PREF_COLS, DEF_PROPERTY);
+  const loanRows = useMemo(() => loanSort.sort(rows), [loanSort, rows]);
+  const swapRows = useMemo(() => swapSort.sort(swaps), [swapSort, swaps]);
+  const prefRows = useMemo(() => prefSort.sort(prefs), [prefSort, prefs]);
   const maxWall = Math.max(1, ...tot.wall.map(w => w.amount));
   const curveAsOf = rates?.termSwapCurve?.asOf ?? null;
   const del = async (id: string) => { if (window.confirm("Delete this record?")) { await apiAmDeleteRecord(id); reload(); } };
@@ -461,8 +501,9 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
           </div>
           <SectionTitle>Loans</SectionTitle>
           {isMobile ? (
+            <><SortSelect sort={loanSort} />
             <div style={{ ...card, overflow: "hidden" }}>
-              {rows.map((r, k) => (
+              {loanRows.map((r, k) => (
                 <button key={r.record.id} onClick={() => setDrawer(r.record.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: "2px 10px", width: "100%", textAlign: "left", background: "#fff", border: "none", borderTop: k ? "1px solid #f3f2ee" : "none", padding: "11px 14px", cursor: "pointer", opacity: r.superseded ? 0.5 : 1, fontFamily: "inherit" }}>
                   <span style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.property}{r.loanLabel ? <span style={{ color: K.gray, fontWeight: 400 }}> · {r.loanLabel}</span> : null}</span>
                   <span style={{ fontSize: 13.5, color: K.ink, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{fmtM(r.balance)}{r.balanceIsOriginal ? "*" : ""}</span>
@@ -470,13 +511,13 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
                   <span style={{ fontSize: 12, color: K.gray, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtPct(r.allInPct, 2)}{r.estimated ? <span style={{ color: K.amber }}>~</span> : null}</span>
                 </button>
               ))}
-            </div>
+            </div></>
           ) : (
           <div style={{ ...card, overflowX: "auto" }}>
             <table className="kpr-table" style={{ width: "100%", minWidth: 1000, borderCollapse: "collapse", tableLayout: "fixed" }}>
               <colgroup><col style={{ width: "18%" }} /><col style={{ width: "10%" }} /><col style={{ width: 92 }} /><col style={{ width: "17%" }} /><col style={{ width: 82 }} /><col style={{ width: "13%" }} /><col style={{ width: 150 }} /><col style={{ width: "9%" }} /><col style={{ width: "11%" }} /></colgroup>
-              <thead><tr>{LOAN_COLS.map(h => <th key={h} style={{ ...th, position: "static" }}>{h}</th>)}</tr></thead>
-              <tbody>{rows.map((r: DebtRow) => {
+              <thead><tr>{LOAN_COLS.map(c => <SortTh key={c.key} sort={loanSort} k={c.key} style={{ ...th, position: "static" }}>{c.label}</SortTh>)}</tr></thead>
+              <tbody>{loanRows.map((r: DebtRow) => {
                 const d = r.record.data;
                 const recourse = [d.recourse, d.guarantor].filter(Boolean).map(String).join(" · ") || "—";
                 return (
@@ -503,9 +544,10 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
       {swaps.length > 0 && (
         <>
           <SectionTitle>Swaps</SectionTitle>
+          {isMobile && <SortSelect sort={swapSort} />}
           <Table minWidth={1150}>
-            <thead><tr>{SWAP_COLS.map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
-            <tbody>{swaps.map((w: SwapRow) => {
+            <thead><tr>{SWAP_HEAD.map(([k, l]) => <SortTh key={k} sort={swapSort} k={k} style={th}>{l}</SortTh>)}</tr></thead>
+            <tbody>{swapRows.map((w: SwapRow) => {
               return [
                 <tr key={w.record.id}>
                   <td style={td}><button onClick={() => onOpenDeal(w.dealId)} style={linkBtn}>{w.property}</button>{w.loanLabel && <span style={{ color: K.charcoal, fontWeight: 600 }}> · {w.loanLabel}</span>}{w.termsPending && <div style={{ marginTop: 3 }}><Pill flag="amber">terms pending</Pill></div>}</td>
@@ -534,8 +576,9 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
             <>
               <div style={{ fontSize: 13, color: K.gray, marginBottom: 8 }}>{fmtM(pt.total)} across {pt.count} position{pt.count === 1 ? "" : "s"}{pt.weightedRatePct != null ? ` · weighted all-in ${fmtPct(pt.weightedRatePct, 2)}` : ""}{pt.annualCurrentPay != null ? ` · ${fmtM(pt.annualCurrentPay)}/yr current pay${pt.currentPayCovered < pt.count ? ` (${pt.currentPayCovered} of ${pt.count} with a current-pay rate)` : ""}` : ""}{pt.annualAccrual != null ? ` · ${fmtM(pt.annualAccrual)}/yr accrues` : ""} — kept out of total debt and the weighted rate above.</div>
               {isMobile ? (
+                <><SortSelect sort={prefSort} />
                 <div style={{ ...card, overflow: "hidden" }}>
-                  {prefs.map((p, k) => (
+                  {prefRows.map((p, k) => (
                     <button key={p.record.id} onClick={() => setPrefDrawer(p.record.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: "2px 10px", width: "100%", textAlign: "left", background: "#fff", border: "none", borderTop: k ? "1px solid #f3f2ee" : "none", padding: "11px 14px", cursor: "pointer", fontFamily: "inherit" }}>
                       <span style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{p.property}{p.loanLabel ? <span style={{ color: K.gray, fontWeight: 400 }}> · {p.loanLabel}</span> : null}</span>
                       <span style={{ fontSize: 13.5, color: K.ink, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{fmtM(p.amount)}</span>
@@ -543,12 +586,12 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
                       <span style={{ fontSize: 12, color: K.gray, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>all-in {fmtPct(p.ratePct, 2)}</span>
                     </button>
                   ))}
-                </div>
+                </div></>
               ) : (
               <div style={{ ...card, overflowX: "auto" }}>
                 <table className="kpr-table" style={{ width: "100%", minWidth: 900, borderCollapse: "collapse" }}>
-                  <thead><tr>{PREF_COLS.map(h => <th key={h} style={{ ...th, position: "static" }}>{h}</th>)}</tr></thead>
-                  <tbody>{prefs.map((p: PrefRow) => (
+                  <thead><tr>{PREF_COLS.map(c => <SortTh key={c.key} sort={prefSort} k={c.key} style={{ ...th, position: "static" }}>{c.label}</SortTh>)}</tr></thead>
+                  <tbody>{prefRows.map((p: PrefRow) => (
                     <tr key={p.record.id} onClick={() => setPrefDrawer(p.record.id)} tabIndex={0} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPrefDrawer(p.record.id); } }} style={{ cursor: "pointer", height: 42 }} title="Click for every field">
                       <td style={{ ...ell, overflow: "visible" }}><div style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={{ fontWeight: 600 }}>{p.property}</span>{p.loanLabel && <span style={{ color: K.gray }}> · {p.loanLabel}</span>}</span><span style={{ flex: "none" }}><DocBadge rec={p.record} /></span></div></td>
                       <td style={ell}>{p.investor ?? "—"}</td>
@@ -579,12 +622,30 @@ export const miniBtn: React.CSSProperties = { background: "#fff", border: "1px s
 
 // ── Dates tab ─────────────────────────────────────────────────────────────────
 const TYPES: DateType[] = ["Lease expiry", "Option notice", "Termination / kick-out", "Co-tenancy", "Covenant test", "Covenant trigger", "Loan maturity", "Extension notice", "Swap maturity", "Other"];
-export function DatesList({ items, onOpenDeal, compact = false }: { items: CriticalDate[]; onOpenDeal: (id: string) => void; compact?: boolean }) {
+const DATE_COLS: SortCol<CriticalDate>[] = [
+  { key: "date", label: "Date", value: i => i.date },
+  { key: "days", label: "Days", value: i => i.days },
+  { key: "type", label: "Type", value: i => i.type },
+  { key: "property", label: "Property", value: i => `${i.property}${i.tenant ? ` · ${i.tenant}` : ""}` },
+  { key: "owner", label: "Owner", value: i => i.owner },
+];
+const DEF_DATE = { key: "date", dir: "asc" } as const;
+export function DatesList({ items, onOpenDeal, compact = false, sortable = false }: { items: CriticalDate[]; onOpenDeal: (id: string) => void; compact?: boolean; sortable?: boolean }) {
   const isMobile = useIsMobile();
+  const sort = useTableSort("am_dates", DATE_COLS, DEF_DATE);
+  const list = useMemo(() => sortable ? sort.sort(items) : items, [sortable, sort, items]);
   if (!items.length) return <div style={{ ...card, padding: 16, fontSize: 13.5, color: K.gray }}>Nothing in this window.</div>;
+  const grid = isMobile ? "1fr auto" : compact ? "96px 64px 1fr auto" : "110px 70px 150px 1fr 200px";
   return (
+    <>
+    {sortable && isMobile && <SortSelect sort={sort} />}
     <div style={{ ...card, overflow: "hidden" }}>
-      {items.map((i, k) => (
+      {sortable && !isMobile && !compact && (
+        <div role="row" style={{ display: "grid", gridTemplateColumns: grid, gap: 10, padding: "0 14px", borderBottom: `1px solid ${K.line}` }}>
+          {DATE_COLS.map(c => <SortTh key={c.key} sort={sort} k={c.key} as="div" style={{ ...th, padding: "8px 0", display: "block", position: "static", borderBottom: "none" }}>{c.label}</SortTh>)}
+        </div>
+      )}
+      {list.map((i, k) => (
         <div key={`${i.type}-${i.dealId}-${i.date}-${k}`} style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr auto" : compact ? "96px 64px 1fr auto" : "110px 70px 150px 1fr 200px", gap: 10, padding: "10px 14px", borderTop: k ? `1px solid #f3f2ee` : "none", alignItems: "start" }}>
           {!isMobile && <div style={{ fontVariantNumeric: "tabular-nums", fontSize: 13, color: K.ink }}>{fmtDate(i.date)}</div>}
           {!isMobile && <div>{daysPill(i.days)}</div>}
@@ -599,6 +660,7 @@ export function DatesList({ items, onOpenDeal, compact = false }: { items: Criti
         </div>
       ))}
     </div>
+    </>
   );
 }
 function DatesTab({ deals, records, abstracts, isAdmin, reload, onOpenDeal }: { deals: Deal[]; records: AmRecord[]; abstracts: LeaseAbstract[]; isAdmin: boolean; reload: () => void; onOpenDeal: (id: string) => void }) {
@@ -640,7 +702,7 @@ function DatesTab({ deals, records, abstracts, isAdmin, reload, onOpenDeal }: { 
         </>
       )}
       <SectionTitle>{shown.length} date{shown.length === 1 ? "" : "s"} in the next {hz} days</SectionTitle>
-      <DatesList items={shown} onOpenDeal={onOpenDeal} />
+      <DatesList items={shown} onOpenDeal={onOpenDeal} sortable />
       <Src>Lease expiries come from Datex (Tenants) where a snapshot is loaded, else the OM roster. Option notice dates come from the lease abstracts — Datex's option table is empty through the connector. Loan, extension and swap dates come from the Debt records.</Src>
       {undated.length > 0 && (
         <div style={{ ...card, padding: "10px 14px", marginTop: 12, fontSize: 12.5, color: K.ink }}>
@@ -674,6 +736,16 @@ function fmtChange(field: string, v: unknown): string {
 }
 
 // ── Properties tab ────────────────────────────────────────────────────────────
+interface PropRow { d: Deal; dx?: Record<string, unknown>; rent: number | null; ar: ReturnType<typeof splitArAging>; nvb: ReturnType<typeof noiVsBudget>; owner: string | null }
+const PROP_COLS: SortCol<PropRow>[] = [
+  { key: "property", label: "Property", value: r => r.d.propertyName },
+  { key: "asOf", label: "Datex as of", value: r => r.dx?.asOf != null ? String(r.dx.asOf) : null },
+  { key: "occ", label: "Occupancy", value: r => r.dx?.occupancyPct != null ? Number(r.dx.occupancyPct) : null },
+  { key: "rent", label: "In-place base rent", value: r => r.rent },
+  { key: "noi", label: "NOI YTD vs budget", value: r => r.nvb?.actual ?? null },
+  { key: "ar", label: "A/R > 60 / > 90", value: r => r.ar ? r.ar.current60 : null },
+  { key: "owner", label: "Asset manager", value: r => r.owner },
+];
 function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin: boolean; onOpenDeal: (id: string) => void }) {
   const [map, setMap] = useState<DatexMapRow[] | null>(null);
   const [editMap, setEditMap] = useState(false);
@@ -702,6 +774,8 @@ function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin:
     const close = s(acq?.data.closeDate) ?? s((d as unknown as { txnCloseDate?: string }).txnCloseDate);
     return { d, dx, tie, fin, ar, rent, bldgs: mrow?.bldgIds ?? [], mapNote: mrow?.note ?? null, nvb: noiVsBudget(fin as Record<string, unknown> | undefined, close), owner: propertyOwner(d, recs), ownerEntered: !!s(acq?.data.assetManager) };
   });
+  const propSort = useTableSort("am_properties", PROP_COLS, DEF_PROPERTY);
+  const sortedRows = propSort.sort(rows as PropRow[]) as typeof rows;
   return (
     <>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
@@ -724,10 +798,10 @@ function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin:
           ar: ar ? <ArCell ar={ar} /> : "—",
           owner: <>{owner ?? <span style={{ color: K.gray }}>no owner on file</span>}{owner && !ownerEntered && <Src>from Datex</Src>}{isAdmin && <div><button style={{ ...miniBtn, marginTop: 4 }} onClick={() => saveOwner(d)}>{owner ? "Change" : "Set owner"}</button></div>}</>,
         });
-        const HEAD = ["Property", "Datex as of", "Occupancy", "In-place base rent", "NOI YTD vs budget", "A/R > 60 / > 90", "Asset manager"];
         if (isMobile) return (
+          <><SortSelect sort={propSort} />
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {rows.map(r => { const c = cells(r); return (
+            {sortedRows.map(r => { const c = cells(r); return (
               <div key={r.d.id} style={{ ...card, padding: "12px 14px" }}>
                 <div style={{ fontSize: 14.5 }}>{c.prop}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: "10px 14px", marginTop: 8 }}>
@@ -737,12 +811,12 @@ function PropertiesTab({ deals, isAdmin, onOpenDeal }: { deals: Deal[]; isAdmin:
                 </div>
               </div>
             ); })}
-          </div>
+          </div></>
         );
         return (
           <Table minWidth={1050}>
-            <thead><tr>{HEAD.map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
-            <tbody>{rows.map(r => { const c = cells(r); return (
+            <thead><tr>{propSort.cols.map(c => <SortTh key={c.key} sort={propSort} k={c.key} style={th}>{c.label}</SortTh>)}</tr></thead>
+            <tbody>{sortedRows.map(r => { const c = cells(r); return (
               <tr key={r.d.id}>
                 <td style={td}>{c.prop}</td><td style={td}>{c.asOf}</td><td style={num}>{c.occ}</td><td style={num}>{c.rent}</td><td style={num}>{c.noi}</td><td style={num}>{c.ar}</td><td style={td}>{c.owner}</td>
               </tr>
@@ -882,6 +956,18 @@ function DatexMapEditor({ deals, rows, onClose, onSaved }: { deals: Deal[]; rows
 }
 
 // ── Credit Watch tab ──────────────────────────────────────────────────────────
+const STATUS_RANK: Record<string, number> = { Bankruptcy: 3, "Store closures announced": 2, Watch: 1, OK: 0 };
+const CREDIT_COLS: SortCol<CreditRow>[] = [
+  { key: "brand", label: "Brand", value: r => r.brand },
+  { key: "locations", label: "Our locations", value: r => r.locations.length },
+  { key: "rent", label: "Annual base rent", value: r => r.rent },
+  { key: "pct", label: "% of rent", value: r => r.pctOfRent },
+  { key: "ig", label: "IG", value: r => r.ig },
+  { key: "status", label: "Status", value: r => STATUS_RANK[r.status] ?? 0 },
+  { key: "headline", label: "Latest distress headline", value: r => r.news?.headline ?? null },
+];
+const CREDIT_HEAD: Array<[string, string]> = [...CREDIT_COLS.map(c => [c.key, c.label] as [string, string]), ["actions", ""]];
+const DEF_RENT_DESC = { key: "rent", dir: "desc" } as const;
 function CreditTab({ deals, abstracts, onOpenDeal }: { deals: Deal[]; abstracts: LeaseAbstract[]; onOpenDeal: (id: string) => void }) {
   const wl = useWatchlist();
   const [news, setNews] = useState<NewsSignal[]>([]);
@@ -912,7 +998,8 @@ function CreditTab({ deals, abstracts, onOpenDeal }: { deals: Deal[]; abstracts:
   const [showAll, setShowAll] = useState(false);
   const isMobile = useIsMobile();
   const flagged = rows.filter(r => r.status !== "OK" || !!r.news?.headline);
-  const list = showAll ? rows : flagged;
+  const creditSort = useTableSort("am_credit", CREDIT_COLS, DEF_RENT_DESC);
+  const list = creditSort.sort(showAll ? rows : flagged);
   const summarize = async (brand: string) => { setSummary(m => ({ ...m, [brand]: "…" })); try { const s = await apiAmSummarizeNews(brand); setSummary(m => ({ ...m, [brand]: s })); } catch (e) { setSummary(m => ({ ...m, [brand]: e instanceof Error ? e.message : "failed" })); } };
   return (
     <>
@@ -922,6 +1009,7 @@ function CreditTab({ deals, abstracts, onOpenDeal }: { deals: Deal[]; abstracts:
       </div>
       {!showAll && !flagged.length && <div style={{ ...card, padding: 14, fontSize: 13.5, color: K.gray, marginBottom: 10 }}>No brand is on the watchlist or has a distress headline touching a state we're in. Switch to “All brands” for the full list.</div>}
       {isMobile ? (
+        <><SortSelect sort={creditSort} />
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {list.map(r => (
             <div key={r.key} style={{ ...card, padding: "12px 14px", minWidth: 0 }}>
@@ -943,10 +1031,10 @@ function CreditTab({ deals, abstracts, onOpenDeal }: { deals: Deal[]; abstracts:
               ))}
             </div>
           ))}
-        </div>
+        </div></>
       ) : (
       <Table minWidth={900}>
-        <thead><tr>{["Brand", "Our locations", "Annual base rent", "% of rent", "IG", "Status", "Latest distress headline", ""].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+        <thead><tr>{CREDIT_HEAD.map(([k, l]) => <SortTh key={k} sort={creditSort} k={k} style={th}>{l}</SortTh>)}</tr></thead>
         <tbody>{list.map(r => (
           <Fragment key={r.key}>
             <tr>

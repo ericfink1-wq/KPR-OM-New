@@ -20,6 +20,10 @@ it through these. Boundary tests: `__tests__/money.test.ts`.
   spread on the rest, `estimated`); an entered all-in that just equals the swap rate is ignored for the blend.
   `allInBasis` = swap / curve est. / fixed note / blended / as entered (All-in tooltip + drawer). `ioAmortLabel` →
   IO / Amort column from `ioUntil` (alias `ioEndDate`) + `amortYears` + maturity; "—" when unknown.
+- Sorting (10/19/26): EVERY Asset Mgmt table uses `useTableSort` (lib/tableSort.ts — single-level on top of useMultiSort,
+  key `kpr_sort_<table>` in localStorage) + `SortTh` / `SortSelect` (components/SortControls.tsx, phone dropdown). Column
+  defs (`LOAN_COLS`, `SWAP_COLS`, `PREF_COLS`, `DATE_COLS`, `PROP_COLS`, `CREDIT_COLS`) return the UNDERLYING value;
+  blanks/"—" last both ways. New AM table → add a SortCol list, never sort display strings.
 - Dates: `keyDebtDeadlines` (cap expiries grouped across loans, extension-notice WINDOWS parsed from text, maturities ≤12 mo)
   pinned above the window; `collapsePortfolioCovenants` (same type+date+description on ≥3 properties → one
   "<Name> portfolio (N properties)" row, name from `portfolioName`). Owner = acquisition row `assetManager` → Datex.
