@@ -93,3 +93,30 @@ describe("preferred equity import (Eric, 10/19/26)", () => {
     expect(plan({ preferredEquity: [{ dealId: "chili", loanLabel: "New", ratePct: 9 }] }, []).rejected[0].problem).toMatch(/amount/);
   });
 });
+
+describe("document sources on loans / swaps / prefs (Eric, 10/19/26)", () => {
+  it("keeps clean sources + missing docs, drops unsafe links, and updates in place", async () => {
+    const { sanitizeSources } = await import("../assetMgmt");
+    const loan = rec("loan:s", "loan", "chili", { lender: "M&T", loanLabel: "Senior Loan", originalBalance: 2e7, maturityDate: "2028-06-01" });
+    const p = plan({ loans: [{ dealId: "chili", loanLabel: "Senior Loan", sources: [
+      { title: "Promissory Note", docType: "Note", date: "2021-06-01", status: "executed", url: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123/view", usedFor: ["rate", "maturity"] },
+      { title: "Bad link", url: "javascript:alert(1)" },
+      { docType: "Note" },
+    ], missingDocs: ["Executed note not in folder"] }] }, [loan]);
+    expect(p.rejected.map(r => r.problem)).toEqual([]);
+    expect([p.rows[0].action, p.rows[0].id]).toEqual(["update", "loan:s"]);
+    const src = p.rows[0].data.sources as Array<Record<string, unknown>>;
+    expect(src).toHaveLength(2);
+    expect(src[0]).toMatchObject({ title: "Promissory Note", status: "Executed", date: "2021-06-01", usedFor: ["rate", "maturity"] });
+    expect(src[1].url).toBeUndefined();
+    expect(p.rows[0].data.missingDocs).toEqual(["Executed note not in folder"]);
+    expect(p.rows[0].data.lender).toBe("M&T");
+    expect(sanitizeSources('[{"title":"Swap Confirm","status":"summary"}]')).toEqual([{ title: "Swap Confirm", status: "Summary/derived" }]);
+  });
+  it("swaps and prefs accept them too", () => {
+    const p = plan({ swaps: [{ dealId: "over", loanLabel: "ONB", notional: 1e6, swapRate: 3, maturityDate: "2030-01-01", sources: [{ title: "Swap Confirmation", docType: "Swap Confirm", status: "Executed" }] }],
+      preferredEquity: [{ dealId: "over", loanLabel: "TP", amount: 1e6, missingDocs: "Pref agreement not in folder" }] }, []);
+    expect(p.rows.find(r => r.kind === "swap")!.data.sources).toHaveLength(1);
+    expect(p.rows.find(r => r.kind === "pref")!.data.missingDocs).toEqual(["Pref agreement not in folder"]);
+  });
+});

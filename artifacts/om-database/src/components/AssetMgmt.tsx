@@ -10,7 +10,7 @@ import {
 import {
   buildDebtRows, buildSwapRows, debtTotals, buildPrefRows, prefTotals, buildCriticalDates, buildCreditWatch, buildSalesRows, omVsToday, liveTenants,
   type AmRecord, type DebtRow, type SwapRow, type PrefRow, type CriticalDate, type CreditRow, type NewsSignal, type DateType,
-  datexGlaTieOut, splitArAging, noiVsBudget, propertyOwner, collapsePortfolioCovenants, keyDebtDeadlines,
+  datexGlaTieOut, splitArAging, recordSources, driveLinks, noiVsBudget, propertyOwner, collapsePortfolioCovenants, keyDebtDeadlines,
 } from "../lib/assetMgmt";
 import { useWatchlist } from "../lib/useWatchlist";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -235,7 +235,7 @@ function LoanDrawer({ r, isAdmin, onClose, onEdit, onDelete, onOpenDeal }: { r: 
       <Field k="Open questions" v={s(d.openQuestions)} />
       <Field k="Confidence" v={s(d.confidence)} />
       {extras.map(([k, v]) => <Field key={k} k={k.replace(/([a-z])([A-Z])/g, "$1 $2")} v={String(v)} />)}
-      <Src>Source: {r.record.sourceNote ?? "none noted"}{r.record.updatedBy ? ` · last saved by ${r.record.updatedBy}` : ""}{r.record.updatedAt ? ` ${fmtDate(r.record.updatedAt)}` : ""}</Src>
+      <SourcesSection rec={r.record} />
     </SideDrawer>
   );
 }
@@ -263,7 +263,78 @@ function PrefDrawer({ p, isAdmin, onClose, onEdit, onDelete, onOpenDeal }: { p: 
       <Field k="Open questions" v={s(d.openQuestions)} />
       <Field k="Confidence" v={s(d.confidence)} />
       {extras.map(([k, v]) => <Field key={k} k={k.replace(/([a-z])([A-Z])/g, "$1 $2")} v={String(v)} />)}
-      <Src>Preferred equity is capital, not debt — kept out of total debt and the weighted debt rate. Source: {p.record.sourceNote ?? "none noted"}{p.record.updatedBy ? ` · last saved by ${p.record.updatedBy}` : ""}</Src>
+      <SourcesSection rec={p.record} />
+      <Src>Preferred equity is capital, not debt — kept out of total debt and the weighted debt rate.</Src>
+    </SideDrawer>
+  );
+}
+const STATUS_TONE: Record<string, "green" | "amber" | "gray"> = { Executed: "green", Amendment: "green", Statement: "gray", "Summary/derived": "amber", "Term sheet": "amber" };
+/** "4 docs" on a row (amber when documents are known to be missing, gray "no docs" when none listed). */
+export function DocBadge({ rec }: { rec: AmRecord }) {
+  const { count, missing } = recordSources(rec);
+  if (!count && !missing.length) return <span title="No source documents listed yet" style={{ display: "inline-block", fontSize: 10.5, color: K.gray, border: `1px solid ${K.line}`, borderRadius: 10, padding: "0 6px", marginLeft: 6, whiteSpace: "nowrap" }}>no docs</span>;
+  return <span title={missing.length ? `Missing: ${missing.join("; ")}` : `${count} source document${count === 1 ? "" : "s"}`} style={{ display: "inline-block", fontSize: 10.5, fontWeight: 600, color: missing.length ? K.amber : K.gray, background: missing.length ? "#fff2e0" : "#f1f0ec", borderRadius: 10, padding: "0 6px", marginLeft: 6, whiteSpace: "nowrap" }}>{count} doc{count === 1 ? "" : "s"}{missing.length ? ` · ${missing.length} missing` : ""}</span>;
+}
+/** The drawer's "Sources" block: each document as a link + type + date + status + what it was used for,
+ *  then anything known to be missing (amber). Falls back to the free-text source line. */
+export function SourcesSection({ rec }: { rec: AmRecord }) {
+  const { sources, missing } = recordSources(rec);
+  const drive = driveLinks(rec);
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ fontFamily: "'Montserrat',sans-serif", fontSize: 10.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: K.charcoal, marginBottom: 4 }}>Sources</div>
+      {sources.length ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {sources.map((d, i) => (
+            <div key={i} style={{ padding: "6px 0", borderBottom: "1px solid #f3f2ee", fontSize: 13, overflowWrap: "anywhere" }}>
+              <div style={{ display: "flex", gap: 6, alignItems: "baseline", flexWrap: "wrap" }}>
+                {d.url ? <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ color: K.ink, fontWeight: 600 }}>{d.title || "Document"} ↗</a> : <span style={{ fontWeight: 600, color: K.ink }}>{d.title || "Document"}</span>}
+                {d.status && <Pill flag={STATUS_TONE[d.status] ?? "gray"}>{d.status}</Pill>}
+              </div>
+              <div style={{ fontSize: 12, color: K.gray, marginTop: 1 }}>{[d.docType, d.date ? (/^\d{4}-\d{2}-\d{2}$/.test(d.date) ? fmtDate(d.date) : d.date) : null].filter(Boolean).join(" · ")}{d.usedFor?.length ? `${d.docType || d.date ? " · " : ""}used for: ${d.usedFor.join(", ")}` : ""}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ fontSize: 13, color: K.gray }}>
+          {rec.sourceNote ?? "No source documents listed."}
+          {drive.length > 0 && <div style={{ marginTop: 4 }}>{drive.map(l => <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" style={{ color: K.ink, marginRight: 10 }}>{l.name} ↗</a>)}</div>}
+        </div>
+      )}
+      {missing.length > 0 && (
+        <div style={{ marginTop: 10, background: "#fff2e0", border: "1px solid #f0d9b5", borderRadius: 8, padding: "8px 10px" }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: K.amber }}>Missing / not found</div>
+          <ul style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: 13, color: "#7a4d0f" }}>{missing.map((m, i) => <li key={i}>{m}</li>)}</ul>
+        </div>
+      )}
+      <Src>{sources.length && rec.sourceNote ? `Note: ${rec.sourceNote} · ` : ""}{rec.updatedBy ? `last saved by ${rec.updatedBy}` : ""}{rec.updatedAt ? ` ${fmtDate(rec.updatedAt)}` : ""}</Src>
+    </div>
+  );
+}
+function SwapDrawer({ w, isAdmin, onClose, onEdit, onDelete, onOpenDeal }: { w: SwapRow; isAdmin: boolean; onClose: () => void; onEdit: () => void; onDelete: () => void; onOpenDeal: (id: string) => void }) {
+  const d = w.record.data;
+  return (
+    <SideDrawer title={`${w.property}${w.loanLabel ? ` · ${w.loanLabel}` : ""} — swap`} onClose={onClose}>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+        <button style={btn()} onClick={() => onOpenDeal(w.dealId)}>Open deal</button>
+        {isAdmin && <><button style={btn()} onClick={onEdit}>Edit</button><button style={btn()} onClick={onDelete}>Delete</button></>}
+      </div>
+      {w.termsPending && <div style={{ fontSize: 13, color: K.amber, marginBottom: 6 }}>Terms pending — notional, swap rate or maturity isn't documented, so it isn't priced.</div>}
+      <Field k="Counterparty" v={w.counterparty} />
+      <Field k="Swap label" v={s(d.swapLabel)} />
+      <Field k="Notional" v={w.notional != null ? fmtM(w.notional) : null} />
+      <Field k="Fixed swap rate" v={w.fixedSwapRatePct != null ? fmtPct(w.fixedSwapRatePct, 4) : null} />
+      <Field k="All-in fixed" v={w.allInFixedPct != null ? fmtPct(w.allInFixedPct, 4) : null} />
+      <Field k="Index" v={s(d.index)} />
+      <Field k="Trade date" v={d.tradeDate ? fmtDate(String(d.tradeDate)) : null} />
+      <Field k="Effective" v={w.effective ? fmtDate(w.effective) : null} />
+      <Field k="Maturity" v={w.maturity ? fmtDate(w.maturity) : null} />
+      <Field k="Market rate (remaining term)" v={w.marketRatePct != null ? `${fmtPct(w.marketRatePct, 3)} · ${w.curve ?? ""}${w.remainingYears != null ? ` · ${w.remainingYears}y left` : ""}` : null} />
+      <Field k="Mark-to-market" v={w.mtm != null ? `${w.mtm >= 0 ? "+" : "−"}${fmtM(Math.abs(w.mtm))} (${w.mtmLabel})` : null} />
+      <Field k="Notes" v={s(d.notes)} />
+      <Field k="Open questions" v={s(d.openQuestions)} />
+      <Field k="Confidence" v={s(d.confidence)} />
+      <SourcesSection rec={w.record} />
     </SideDrawer>
   );
 }
@@ -307,7 +378,7 @@ function ImportBox({ onDone, onClose }: { onDone: () => void; onClose: () => voi
 
 // ── Debt tab ──────────────────────────────────────────────────────────────────
 const LOAN_COLS = ["Property", "Lender", "Balance", "Rate", "All-in", "Maturity", "Extension", "Recourse"];
-const SWAP_COLS = ["Property", "Counterparty", "Notional", "Fixed swap", "All-in fixed", "Effective", "Maturity", "Market (remaining term)", "Mark-to-market", "Source", ""];
+const SWAP_COLS = ["Property", "Counterparty", "Notional", "Fixed swap", "All-in fixed", "Effective", "Maturity", "Market (remaining term)", "Mark-to-market", "Sources", ""];
 const PREF_COLS = ["Property", "Investor", "Amount", "Current pay", "All-in", "Current pay / yr", "Accrues / yr", "Redemption"];
 const s = (v: unknown): string | null => (v == null || String(v).trim() === "" ? null : String(v));
 export function Clamp({ children }: { children: ReactNode }) {
@@ -343,12 +414,11 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
   const tot = useMemo(() => debtTotals(rows, swaps), [rows, swaps]);
   const prefs = useMemo(() => buildPrefRows(records, deals, today), [records, deals, today]);
   const pt = useMemo(() => prefTotals(prefs), [prefs]);
-  const [open, setOpen] = useState<Set<string>>(() => new Set());
-  const toggle = (id: string) => setOpen(o => { const n = new Set(o); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const [edit, setEdit] = useState<{ kind: "loan" | "swap" | "pref"; rec: AmRecord | null } | null>(null);
   const [imp, setImp] = useState(false);
   const [drawer, setDrawer] = useState<string | null>(null);
   const [prefDrawer, setPrefDrawer] = useState<string | null>(null);
+  const [swapDrawer, setSwapDrawer] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const maxWall = Math.max(1, ...tot.wall.map(w => w.amount));
   const curveAsOf = rates?.termSwapCurve?.asOf ?? null;
@@ -387,9 +457,9 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
             <div style={{ ...card, overflow: "hidden" }}>
               {rows.map((r, k) => (
                 <button key={r.record.id} onClick={() => setDrawer(r.record.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: "2px 10px", width: "100%", textAlign: "left", background: "#fff", border: "none", borderTop: k ? "1px solid #f3f2ee" : "none", padding: "11px 14px", cursor: "pointer", opacity: r.superseded ? 0.5 : 1, fontFamily: "inherit" }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.property}{r.loanLabel ? <span style={{ color: K.gray, fontWeight: 400 }}> · {r.loanLabel}</span> : null}</span>
+                  <span style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.property}{r.loanLabel ? <span style={{ color: K.gray, fontWeight: 400 }}> · {r.loanLabel}</span> : null}</span>
                   <span style={{ fontSize: 13.5, color: K.ink, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{fmtM(r.balance)}{r.balanceIsOriginal ? "*" : ""}</span>
-                  <span style={{ fontSize: 12, color: K.gray, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.lender ?? "—"} · {r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType ?? "—"} · {fmtDate(r.maturity)}</span>
+                  <span style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ fontSize: 12, color: K.gray, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.lender ?? "—"} · {r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType ?? "—"} · {fmtDate(r.maturity)}</span><span style={{ flex: "none" }}><DocBadge rec={r.record} /></span></span>
                   <span style={{ fontSize: 12, color: K.gray, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtPct(r.allInPct, 2)}{r.estimated ? <span style={{ color: K.amber }}>~</span> : null}</span>
                 </button>
               ))}
@@ -404,7 +474,7 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
                 const recourse = [d.recourse, d.guarantor].filter(Boolean).map(String).join(" · ") || "—";
                 return (
                   <tr key={r.record.id} onClick={() => setDrawer(r.record.id)} tabIndex={0} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDrawer(r.record.id); } }} style={{ opacity: r.superseded ? 0.5 : 1, cursor: "pointer", height: 42 }} title="Click for every field">
-                    <td style={ell}><span style={{ fontWeight: 600 }}>{r.property}</span>{r.loanLabel && <span style={{ color: K.gray }}> · {r.loanLabel}</span>}{r.superseded && <span style={{ color: K.gray }}> · Datex row (superseded)</span>}</td>
+                    <td style={{ ...ell, overflow: "visible" }}><div style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={{ fontWeight: 600 }}>{r.property}</span>{r.loanLabel && <span style={{ color: K.gray }}> · {r.loanLabel}</span>}{r.superseded && <span style={{ color: K.gray }}> · Datex row (superseded)</span>}</span><span style={{ flex: "none" }}><DocBadge rec={r.record} /></span></div></td>
                     <td style={ell} title={r.lender ?? undefined}>{r.lender ?? "—"}</td>
                     <td style={{ ...num, verticalAlign: "middle" }}>{fmtM(r.balance)}{r.balanceIsOriginal ? "*" : ""}</td>
                     <td style={ell}>{r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType ?? "—"}{r.spreadBps != null && r.rateClass !== "fixed" ? <span style={{ color: K.gray }}> +{r.spreadBps}</span> : null}</td>
@@ -428,7 +498,6 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
           <Table minWidth={1150}>
             <thead><tr>{SWAP_COLS.map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
             <tbody>{swaps.map((w: SwapRow) => {
-              const d = w.record.data, isOpen = open.has(w.record.id);
               return [
                 <tr key={w.record.id}>
                   <td style={td}><button onClick={() => onOpenDeal(w.dealId)} style={linkBtn}>{w.property}</button>{w.loanLabel && <span style={{ color: K.charcoal, fontWeight: 600 }}> · {w.loanLabel}</span>}{w.termsPending && <div style={{ marginTop: 3 }}><Pill flag="amber">terms pending</Pill></div>}</td>
@@ -440,13 +509,13 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
                   <td style={td}>{fmtDate(w.maturity)} {daysPill(w.daysToMaturity, w.flag)}</td>
                   <td style={num}>{fmtPct(w.marketRatePct, 3)}<Src>{w.termsPending ? "not priced" : `${w.curve ?? "no curve"}${w.remainingYears != null ? ` · ${w.remainingYears}y left` : ""}`}</Src></td>
                   <td style={{ ...num, color: w.mtm == null ? K.gray : w.mtm >= 0 ? "#3e8a2f" : K.red, fontWeight: 700 }}>{w.mtm == null ? "—" : `${w.mtm >= 0 ? "+" : "−"}${fmtM(Math.abs(w.mtm))}`}<Src>{w.mtmLabel}</Src></td>
-                  <td style={{ ...td, fontSize: 11.5, color: K.gray, maxWidth: 220 }}>{w.record.sourceNote ?? "—"}</td>
-                  <td style={td}><RowActions isOpen={isOpen} onToggle={() => toggle(w.record.id)} isAdmin={isAdmin} onEdit={() => setEdit({ kind: "swap", rec: w.record })} onDelete={() => del(w.record.id)} /></td>
+                  <td style={{ ...td, fontSize: 11.5, color: K.gray, maxWidth: 220 }}><DocBadge rec={w.record} />{w.record.sourceNote ? <div style={{ marginTop: 3 }}>{w.record.sourceNote}</div> : null}</td>
+                  <td style={td}><RowActions isOpen={swapDrawer === w.record.id} onToggle={() => setSwapDrawer(w.record.id)} isAdmin={isAdmin} onEdit={() => setEdit({ kind: "swap", rec: w.record })} onDelete={() => del(w.record.id)} /></td>
                 </tr>,
-                isOpen && <DetailRow key={w.record.id + ":d"} cols={SWAP_COLS.length} rec={w.record} items={[["Notes", s(d.notes)], ["Open questions", s(d.openQuestions)], ["Confidence", s(d.confidence)], ["Index", s(d.index)], ["Trade date", d.tradeDate ? fmtDate(String(d.tradeDate)) : null]]} />,
               ];
             })}</tbody>
           </Table>
+          {(() => { const w = swaps.find(x => x.record.id === swapDrawer); return w ? <SwapDrawer w={w} isAdmin={isAdmin} onClose={() => setSwapDrawer(null)} onEdit={() => { setSwapDrawer(null); setEdit({ kind: "swap", rec: w.record }); }} onDelete={() => { setSwapDrawer(null); void del(w.record.id); }} onOpenDeal={onOpenDeal} /> : null; })()}
           <Src>Mark-to-market is indicative: the fixed swap rate vs today's 1M Term SOFR swap rate for the remaining term (SOFR annual/annual for a Daily Simple SOFR swap), on the notional — the same engine as the deal page's breakage estimate. The bank's mark governs. "Terms pending" = the hedge exists but its notional, rate or maturity isn't documented yet, so it is shown but left out of the mark-to-market. Red = maturity under 12 months, amber = under 18.</Src>
         </>
       )}
@@ -460,9 +529,9 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
                 <div style={{ ...card, overflow: "hidden" }}>
                   {prefs.map((p, k) => (
                     <button key={p.record.id} onClick={() => setPrefDrawer(p.record.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: "2px 10px", width: "100%", textAlign: "left", background: "#fff", border: "none", borderTop: k ? "1px solid #f3f2ee" : "none", padding: "11px 14px", cursor: "pointer", fontFamily: "inherit" }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.property}{p.loanLabel ? <span style={{ color: K.gray, fontWeight: 400 }}> · {p.loanLabel}</span> : null}</span>
+                      <span style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{p.property}{p.loanLabel ? <span style={{ color: K.gray, fontWeight: 400 }}> · {p.loanLabel}</span> : null}</span>
                       <span style={{ fontSize: 13.5, color: K.ink, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{fmtM(p.amount)}</span>
-                      <span style={{ fontSize: 12, color: K.gray, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.investor ?? "—"} · current {fmtPct(p.currentPayPct, 2)}{p.accruedPct != null ? ` +${p.accruedPct.toFixed(2)}% accrues` : ""}</span>
+                      <span style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ fontSize: 12, color: K.gray, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{p.investor ?? "—"} · current {fmtPct(p.currentPayPct, 2)}{p.accruedPct != null ? ` +${p.accruedPct.toFixed(2)}% accrues` : ""}</span><span style={{ flex: "none" }}><DocBadge rec={p.record} /></span></span>
                       <span style={{ fontSize: 12, color: K.gray, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>all-in {fmtPct(p.ratePct, 2)}</span>
                     </button>
                   ))}
@@ -473,7 +542,7 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
                   <thead><tr>{PREF_COLS.map(h => <th key={h} style={{ ...th, position: "static" }}>{h}</th>)}</tr></thead>
                   <tbody>{prefs.map((p: PrefRow) => (
                     <tr key={p.record.id} onClick={() => setPrefDrawer(p.record.id)} tabIndex={0} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPrefDrawer(p.record.id); } }} style={{ cursor: "pointer", height: 42 }} title="Click for every field">
-                      <td style={ell}><span style={{ fontWeight: 600 }}>{p.property}</span>{p.loanLabel && <span style={{ color: K.gray }}> · {p.loanLabel}</span>}</td>
+                      <td style={{ ...ell, overflow: "visible" }}><div style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={{ fontWeight: 600 }}>{p.property}</span>{p.loanLabel && <span style={{ color: K.gray }}> · {p.loanLabel}</span>}</span><span style={{ flex: "none" }}><DocBadge rec={p.record} /></span></div></td>
                       <td style={ell}>{p.investor ?? "—"}</td>
                       <td style={{ ...num, verticalAlign: "middle" }}>{fmtM(p.amount)}</td>
                       <td style={{ ...num, verticalAlign: "middle" }}>{fmtPct(p.currentPayPct, 2)}{p.accruedPct != null && <span style={{ color: K.gray, fontSize: 11.5 }}> +{p.accruedPct.toFixed(2)}% accrues</span>}</td>

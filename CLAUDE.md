@@ -32,6 +32,10 @@ it through these. Boundary tests: `__tests__/money.test.ts`.
   deferred part, `stepNote`, `redemptionDate`. Per-year $ = amount × rate; missing rate → "—", never 0. Still never in
   debt totals / weighted debt rate. Import matches pref on property + loanLabel, else investor; import validation runs on
   the MERGED row so an update only needs the changed fields.
+- Document provenance: loans / swaps / prefs carry optional `sources` [{title, docType, date, status (Executed |
+  Amendment | Statement | Summary/derived | Term sheet), url (http(s) only — server + client both enforce), usedFor[]}]
+  and `missingDocs` (strings) — `sanitizeSources` / `sanitizeMissingDocs` (api lib/assetMgmt.ts), `recordSources`
+  (web). Drawer `SourcesSection` (falls back to the free-text source note + Drive links); row `DocBadge`.
 - `useAmData` resolves records / rates / abstracts independently (the hero waited on the slowest); hero caches last debt
   figures in localStorage. Fixed-position panels use `100%` not `100vw` (100vw read 409px on a 390px phone).
 

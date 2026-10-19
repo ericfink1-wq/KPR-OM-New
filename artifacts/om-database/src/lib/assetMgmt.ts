@@ -507,6 +507,14 @@ export function sinceAcquisition(deal: Deal, records: AmRecord[], today: Date): 
 }
 
 /** Drive links on a record: drive.google.com/file/d/<id>/view. */
+// ── Document provenance on a loan / swap / pref (Eric, 10/19/26) ──
+export interface SourceDoc { title?: string; docType?: string; date?: string; status?: string; url?: string; usedFor?: string[] }
+export function recordSources(rec: AmRecord): { sources: SourceDoc[]; missing: string[]; count: number } {
+  const sources = (Array.isArray(rec.data.sources) ? rec.data.sources as SourceDoc[] : []).filter(x => x && (x.title || x.url));
+  const missing = (Array.isArray(rec.data.missingDocs) ? rec.data.missingDocs as unknown[] : []).map(x => String(x ?? "").trim()).filter(Boolean);
+  // A link is shown only when it is http(s) — the server already enforces this; checked again here.
+  return { sources: sources.map(x => ({ ...x, url: x.url && /^https?:\/\//i.test(x.url) ? x.url : undefined })), missing, count: sources.length };
+}
 export function driveLinks(rec: AmRecord): Array<{ url: string; name: string }> {
   const docs = (rec.data.sourceDocs as Array<{ id: string; name?: string }> | undefined) ?? [];
   return docs.filter(d => /^[A-Za-z0-9_-]{20,}$/.test(d.id)).map((d, i) => ({ url: `https://drive.google.com/file/d/${d.id}/view`, name: d.name ?? (docs.length > 1 ? `Source doc ${i + 1}` : "Source doc") }));

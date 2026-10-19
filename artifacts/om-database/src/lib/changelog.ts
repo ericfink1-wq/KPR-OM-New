@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-19-debt-sources",
+    date: "2026-10-19",
+    category: "new",
+    title: "Loans, swaps and pref equity show the documents their terms came from",
+    detail: "Open a loan, swap or preferred-equity position and a Sources section lists each document — a link to the file, its type and date, whether it's executed, an amendment, a statement or a summary, and which terms it supplied. Anything known to be missing is listed in amber. Each row also carries a small badge (\"4 docs\", \"1 missing\", or \"no docs\") so gaps are visible without opening it. Admins can load the document list through Import loans & swaps.",
+    where: "Asset Mgmt → Debt",
+  },
+  {
     id: "2026-10-19-money-format",
     date: "2026-10-19",
     category: "improved",

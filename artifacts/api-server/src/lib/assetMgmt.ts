@@ -181,6 +181,40 @@ export function normIndex(v: unknown): string | undefined {
   return s;
 }
 
+// ── Document provenance (Eric, 10/19/26): which documents a loan / swap / pref's terms came
+//    from, and which are known to be missing. Bounded; a link must be http(s) (never javascript:).
+export const SOURCE_STATUSES = ["Executed", "Amendment", "Statement", "Summary/derived", "Term sheet"] as const;
+export interface SourceDoc { title?: string; docType?: string; date?: string; status?: (typeof SOURCE_STATUSES)[number]; url?: string; usedFor?: string[] }
+const asArray = (v: unknown): unknown[] | null => {
+  if (Array.isArray(v)) return v;
+  if (typeof v === "string" && v.trim().startsWith("[")) { try { const j = JSON.parse(v); return Array.isArray(j) ? j : null; } catch { return null; } }
+  return null;
+};
+export function sanitizeSources(v: unknown): SourceDoc[] | undefined {
+  const arr = asArray(v);
+  if (!arr) return undefined;
+  const out: SourceDoc[] = [];
+  for (const x of arr.slice(0, 40)) {
+    if (!x || typeof x !== "object") continue;
+    const o = x as Record<string, unknown>;
+    const rawUrl = str(o.url ?? o.link ?? o.href, 600);
+    const url = rawUrl && /^https?:\/\//i.test(rawUrl) ? rawUrl : undefined;
+    const title = str(o.title ?? o.name ?? o.fileName, 200);
+    if (!title && !url) continue;
+    const st = String(o.status ?? "").trim().toLowerCase();
+    const status = SOURCE_STATUSES.find(k => k.toLowerCase() === st || (st.startsWith("summary") && k === "Summary/derived") || (st === "derived" && k === "Summary/derived"));
+    const used = (Array.isArray(o.usedFor) ? o.usedFor : typeof o.usedFor === "string" ? String(o.usedFor).split(/[,;]/) : [])
+      .map(u => String(u ?? "").trim().slice(0, 40)).filter(Boolean).slice(0, 20);
+    out.push(prune({ title, docType: str(o.docType ?? o.type, 60), date: isoDate(o.date) ?? str(o.date, 40), status, url, usedFor: used.length ? used : undefined } as SourceDoc & Record<string, unknown>) as SourceDoc);
+  }
+  return out;
+}
+export function sanitizeMissingDocs(v: unknown): string[] | undefined {
+  const arr = asArray(v) ?? (typeof v === "string" && v.trim() ? v.split(/\n|;/) : null);
+  if (!arr) return undefined;
+  return arr.map(x => String(x ?? "").trim().slice(0, 300)).filter(Boolean).slice(0, 30);
+}
+
 export function sanitizeLoan(r: Record<string, unknown>): LoanRec {
   const spreadBps = num(r.spreadBps ?? r.spread_bps, 0, 2000) ?? (num(r.spreadPct ?? r.spread, 0, 20) != null ? Math.round(num(r.spreadPct ?? r.spread, 0, 20)! * 100) : undefined);
   const amort = String(r.amortization ?? "").toLowerCase();
@@ -200,6 +234,7 @@ export function sanitizeLoan(r: Record<string, unknown>): LoanRec {
     recourse: str(r.recourse), guarantor: str(r.guarantor), datexLoanId: num(r.datexLoanId, 0), notes: text(r.notes),
     loanLabel: str(r.loanLabel ?? r.label, 120), covenants: text(r.covenants), prepayment: text(r.prepayment ?? r.prepaymentTerms ?? r.prepay),
     openQuestions: text(r.openQuestions), confidence: str(r.confidence, 60),
+    sources: sanitizeSources(r.sources), missingDocs: sanitizeMissingDocs(r.missingDocs),
   } as LoanRec & Record<string, unknown>);
 }
 export function sanitizeSwap(r: Record<string, unknown>): SwapRec {
@@ -210,7 +245,8 @@ export function sanitizeSwap(r: Record<string, unknown>): SwapRec {
     tradeDate: isoDate(r.tradeDate), effectiveDate: isoDate(r.effectiveDate), maturityDate: isoDate(r.maturityDate ?? r.terminationDate ?? r.maturity),
     index: normIndex(r.index ?? r.floatingIndex), payFixed: bool(r.payFixed), notes: text(r.notes),
     loanLabel: str(r.loanLabel ?? r.label, 120), swapLabel: str(r.swapLabel ?? r.swapName, 120), openQuestions: text(r.openQuestions), confidence: str(r.confidence, 60),
-  });
+    sources: sanitizeSources(r.sources), missingDocs: sanitizeMissingDocs(r.missingDocs),
+  } as SwapRec & Record<string, unknown>);
 }
 export function sanitizePref(r: Record<string, unknown>): PrefRec {
   return prune({
@@ -223,7 +259,8 @@ export function sanitizePref(r: Record<string, unknown>): PrefRec {
     stepNote: text(r.stepNote ?? r.rateSteps ?? r.steps, 600), redemptionDate: isoDate(r.redemptionDate),
     fundingDate: isoDate(r.fundingDate ?? r.originationDate), maturityDate: isoDate(r.maturityDate ?? r.maturity),
     redemption: text(r.redemption ?? r.prepayment), notes: text(r.notes), openQuestions: text(r.openQuestions), confidence: str(r.confidence, 60),
-  });
+    sources: sanitizeSources(r.sources), missingDocs: sanitizeMissingDocs(r.missingDocs),
+  } as PrefRec & Record<string, unknown>);
 }
 export function sanitizeDate(r: Record<string, unknown>): DateRec {
   return prune({ date: isoDate(r.date), type: str(r.type, 60), tenant: str(r.tenant, 120), description: str(r.description, 500), owner: str(r.owner, 80), noticeDays: num(r.noticeDays, 0, 3650) });
@@ -231,7 +268,7 @@ export function sanitizeDate(r: Record<string, unknown>): DateRec {
 // ── Columns we don't model are KEPT, not silently dropped (Eric's 10/18 seed lost its
 //    covenant, prepayment and Drive-link columns to a whitelist). Bounded, primitive-ish only.
 const META_KEYS = new Set(["kind", "id", "dealId", "bldgId", "BLDGID", "property", "propertyName", "source", "sourceNote"]);
-const ALIAS_KEYS = new Set(["spread", "spreadPct", "spread_bps", "originalAmount", "balance", "name", "fixedRate", "allInRate", "startDate", "maturity",
+const ALIAS_KEYS = new Set(["sources", "missingDocs", "spread", "spreadPct", "spread_bps", "originalAmount", "balance", "name", "fixedRate", "allInRate", "startDate", "maturity",
   "dscr", "debtYieldCovenant", "swapRate", "allIn", "terminationDate", "floatingIndex", "label", "prepaymentTerms", "prepay", "provider",
   "prefRatePct", "rate", "allInPct", "currentPay", "cashPayPct", "accrualPct", "accrued", "accrual", "rateSteps", "steps", "price", "closingDate", "noiAtClose", "goingInCap", "capRate", "kpOwnershipPct", "kpPercent", "jv", "partner"]);
 function withExtras(raw: Record<string, unknown>, clean: Record<string, unknown>): Record<string, unknown> {
@@ -497,7 +534,7 @@ const FIELD_LABEL: Record<string, string> = {
   counterparty: "counterparty", notional: "notional", fixedSwapRatePct: "swap rate %", allInFixedPct: "all-in fixed %", effectiveDate: "effective date",
   tradeDate: "trade date", threshold: "threshold", sweepBelow: "sweep below", testFrequency: "test frequency", firstTestDate: "first test",
   triggerDate: "trigger date", type: "type", investor: "investor", amount: "amount", ratePct: "all-in rate %", currentPayPct: "current pay %",
-  accruedPct: "accrued %", stepNote: "rate steps", redemptionDate: "redemption date", loanLabel: "loan label", swapLabel: "swap label", linkedTenant: "tenant", termsPending: "terms pending",
+  accruedPct: "accrued %", stepNote: "rate steps", sources: "sources", missingDocs: "missing docs", redemptionDate: "redemption date", loanLabel: "loan label", swapLabel: "swap label", linkedTenant: "tenant", termsPending: "terms pending",
 };
 const SKIP_DIFF = new Set(["amortizationText", "sourceDocs"]);
 export function fieldChanges(before: Record<string, unknown>, incoming: Record<string, unknown>): ImportFieldChange[] {

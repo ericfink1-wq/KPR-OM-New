@@ -128,3 +128,15 @@ describe("preferred equity current pay vs all-in", () => {
     expect(debtTotals(buildDebtRows([], ds, rates, today), []).weightedRatePct).toBeNull();
   });
 });
+
+import { recordSources } from "../assetMgmt";
+describe("record sources", () => {
+  it("counts documents, lists missing ones, drops non-http links", () => {
+    const r = rec("l", "loan", "c1", { sources: [{ title: "Note", url: "https://drive.google.com/x" }, { title: "Bad", url: "javascript:1" }, { docType: "x" }], missingDocs: ["Executed note not in folder", ""] });
+    const out = recordSources(r);
+    expect(out.count).toBe(2);
+    expect(out.sources[1].url).toBeUndefined();
+    expect(out.missing).toEqual(["Executed note not in folder"]);
+    expect(recordSources(rec("e", "loan", "c1", {})).count).toBe(0);
+  });
+});
