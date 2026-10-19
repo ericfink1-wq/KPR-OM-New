@@ -28,6 +28,33 @@ function fmtDate(iso: string): string {
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** Plain paragraph, or — for a roundup entry — "## " headings with "- " bullets. */
+function Detail({ text }: { text: string }) {
+  if (!text.includes("\n")) return <div style={{ fontSize:13.5, color:"#55584f", lineHeight:1.6 }}>{text}</div>;
+  const blocks: Array<{ head: string | null; items: string[]; para: string[] }> = [];
+  for (const line of text.split("\n")) {
+    if (line.startsWith("## ")) blocks.push({ head: line.slice(3), items: [], para: [] });
+    else {
+      if (!blocks.length) blocks.push({ head: null, items: [], para: [] });
+      const b = blocks[blocks.length - 1];
+      if (line.startsWith("- ")) b.items.push(line.slice(2)); else if (line.trim()) b.para.push(line);
+    }
+  }
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+      {blocks.map((b, i) => (
+        <div key={i}>
+          {b.head && <div style={{ fontFamily:"'Montserrat',sans-serif", fontSize:10.5, fontWeight:800, letterSpacing:"0.08em", textTransform:"uppercase", color:"#383a37", marginBottom:4 }}>{b.head}</div>}
+          {b.para.map((p, j) => <div key={j} style={{ fontSize:13.5, color:"#55584f", lineHeight:1.6 }}>{p}</div>)}
+          {b.items.length > 0 && <ul style={{ margin:0, paddingLeft:18, listStyle:"disc", display:"flex", flexDirection:"column", gap:4 }}>
+            {b.items.map((it, j) => <li key={j} style={{ fontSize:13.5, color:"#55584f", lineHeight:1.55 }}>{it}</li>)}
+          </ul>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Entry({ e, isNew }: { e: ChangeEntry; isNew: boolean }) {
   const c = CATEGORY_STYLE[e.category];
   return (
@@ -44,7 +71,7 @@ function Entry({ e, isNew }: { e: ChangeEntry; isNew: boolean }) {
         )}
       </div>
       <div style={{ fontFamily:"'Lora',Georgia,serif", fontSize:16, fontWeight:600, color:"#232422", lineHeight:1.35 }}>{e.title}</div>
-      <div style={{ fontSize:13.5, color:"#55584f", lineHeight:1.6 }}>{e.detail}</div>
+      <Detail text={e.detail} />
       {e.where && (
         <div style={{ fontSize:12, color:"#8a8579" }}>
           <span style={{ color:"#9b9992" }}>Where: </span>{e.where}

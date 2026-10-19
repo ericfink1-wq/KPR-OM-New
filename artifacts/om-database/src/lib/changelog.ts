@@ -48,198 +48,41 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
-    id: "2026-10-19-roster-flags-right",
-    date: "2026-10-19",
-    category: "improved",
-    title: "Tenant roster: Flags pinned to the right, cleaner market-rent column, tap-to-read hints on phones",
-    detail: "The Flags column now sits at the far right of the tenant roster and stays pinned there while you scroll sideways, with the tenant name still pinned on the left. The Mkt rent column shows just the dollar figure. Hover it (tap on a phone) to see what it's based on and how many leases, for example \"Category benchmark (Grocery, 10–25K SF), 36 leases\". The same detail is added to the below/above-market arrow next to Rent/SF. The flag filters above the table and column sorting work as before. On a phone, tap any flag, badge or icon (roster flag chips, the flag filters, the doc count on Debt loans and the small hints across the site) to read what hovering shows on a computer. Tap anywhere else to close it.",
-    where: "Deal page → Tenants & Sales → Tenant roster",
-  },
-  {
-    id: "2026-10-19-doc-link-privacy",
-    date: "2026-10-19",
-    category: "improved",
-    title: "Links to internal document folders are private to the site owner",
-    detail: "Loan, swap and preferred-equity sources still show each document's title, type, date, status and what it was used for. The link itself, and any Google Drive or SharePoint link or file ID in notes, appears only on the site owner's account — everyone else sees \"[link hidden]\". The same applies in exports, the analyst chat and the Claude connector. Edits you make are saved as normal, and the hidden links stay in place.",
-    where: "Asset Mgmt → Debt, deal pages, lease abstracts",
-  },
-  {
-    id: "2026-10-19-am-sorting",
-    date: "2026-10-19",
-    category: "improved",
-    title: "Every Asset Mgmt table sorts",
-    detail: "Click any column header on the Debt (loans, swaps, preferred equity), Dates, Properties and Credit Watch tables to sort it; click again to flip it. An arrow marks the active column. Amounts, rates and dates sort by their real values, and blanks always stay at the bottom. Each table remembers your last sort on this device. On a phone, use the small \"Sort by\" menu above the cards.",
-    where: "Asset Mgmt",
-  },
-  {
-    id: "2026-10-19-debt-sources",
+    // Oct 17–19 consolidated into ONE entry (Eric, 10/19/26). Lines: "## " = heading, "- " = bullet,
+    // "- [admin] " = shown to admins only (see forViewer).
+    id: "2026-10-19-weekend-roundup",
     date: "2026-10-19",
     category: "new",
-    title: "Loans, swaps and pref equity show the documents their terms came from",
-    detail: "Open a loan, swap or preferred-equity position and a Sources section lists each document — a link to the file, its type and date, whether it's executed, an amendment, a statement or a summary, and which terms it supplied. Anything known to be missing is listed in amber. Each row also carries a small badge (\"4 docs\", \"1 missing\", or \"no docs\") so gaps are visible without opening it. Admins can load the document list through Import loans & swaps.",
-    where: "Asset Mgmt → Debt",
-  },
-  {
-    id: "2026-10-19-money-format",
-    date: "2026-10-19",
-    category: "improved",
-    title: "Dollar amounts roll up to the next unit",
-    detail: "Money figures never show four digits before the unit any more: $1,250K reads $1.25M and $1,098.76M reads $1.10B, with millions and billions shown to two decimals. This is the same everywhere — tiles, tables, the maturity wall, side panels, PDFs and the analyst chat.",
-  },
-  {
-    id: "2026-10-19-occupancy-check",
-    date: "2026-10-19",
-    category: "fixed",
-    title: "Far fewer false \"write-up vs stored occupancy\" questions",
-    detail: "The check that compares the AI write-up's occupancy to the deal's stored occupancy now reads only figures explicitly labelled as the center's occupancy (not an occupancy cost, a tenant's share, or \"leased to\"), within one point. The several hundred questions it raised by mistake are marked resolved with the reason, not deleted. The recourse questions on Mattatuck, Concordia and Providence are answered: a carve-out (bad-boy) guaranty by Katz / Kaufthal, per the loan documents.",
-    where: "Portfolio Analytics → Feedback & trends; each deal's review questions",
-  },
-  {
-    id: "2026-10-19-credit-watch",
-    date: "2026-10-19",
-    category: "improved",
-    title: "Credit Watch shows flagged brands first, one row per brand",
-    detail: "Credit Watch now opens on brands that need a look — on the watchlist, or with a distress headline — with a switch to see every brand. A headline that only names states where we have no store for that brand (PNC closing Colorado branches) is left out. Store numbers are stripped everywhere (\"Walgreens #5282\" is just Walgreens), and the watchlist card in Portfolio Analytics now uses the same rent as Credit Watch, so a brand's total matches in both places.",
-    where: "Asset Mgmt → Credit Watch; Portfolio Analytics → Owned",
-  },
-  {
-    id: "2026-10-19-am-dates-properties",
-    date: "2026-10-19",
-    category: "improved",
-    title: "Key debt deadlines, one row per portfolio covenant, and an owner for every property",
-    detail: "The Dates tab now pins rate-cap expirations, extension-notice windows and loans maturing within a year at the top, whatever window you pick. A covenant tested across a whole portfolio loan (Cedar's debt-yield test) shows once instead of on every property. Each property can carry an asset manager, which the Dates tab and the home \"This week\" card use. On Properties, a budget for a property bought mid-year is labelled \"partial-year budget\" and no longer coloured red or green, the ledger basis is shown on every row, and properties that aren't in Datex say so (Fred Meyer Bend is single-tenant; Providence isn't set up in Datex yet).",
-    where: "Asset Mgmt → Dates and Properties",
-  },
-  {
-    id: "2026-10-19-debt-floating",
-    date: "2026-10-19",
-    category: "improved",
-    title: "Debt tab prices floating loans, counts rate caps, and fits one line per loan",
-    detail: "Floating loans now show an all-in rate estimated from today's 1M Term SOFR (or the loan's index floor, whichever is higher) plus the spread, marked with a ~, so the weighted average rate covers nearly all the debt. Loans under a live rate cap are counted as capped, and the rate tile splits fixed/swapped, capped and floating. Swaps whose terms are now complete (Overland, Pointe Plaza) are priced instead of saying \"terms pending\". The loans table is one line per loan; tap a row to open every field in a side panel. On a phone, the Debt, Properties and Credit Watch tabs now show cards instead of wide tables, and the home page's Total debt and Next maturity tiles appear right away instead of saying \"loading\". Preferred equity now shows both the current (cash) pay rate and the all-in rate, what accrues on top, the yearly dollars of each, any scheduled rate changes and the redemption date. A new IO / Amort column shows each loan's interest-only period and amortization (e.g. \"IO to Jan 2030, then 25-yr\"). A loan only partly covered by its swap (Pointe Plaza, Overland, Rockaway Commons) now blends the swapped part at the swap rate with the rest at today's SOFR plus spread, marked ~ and labelled \"partly swapped\". Any loan with a live swap is shown as swapped with its spread (Bensalem now reads \"Swapped +236\"), and hovering an all-in rate tells you where it came from: swap, curve estimate, fixed note or blended.",
-    where: "Asset Mgmt → Debt",
-  },
-  {
-    id: "2026-10-19-am-import-match",
-    date: "2026-10-19",
-    category: "fixed",
-    adminOnly: true,
-    title: "Importing loans, swaps and covenants updates them instead of adding duplicates",
-    detail: "A re-import now recognises a loan by its property and loan label, a swap by its property and swap (or loan) label, and a covenant by its property and type. A corrected maturity, lender, amount or covenant level updates the saved row, and anything the import doesn't include is kept. The preview shows each change as old → new before you save. If a property already has two rows with the same label, the import holds that row back and tells you, so you can delete the extra first.",
-    where: "Asset Mgmt → Debt → Import loans & swaps",
-  },
-  {
-    id: "2026-10-18-roster-scrub",
-    date: "2026-10-18",
-    category: "new",
-    title: "Roster scrub: every OM in the same standard format, plus a one-line roster",
-    detail: "The Tenants tab now opens with a roster scrub: leased %, in-place rent, investment-grade share, top-5 concentration, WALT, rent rolling in 12/24/36 months, and below- and above-market rent against the library (shown separately, never netted). Proposed or unsigned leases are left out of occupancy, rent and NOI unless you switch them on. Each tenant gets flags you can filter by and a market-rent benchmark. Two new downloads build the same layout for every OM: a KPR Standard Rent Roll in Excel and a one-page KPR OM Summary PDF. The roster itself now fits one line per tenant (recovery chip, next rent step, options, abstract icon). Tap a row for the full detail.",
-    where: "Any deal → Tenants & Sales",
-  },
-  {
-    id: "2026-10-18-design-refresh",
-    date: "2026-10-18",
-    category: "improved",
-    title: "A cleaner look across the site, and a new home page",
-    detail: "Every page now uses the KPR colors and type, with consistent headers, cards, tables and buttons, and loading placeholders instead of blank screens. The home page opens with today's date and live owned-portfolio figures from Datex: occupancy, NOI vs. budget, total debt and the next maturity. The library tiles show trends, the pipeline cards are larger with photos, and \"This week\" is a timeline colored by urgency. Datex leasing activity is now labelled as applications, not signed deals.",
-    where: "Home page and every page",
-  },
-  {
-    id: "2026-10-18-asset-mgmt-polish",
-    date: "2026-10-18",
-    category: "fixed",
-    title: "Clearer Datex figures for owned properties",
-    detail: "NOI vs budget now shows whether Datex books the property on a cash or accrual basis, with a note that cash-basis timing can swing year-to-date figures. A/R past 60 and 90 days now counts current tenants only, and lists balances left by tenants who have moved out (such as Big Lots) separately. The rent-roll size check now allows for suites listed twice and signed-but-not-open leases, and only warns when the gap is above 5%. A tenant month that looks like a whole year's sales keyed into one month is now left out of the 12-month total and marked with a \"suspect month\" chip. Flat leases read \"Flat to Mar-30\" instead of showing a step to the same rent, and the deal-page tab menus open only when you click the small arrow.",
-    where: "Asset Mgmt → Properties, owned deal pages, and the Tenants & Sales roster",
-  },
-  {
-    id: "2026-10-18-owned-deal-page",
-    date: "2026-10-18",
-    category: "improved",
-    title: "Owned deal pages: a new Asset tab, live covenants, and a cleaner layout",
-    detail: "Owned properties now open on an Asset tab. It shows Datex occupancy, base rent, NOI year to date vs. budget, debt, DSCR, debt yield and the next critical date. Below that are a covenant monitor with live headroom, plan vs. actual, a since-acquisition timeline, and a button that drafts the quarterly investor-letter paragraph (one AI call, only when you click). Financing now reads the loan and swap from Asset Mgmt, with interest-only debt service, swap mark-to-market and links to the loan documents. Transaction shows the acquisition details. The page header and tab bar appear once, cap rate and price/SF are computed for owned deals, and the CAM text opens in a side panel. The roster flags holdover leases and passed option notices, and no longer counts utility closets and ATMs as vacancy. Tenant sales flag identical year-over-year figures and tuck former tenants behind a toggle.",
-    where: "Any owned property's deal page",
-  },
-  {
-    id: "2026-10-18-asset-mgmt",
-    date: "2026-10-18",
-    category: "new",
-    title: "Asset Mgmt: debt, critical dates, live Datex and tenant credit for owned properties",
-    detail: "A new Asset Mgmt section covers KPR's owned properties only. Debt lists every loan and swap with its all-in rate, a maturity wall, a mark-to-market on each swap from today's 1-Month Term SOFR curve, and red or amber flags when maturity is within 12 or 18 months. Dates gathers lease expirations, option notice deadlines, co-tenancy and kick-out dates, and loan and swap maturities, with days remaining and who owns each one. Properties shows each building's latest Datex figures. Credit Watch ranks your tenants by share of rent and checks the news daily for bankruptcies and store closures. Tap Details on any loan or swap to see its covenants, prepayment terms, notes and open questions. Preferred equity has its own section and is kept out of total debt. Each owned deal page now opens with Datex today vs. the OM, A/R, NOI vs. budget, tenant sales and occupancy cost, and the next dates. The home page gets a \"This week\" list.",
-    where: "Asset Mgmt (top bar; Analytics on a phone), owned deal pages, and the home page",
-  },
-  {
-    id: "2026-10-18-asset-mgmt-admin",
-    date: "2026-10-18",
-    category: "new",
-    adminOnly: true,
-    title: "Asset Mgmt editing: loans, swaps, dates and the Datex building map",
-    detail: "Admins can add, edit and delete loans, swaps and critical dates, each with a source note. You can also paste a JSON or CSV file to import many at once; it previews before it saves. A swap whose notional or maturity isn't documented yet saves as \"terms pending\" and stays out of the mark-to-market. The Datex building map that links each owned deal to its Datex building IDs can now be edited on the Properties tab. The import now also takes covenants, acquisitions and option statuses, keeps every column it doesn't recognise, and turns Drive file IDs into links. On an owned deal's Asset tab, \"Detect from loan docs\" proposes covenants for you to review before saving. The Datex snapshot recipe is now a page you can open in the browser. Datex can now refresh itself: create a token under Properties → Datex auto-refresh, and a scheduled Claude task posts only what changed (anything it doesn't send is kept). The last run shows at the top of the Properties tab. The scheduled task can also get its own 3-hour credentials through the KPR Claude connector (admins only, every one logged), and auto-refresh can be switched off in the same window.",
-    where: "Asset Mgmt → Debt, Dates and Properties",
-  },
-  {
-    id: "2026-10-17-rates-term-sofr",
-    date: "2026-10-17",
-    category: "improved",
-    title: "Today's Rates: live swap rates on 1-Month Term SOFR, plus a loan sizer",
-    detail: "Swap rates now come from the swap trades reported to DTCC's public data and land within about 1 basis point of Chatham's close. The panel leads with 1-Month Term SOFR swaps, which is what KPR's swapped loans use, and keeps the standard SOFR (annual/annual) curve for Daily Simple SOFR loans like Overland. The swap-breakage estimate on deal pages now uses the 1-Month Term curve too. Size a loan off any base rate with your spread, premium and cushion. It tests DSCR, debt yield and LTV and highlights whichever one limits the loan. Star a base rate to make it your default; your inputs are remembered on any device.",
-    where: "Today's Rates (top bar, or ☰ on a phone)",
-  },
-  {
-    id: "2026-10-17-site-refresh",
-    date: "2026-10-17",
-    category: "improved",
-    title: "A cleaner, faster site on desktop and phone",
-    detail: "The home page has a new look in KPR's colors, with your owned portfolio, pipeline cards and the deals that need attention. On a phone, the main sections are tabs along the bottom and the Deal Library is a list of cards. The less-used items now sit in the ☰ menu. Every page has its own link you can copy and send, and Escape closes any open window. The site also loads much faster, with photos and data a fraction of their old size.",
-    where: "Everywhere",
-  },
-  {
-    id: "2026-10-17-ai-writeups",
-    date: "2026-10-17",
-    category: "improved",
-    title: "Every AI write-up redone under the new rules",
-    detail: "Every deal has been re-analyzed. Above-market rent is treated as a roll-down risk, never as upside. The write-up's numbers have to match the deal's own figures, and any mismatch shows up as a review question. Office, medical and bank tenants no longer count as anchors, and pending sales are never mentioned. Go-dark figures now name the actual tenant, and opening a deal no longer re-scores it on its own.",
-    where: "Deal page → Overview and AI Analysis",
-  },
-  {
-    id: "2026-10-17-owned-datex",
-    date: "2026-10-17",
-    category: "improved",
-    title: "Owned portfolio: one count everywhere, and today's Datex numbers",
-    detail: "\"Owned\" now means the same thing on every page, and the investment-grade rent figure agrees everywhere too. Portfolio Analytics opens on Owned. An owned deal with a Datex snapshot shows today's occupancy and rent next to the OM's figures, and the owned rollover and top tenants use Datex's current tenant list. Portfolio Analytics → Owned also shows the rent with watchlist tenants and the rent at risk if a key anchor goes dark.",
-    where: "Owned deal pages; Portfolio Analytics → Owned",
-  },
-  {
-    id: "2026-10-17-property-history",
-    date: "2026-10-17",
-    category: "new",
-    title: "Property history: what changed between OMs",
-    detail: "When a newer OM or rent roll arrives for a center, the deal page keeps a dated history of what changed: tenants who left, backfills, renewals, anchor rent moves and stores gone dark, plus NOI and occupancy then vs now. The AI write-up uses it as background. Every OM now shows its date.",
-    where: "Deal page → Summary → Property History",
-  },
-  {
-    id: "2026-10-17-comps-valuation",
-    date: "2026-10-17",
-    category: "improved",
-    title: "Cleaner comps and valuation",
-    detail: "Comp averages now count only real sales. Duplicates are merged, the OMs' nearby competing centers have their own Competitive set tab, and prices carved out of portfolio deals are left out by default. A new chart plots cap rate by sale date. A deal's implied value uses only sales of the same center type. Mark-to-Market compares like-for-like stores and doesn't count dollars from thin samples. Florida closing costs show the right range and who pays for title.",
-    where: "Comps; deal page → Market & Comps; Mark-to-Market; Closing Costs",
-  },
-  {
-    id: "2026-10-17-records-uploads",
-    date: "2026-10-17",
-    category: "improved",
-    title: "Sales are recorded when they close, and uploads ask before merging",
-    detail: "A property stays Owned until its sale closes. Marking it Sold asks for the closing date, and a Sold deal missing its date or price is flagged. The pending-sale fields are gone. When an upload looks like a property that's already in the library, you choose whether to add to it, replace it or keep it separate. Leftover duplicate and blank deals from failed uploads were merged and moved to Trash, where they can be restored.",
-    where: "Deal page → status tag; Upload",
-  },
-  {
-    id: "2026-10-17-admin-tools",
-    date: "2026-10-17",
-    category: "new",
-    adminOnly: true,
-    title: "For admins: Chatham marks and comp cleanup",
-    detail: "Paste Chatham's rates (the 1M Term SOFR and annual/annual tables) into Today's Rates. You'll see what was read before anything is saved. The mark becomes everyone's swap curve for that day, and the panel keeps a log of how far the free curve was from Chatham. On the Comps page, Clean up comp data shows its fixes and asks before writing anything.",
-    where: "Today's Rates → Paste a Chatham mark; Comps page",
+    title: "This weekend's updates (Oct 17–19)",
+    detail: [
+      "## Debt & loans",
+      "- Asset Mgmt → Debt lists every loan and swap with its all-in rate (floating loans estimated from today's SOFR and marked ~, partly swapped loans blended), a maturity wall, rate caps and swap mark-to-market.",
+      "- Tap a loan for every term, including a new IO / Amort column and a Sources list of the documents each term came from (a \"docs\" badge on each row shows gaps).",
+      "- Today's Rates now tracks 1-Month Term SOFR swaps within about a basis point of Chatham, with a loan sizer that tests DSCR, debt yield and LTV.",
+      "## Preferred equity",
+      "- Kept separate from debt, showing both the cash-pay rate and the all-in rate, what accrues, the yearly dollars of each, rate steps and the redemption date.",
+      "## Asset Mgmt",
+      "- Dates: lease, option-notice, co-tenancy, covenant and loan dates with days left and an owner, plus rate-cap expirations, extension windows and near maturities pinned on top.",
+      "- Properties shows today's Datex occupancy, rent, NOI vs budget and A/R (former tenants listed apart); Credit Watch flags brands on the watchlist or with closure news in states where you have a store.",
+      "- Every table sorts by clicking a column (a \"Sort by\" menu on phones) and remembers your choice.",
+      "## Deal pages & tenant roster",
+      "- Owned deals open on a new Asset tab: live covenant headroom, plan vs actual, a since-acquisition timeline and a one-click quarterly paragraph.",
+      "- Every OM gets the same roster scrub (leased %, rollover, below/above-market rent, flags you can filter), a one-line roster with Flags pinned right, a KPR Standard Rent Roll (Excel) and a one-page OM Summary (PDF).",
+      "- A dated property history shows what changed between OMs, and every AI write-up was redone under the new rules (above-market rent is a risk, not upside).",
+      "## Comps & records",
+      "- Comp averages count only real sales: duplicates merged, nearby competing centers on their own tab, a cap-rate-over-time chart, like-for-like Mark-to-Market and corrected Florida closing costs.",
+      "- \"Owned\" means the same on every page, a property stays Owned until its sale closes, and an upload that matches an existing property asks before merging.",
+      "- Far fewer false review questions; the ones raised by mistake are marked resolved.",
+      "## Privacy",
+      "- Links to internal Drive and SharePoint folders show only on the site owner's account; everyone else still sees each document's title, type, date and status.",
+      "## Site-wide polish",
+      "- A cleaner look in KPR colors, a new home page with live owned figures, and a much faster site; phones get bottom tabs and card lists.",
+      "- Money rolls to the next unit ($1,250K → $1.25M), every page has its own shareable link, and on a phone you can tap any flag, badge or icon to read its hint.",
+      "## For admins",
+      "- [admin] Add, edit and import loans, swaps, covenants and dates (a re-import updates the matching row instead of adding a duplicate), edit the Datex building map and set up Datex auto-refresh.",
+      "- [admin] Paste a Chatham mark into Today's Rates, and use \"Clean up comp data\" on the Comps page.",
+    ].join("\n"),
+    where: "Asset Mgmt, deal pages, Today's Rates, Comps",
   },
   {
     id: "2026-10-16-occupancy-cost",
@@ -457,10 +300,19 @@ export const CHANGELOG: ChangeEntry[] = [
   },
 ];
 
+/** An entry as this reader sees it: "- [admin] " lines are dropped for non-admins (and a heading left
+ *  with no bullets goes too); for admins the tag is just removed. Plain one-paragraph entries are unchanged. */
+export function forViewer(e: ChangeEntry, isAdmin: boolean): ChangeEntry {
+  if (!e.detail.includes("[admin]")) return e;
+  const lines = e.detail.split("\n").flatMap(l => /^- \[admin\] /.test(l) ? (isAdmin ? [l.replace("[admin] ", "")] : []) : [l]);
+  const kept = lines.filter((l, i) => !(l.startsWith("## ") && (i + 1 >= lines.length || lines[i + 1].startsWith("## "))));
+  return { ...e, detail: kept.join("\n") };
+}
+
 /** Newest first, and never a date in the future (a mis-typed entry must not hide everything else). */
 export function visibleChangelog(now: Date = new Date(), isAdmin = false): ChangeEntry[] {
   const today = isoDay(now);
-  return CHANGELOG.filter(e => e.date <= today && (isAdmin || !e.adminOnly)).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return CHANGELOG.filter(e => e.date <= today && (isAdmin || !e.adminOnly)).map(e => forViewer(e, isAdmin)).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
 
 /**
