@@ -2,6 +2,26 @@
 
 Persistent context for this repo. Read this fully at the start of every session.
 
+## LOCAL INTEL (10/19/26) — web-research scan per deal (Eric: "didn't know a Trader Joe's is opening ~1 mi from our Fred Meyer in Bend")
+`api lib/localIntel.ts` (PURE, tested: `siteFacts` → `buildQueries` 8–12 across competing_supply / tenant_health / demand /
+access / municipal / property; prompt; `normalizeFindings` — a source must be a URL the web_search RESULTS contained
+(model-named URLs that weren't returned are dropped, no source = dropped), last 24 months + forward-looking only, dedupe by
+shared URL or near-identical headline (`similar`), `mergeScan` keeps firstSeenAt/id, marks isNew, `newHighIds` = new
+high-severity negatives; dismissals stick by id OR any URL OR similar headline) + `lib/localIntelScan.ts` (ONE raw-HTTP
+Claude call via `callAnthropicOnce` (now takes extra headers) — model `claude-opus-5-5`, effort medium, `web_search_20260209`
+max_uses = query count, user_location, `fallbacks:"default"` + beta `server-side-fallback-2026-07-01`, pause_turn followed;
+page text is untrusted data per the system prompt; Census-geocoded distance when a finding has a street address, else
+the model's "~"). Storage: am_records kind `local_intel` (`local_intel:<dealId>`), queue kind `local_intel_queue`, daily
+marker `local_intel_meta` — NO new table. Auto: PUT of a new document / first save of an upload / JSON import →
+`enqueueLocalIntel` (skipped if scanned <7 days); the open app's `useLocalIntelTick` → `POST /local-intel/tick` runs ONE
+queued scan (claim with SKIP LOCKED; skips `_ingestBy`/processing rows; ≤25 auto scans/day); the tick also queues Owned
+deals not scanned in 30 days (once a day). Manual Refresh / dismiss = admin or owner (`POST /deals/:id/local-intel/scan`,
+`/dismiss`). UI: `LocalIntelCard` (AI Analysis tab, after Red Flags); high-severity negatives → Red Flags and positives →
+Upside LIVE (`intelRedFlags`/`intelUpside`, nothing written to the deal); grade sees `localIntel` in the roster snapshot +
+the LOCAL INTEL prompt rule; owned alerts (`GET /local-intel/alerts`) on Credit Watch + home This week. The MCP doesn't
+expose it yet. Tests: localIntel.test.ts (api), localIntelUi.test.ts (web). NOTE: Fred Meyer Bend's record has NO
+street address, so its distances can only be the model's estimate until one is entered.
+
 ## DELETED DEALS STAY DELETED — TOMBSTONES (10/19/26)
 Deal 1792431501111-hp3bsxm came back ~20 min after DELETE under the same id: PUT /deals/:id is an UPSERT, so any late
 save from a tab still holding it (upload queue's deferred image / analysis saves, an open deal page) re-inserted it.

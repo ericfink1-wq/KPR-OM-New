@@ -438,6 +438,7 @@ router.post("/deals/import", requireAuth, async (req, res) => {
       req.log.info({ id, fieldCount: Object.keys(clean).length }, "import new: inserting deal");
       try {
         await db.insert(dealsTable).values({ id, data: clean });
+        void import("../lib/localIntelScan").then(m => m.enqueueLocalIntel(id, "new-om")).catch(() => {});
       } catch (dbErr) {
         console.error("[import] DB insert failed, id=", id, dbErr);
         req.log.error({ err: dbErr, id }, "import DB insert failed");
@@ -630,6 +631,14 @@ router.put("/deals/:id", requireAuth, async (req, res) => {
       .values({ id, data: rest })
       .onConflictDoUpdate({ target: dealsTable.id, set: { data: rest, updatedAt: new Date() } });
     res.json({ ok: true, id });
+    // Local Intel: a new OM / upload was just kept → queue a background scan (never blocks
+    // the save; the queue skips a deal scanned in the last week). `_ingestBy` on the prior
+    // row = this is the first save of a fresh upload.
+    {
+      const prevData = prevRows[0]?.data as Record<string, unknown> | undefined;
+      const fresh = !!prevData && (!!prevData._ingestBy || (() => { try { return isNewDocument(prevData, rest); } catch { return false; } })());
+      if (fresh && !rest.trashedAt) void import("../lib/localIntelScan").then(m => m.enqueueLocalIntel(id, "new-om")).catch(() => {});
+    }
     setImmediate(() => {
       rebuildTenantIndex(id, rest).catch(() => {});
       rebuildCompsIndex(id, rest).catch(() => {});
@@ -1271,7 +1280,7 @@ router.post("/deals/:id/refresh-analysis", requireAuth, async (req, res) => {
 
     // 1) Regenerate narrative from the live roster (incl. resolved co-tenancy exposure)
     const leaseRiskSummary = await loadLeaseRiskSummary(id, current);
-    const analysis = await runRosterAnalysis(current, leaseRiskSummary);
+    const analysis = await runRosterAnalysis(current, leaseRiskSummary, undefined, id);
     const updated: Record<string, unknown> = { ...current, ...analysis, analysisStale: false, analysisVersion: ANALYSIS_VERSION };
 
     // 2) Layer the portfolio-benchmark pass (augments dealScore + red flags; keeps qualitative flags)
@@ -1316,7 +1325,7 @@ router.post("/deals/score-unscored", requireAuth, async (req, res) => {
     for (const r of targets) {
       const data = r.data as Record<string, unknown>;
       try {
-        const analysis = await runRosterAnalysis(data, await loadLeaseRiskSummary(r.id, data), library);
+        const analysis = await runRosterAnalysis(data, await loadLeaseRiskSummary(r.id, data), library, r.id);
         await db.update(dealsTable)
           .set({ data: { ...data, ...analysis, analysisVersion: ANALYSIS_VERSION }, updatedAt: new Date() })
           .where(eq(dealsTable.id, r.id));
@@ -1404,7 +1413,7 @@ router.post("/deals/refresh-stale-analysis", requireAuth, async (req, res) => {
     for (const r of targets) {
       const data = r.data as Record<string, unknown>;
       try {
-        const analysis = await runRosterAnalysis(data, await loadLeaseRiskSummary(r.id, data), library);
+        const analysis = await runRosterAnalysis(data, await loadLeaseRiskSummary(r.id, data), library, r.id);
         await applyAnalysisToDeal(r.id, data, analysis, req.log);
         refreshed++;
       } catch (err) {
@@ -1434,7 +1443,7 @@ export async function submitStaleAnalysisBatch(log: Logger, filter: (id: string,
   const requests: BatchRequest[] = [];
   for (const r of targets) {
     const data = r.data as Record<string, unknown>;
-    const snapshot = await buildRosterAnalysisSnapshot(data, await loadLeaseRiskSummary(r.id, data), library);
+    const snapshot = await buildRosterAnalysisSnapshot(data, await loadLeaseRiskSummary(r.id, data), library, r.id);
     requests.push({ custom_id: r.id, params: rosterAnalysisParams(snapshot) });
   }
   const batch = await createMessageBatch(requests);

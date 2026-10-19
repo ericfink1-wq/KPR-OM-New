@@ -48,6 +48,19 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-19-local-intel",
+    date: "2026-10-19",
+    category: "new",
+    title: "Local Intel: local news and development around each deal",
+    detail: [
+      "- A web scan for each property turns up competing stores and centers (like a new Trader Joe's or Aldi nearby), closures or bankruptcies among its tenants, big employers and housing, road and zoning changes, and news about the center itself. Each item is dated, says why it matters and how far away it is, and links its source.",
+      "- Serious negatives also show in Red Flags and count in the AI grade; good news shows in Upside. Mark anything \"Not relevant\" and it stays hidden.",
+      "- It runs on its own after a new OM upload, and owned properties are re-checked monthly — new serious items show on Asset Mgmt → Credit Watch and the home \"This week\" card.",
+      "- [admin] Refresh any time from the Local Intel card on the deal's AI Analysis tab (takes a minute or two).",
+    ].join("\n"),
+    where: "Deal page → AI Analysis tab → Local Intel",
+  },
+  {
     id: "2026-10-19-upload-sorting-provenance",
     date: "2026-10-19",
     category: "improved",

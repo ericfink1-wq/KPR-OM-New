@@ -1,0 +1,45 @@
+// Local Intel on the deal page (pure helpers; the scan runs server-side). Tests:
+// __tests__/localIntelUi.test.ts.
+import type { IntelFinding, IntelCategory } from "./api";
+
+export const INTEL_CATEGORY_LABEL: Record<IntelCategory, string> = {
+  competing_supply: "Competing supply", tenant_health: "Tenant health", demand: "Demand drivers",
+  access: "Access & infrastructure", municipal: "Municipal", property: "Property-specific",
+};
+
+/** "Jun 2026" / "Jun 12, 2026" from YYYY-MM or YYYY-MM-DD. */
+export function fmtIntelDate(d: string | null): string | null {
+  if (!d) return null;
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(d);
+  if (!m) return d;
+  const dt = new Date(Date.UTC(+m[1], +m[2] - 1, m[3] ? +m[3] : 1));
+  return dt.toLocaleDateString("en-US", m[3] ? { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" } : { month: "short", year: "numeric", timeZone: "UTC" });
+}
+export function fmtDistance(f: Pick<IntelFinding, "distanceMiles" | "distanceBasis">): string | null {
+  if (f.distanceMiles == null) return null;
+  const n = f.distanceMiles < 10 ? f.distanceMiles.toFixed(1).replace(/\.0$/, "") : String(Math.round(f.distanceMiles));
+  return `${f.distanceBasis === "geocoded" ? "" : "~"}${n} mi`;
+}
+/** "~1 mi · Jun 2026 · upcoming" */
+export function intelMeta(f: IntelFinding): string {
+  return [fmtDistance(f), fmtIntelDate(f.date), f.forwardLooking ? "upcoming" : null].filter(Boolean).join(" · ");
+}
+
+const live = (fs: IntelFinding[]) => fs.filter(f => !f.dismissed);
+
+/** High-severity negatives → the deal's red-flag list (live, not stored on the deal). */
+export function intelRedFlags(fs: IntelFinding[]): Array<{ severity: "high"; description: string }> {
+  return live(fs).filter(f => f.impact === "negative" && f.severity === "high").map(f => ({
+    severity: "high",
+    description: `**Local Intel — ${f.headline}.** ${f.whyItMatters}${intelMeta(f) ? ` (${intelMeta(f)}; per ${f.sources[0]?.title ?? "local news"})` : ""}`,
+  }));
+}
+/** Positives (medium/high) → the upside list. */
+export function intelUpside(fs: IntelFinding[]): Array<{ priority: string; item: string; detail: string }> {
+  return live(fs).filter(f => f.impact === "positive" && f.severity !== "low").map(f => ({
+    priority: f.severity, item: `Local Intel — ${f.headline}`,
+    detail: `${f.whyItMatters}${intelMeta(f) ? ` (${intelMeta(f)}; per ${f.sources[0]?.title ?? "local news"})` : ""}`,
+  }));
+}
+/** Only http(s) links are ever rendered. */
+export const safeHref = (u: string): string | null => /^https?:\/\//i.test(u) ? u : null;

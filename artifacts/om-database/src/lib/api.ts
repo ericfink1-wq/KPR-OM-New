@@ -1403,3 +1403,43 @@ export async function apiDatexAutoStatus(): Promise<{ last: IngestLogView | null
   if (!r.ok) throw new Error("Couldn't load the auto-refresh status");
   return r.json();
 }
+
+// --- Local Intel (web-research scan of local news & development per deal) ---
+export type IntelCategory = "competing_supply" | "tenant_health" | "demand" | "access" | "municipal" | "property";
+export interface IntelFinding {
+  id: string; category: IntelCategory; headline: string; whyItMatters: string;
+  distanceMiles: number | null; distanceBasis: "geocoded" | "reported" | "estimated" | null; location: string | null;
+  date: string | null; forwardLooking: boolean; impact: "negative" | "positive" | "watch"; severity: "high" | "medium" | "low";
+  tenant: string | null; sources: Array<{ title: string; url: string; date?: string | null }>; firstSeenAt: string; isNew?: boolean; dismissed?: boolean;
+}
+export interface LocalIntelRecord {
+  dealId: string; scannedAt: string | null; trigger: "manual" | "new-om" | "monthly" | null; by: string | null;
+  queries: string[]; searchesUsed: number; findings: IntelFinding[]; newHighIds: string[]; error?: string | null; radiusMiles: number;
+}
+export interface LocalIntelResponse { record: LocalIntelRecord | null; canScan: boolean; configured: boolean }
+export async function apiLocalIntel(dealId: string): Promise<LocalIntelResponse | null> {
+  try {
+    const r = await apiFetch(`/deals/${encodeURIComponent(dealId)}/local-intel`);
+    return r.ok ? await r.json() as LocalIntelResponse : null;
+  } catch { return null; }
+}
+/** Manual Refresh (admins / owner). Takes a minute or two; throws with the server's reason. */
+export async function apiLocalIntelScan(dealId: string): Promise<LocalIntelResponse> {
+  const r = await apiFetch(`/deals/${encodeURIComponent(dealId)}/local-intel/scan`, { method: "POST" });
+  const j = await r.json().catch(() => ({})) as LocalIntelResponse & { error?: string };
+  if (!r.ok) throw new Error(j.error || `Scan failed (HTTP ${r.status})`);
+  return j;
+}
+export async function apiLocalIntelDismiss(dealId: string, findingId: string, dismissed: boolean): Promise<LocalIntelResponse> {
+  const r = await apiFetch(`/deals/${encodeURIComponent(dealId)}/local-intel/dismiss`, { method: "POST", body: JSON.stringify({ findingId, dismissed }) });
+  const j = await r.json().catch(() => ({})) as LocalIntelResponse & { error?: string };
+  if (!r.ok) throw new Error(j.error || "Couldn't save");
+  return j;
+}
+export interface LocalIntelAlert { dealId: string; property: string; scannedAt: string | null; id: string; category: string; headline: string; whyItMatters: string; distanceMiles: number | null; date: string | null; source: { title: string; url: string } | null }
+export async function apiLocalIntelAlerts(): Promise<LocalIntelAlert[]> {
+  try {
+    const r = await apiFetch("/local-intel/alerts");
+    return r.ok ? ((await r.json()) as { alerts: LocalIntelAlert[] }).alerts ?? [] : [];
+  } catch { return []; }
+}

@@ -25,6 +25,7 @@ import SaveStatusIndicator from "./components/SaveStatusIndicator";
 import GlobalSearch from "./components/GlobalSearch";
 import { isSupportedUpload } from "./lib/fileExtract";
 import { useAnalysisRefresh } from "./lib/useAnalysisRefresh";
+import { useLocalIntelTick } from "./lib/useLocalIntelTick";
 import TapTipLayer from "./components/TapTip";
 // Heavy, route-gated screens are lazy-loaded so they don't bloat the initial
 // bundle (faster first paint, especially on mobile). They only fetch their chunk
@@ -165,6 +166,7 @@ function AppInner() {
   // Set by popstate so the URL-sync effect doesn't push a new entry for a Back/Forward.
   useEffect(() => installEscapeToClose(), []);
   useAnalysisRefresh(dealsLoaded);
+  useLocalIntelTick(dealsLoaded);
   const fromPopRef = useRef(false);
   // Set by navigate(): it already pushed the entry, so the sync effect only names it.
   const navPushedRef = useRef(false);

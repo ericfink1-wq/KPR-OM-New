@@ -186,7 +186,7 @@ CRITICAL RENT-ROLL LESSONS (from real operator corrections — past extractions 
 
 Return ONLY raw JSON. No markdown, no code fences, no explanation.`;
 
-export async function callAnthropicOnce(body: object, retryCount = 0): Promise<Response> {
+export async function callAnthropicOnce(body: object, retryCount = 0, extraHeaders: Record<string, string> = {}): Promise<Response> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
   let resp: Response;
@@ -197,6 +197,7 @@ export async function callAnthropicOnce(body: object, retryCount = 0): Promise<R
         "Content-Type": "application/json",
         "x-api-key": apiKey!,
         "anthropic-version": "2023-06-01",
+        ...extraHeaders,
       },
       body: JSON.stringify(body),
       dispatcher: anthropicAgent,
@@ -206,7 +207,7 @@ export async function callAnthropicOnce(body: object, retryCount = 0): Promise<R
     if (retryCount < 5) {
       const waitMs = Math.min(2000 * Math.pow(2, retryCount) + Math.random() * 1000, 60000);
       await new Promise((r) => setTimeout(r, waitMs));
-      return callAnthropicOnce(body, retryCount + 1);
+      return callAnthropicOnce(body, retryCount + 1, extraHeaders);
     }
     throw err;
   }
@@ -217,7 +218,7 @@ export async function callAnthropicOnce(body: object, retryCount = 0): Promise<R
       ? Math.min(1000 * Math.pow(2, retryCount) + Math.random() * 500, 30000)
       : Math.min(retryAfter * 1000, 60000);
     await new Promise((r) => setTimeout(r, waitMs));
-    return callAnthropicOnce(body, retryCount + 1);
+    return callAnthropicOnce(body, retryCount + 1, extraHeaders);
   }
   return resp;
 }
@@ -757,6 +758,7 @@ NEW UNDERWRITING SIGNALS — fold these into the grade, strengths, risks AND the
 - LEASE VINTAGE (leaseStart): a lease's rent was priced the day it was SIGNED. A roster dominated by old paper (signed 8+ years ago) or by 2020–2021 COVID-era signings (cut when landlords had little leverage) likely sits below today's market — a mark-to-market story, gated by the timing tiers and options gate above. Conversely, the center's own RECENT signings (last ~24 months) are the best evidence of where market rent sits: if recent inline leases were signed well above the older paper, cite that spread as hard mark-to-market evidence. Ignore when leaseStart coverage is thin.
 - PROPERTY HISTORY (propertyHistory, when present): dated changes between this property's EARLIER documents and the current one — tenants who left, backfills of their space, new tenants, renewals/extensions, anchor rent moves, dark stores, NOI/occupancy then vs now. The CURRENT figures always govern every number you state; use the history as context: a big box that was backfilled (and by whom), an anchor that renewed (durability), repeated turnover in the same suite (a weak space), occupancy or NOI trend across marketings. Mention the most material change in the narrative with its dates. Never present a historical figure as current.
 - LOCATION QUALITY (demographics: population3mi, avgHHIncome3mi/medianHHIncome3mi, trafficCountVPD): higher household income AND higher population — ESPECIALLY when BOTH are high together — generally support HIGHER rents and TIGHTER (lower) cap rates, and signal a dense INFILL / URBAN trade area where supply is constrained (a strength: durable demand, pricing power, stronger residual value). Use this as an interpretive lens: a high-density, high-income location helps justify above-average in-place rent or a tighter going-in cap, and supports mark-to-market upside; a thin or low-income trade area is the opposite (more cap-rate cushion warranted, weaker rent growth). Conversely, a deal whose rent/cap looks aggressive for a WEAK trade area is a pricing risk. Weave it into the location sentence of the narrative and the strengths/risks. Compare to comparableDeals' demographics where present rather than asserting absolute thresholds.
+- LOCAL INTEL (the "localIntel" field, if present): dated, SOURCED local news from a web scan around the site — competing supply (new grocers / anchors / centers within the stated radius), tenant health (closures, bankruptcies, relocations of THIS center's tenants), demand drivers, access/road changes, municipal actions (rezoning, moratoria, reassessment) and news about the center itself. Weigh it: a NEGATIVE item with HIGH severity (e.g. a new competing grocer within a few miles of a grocery anchor, an anchor closing) belongs in Red Flags and Risks with its date and distance, and should temper the grade; a POSITIVE item (a big employer or housing project arriving, a road improvement) can support Upside; "watch" items are context. State each as reported local news ("a Trader Joe's is reported opening ~1 mi away, per local news, 2026"), never as verified fact, and never invent detail beyond the headline and why-it-matters given. If localIntel is absent, ignore this.
 - OPERATOR INTEL (the "operatorIntel" field, if present): these are notes the KPR deal team typed in directly about THIS property — sales they've learned, lease changes that are expected, market/tenant color. Treat them as INFORMED FIRST-HAND CONTEXT and weave the material ones into the narrative, strengths, risks and upside. Two cautions: (1) a note tagged "(reported — not yet executed)" or "anecdotal" is an EXPECTATION / soft figure, not a committed fact — frame it as such ("Best Buy is reportedly extending five years — confirm the executed amendment") and don't let it inflate in-place NOI or the grade as if signed/verified; (2) where an intel note has already been applied to the structured data (sales/expiry), don't double-count it. If operatorIntel is absent, ignore this.
 
 FINAL SELF-CHECK BEFORE YOU RETURN — re-read your own JSON and FIX any of these before outputting. These are the exact tie-outs verified downstream; catching them now keeps a wrong figure from landing:
@@ -886,7 +888,9 @@ function buildComparablesBlock(dealData: Record<string, unknown>, all: Array<Rec
 // shared House View text and the library. Exported so the Batch API path builds an
 // IDENTICAL request to the live path. Pass `library` (already-loaded deal data rows) on
 // bulk paths so we don't re-query the table per deal.
-export async function buildRosterAnalysisSnapshot(dealData: Record<string, unknown>, leaseRiskSummary = "", library?: Array<Record<string, unknown>>): Promise<Record<string, unknown>> {
+export async function buildRosterAnalysisSnapshot(dealData: Record<string, unknown>, leaseRiskSummary = "", library?: Array<Record<string, unknown>>, dealId?: string): Promise<Record<string, unknown>> {
+  // Local news & development around the site (Local Intel scan) — see LOCAL INTEL in the prompt.
+  const localIntel = dealId ? await import("./localIntelScan").then(async m => (await import("./localIntel")).intelForAnalysis(await m.loadLocalIntel(dealId))).catch(() => undefined) : undefined;
   const houseView = await loadHouseViewText();
   // Retrieval (#2) + ground-truth calibration (#1): both ground the grade in KPR's own
   // data. Best-effort — never let library work break an analysis.
@@ -949,6 +953,7 @@ export async function buildRosterAnalysisSnapshot(dealData: Record<string, unkno
     // What changed between this property's earlier documents and now (backfills,
     // departures, renewals, anchor rent moves) — see PROPERTY HISTORY in the prompt.
     propertyHistory: historyForAnalysis(dealData),
+    localIntel,
     omDate: dealData.omDate ?? undefined,
     // Center-level non-rent income (utility resale, EV, parking, storage) — durability
     // of NOI; and the current tax facts so the grade can flag a reassessment step-up.
@@ -1012,8 +1017,8 @@ export function parseRosterAnalysisMessage(message: Record<string, unknown>): Re
   return out;
 }
 
-export async function runRosterAnalysis(dealData: Record<string, unknown>, leaseRiskSummary = "", library?: Array<Record<string, unknown>>): Promise<Record<string, unknown>> {
-  const snapshot = await buildRosterAnalysisSnapshot(dealData, leaseRiskSummary, library);
+export async function runRosterAnalysis(dealData: Record<string, unknown>, leaseRiskSummary = "", library?: Array<Record<string, unknown>>, dealId?: string): Promise<Record<string, unknown>> {
+  const snapshot = await buildRosterAnalysisSnapshot(dealData, leaseRiskSummary, library, dealId);
   const upstream = await callAnthropicOnce(rosterAnalysisParams(snapshot));
   const data = await upstream.json() as Record<string, unknown>;
   if (!upstream.ok) {

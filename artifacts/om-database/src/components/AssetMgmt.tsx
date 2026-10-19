@@ -9,6 +9,8 @@ import {
   apiGetRates, apiListAllLeaseAbstracts, apiLoadTenantBenchmarks, type RatesPayload, type AmImportResult, type DatexMapRow, type AnalystTenantBenchmark,
   apiDatexAutoTokens, apiDatexAutoCreateToken, apiDatexAutoRevokeToken, apiDatexAutoStatus, apiDatexAutoSetEnabled, type IngestTokenView, type IngestLogView, type AutoRefreshSettingView, type IngestAuditView,
 } from "../lib/api";
+import { apiLocalIntelAlerts, type LocalIntelAlert } from "../lib/api";
+import { fmtIntelDate } from "../lib/localIntel";
 import {
   buildDebtRows, buildSwapRows, debtTotals, buildPrefRows, prefTotals, buildCriticalDates, buildCreditWatch, buildSalesRows, omVsToday, liveTenants,
   type AmRecord, type DebtRow, type SwapRow, type PrefRow, type CriticalDate, type CreditRow, type NewsSignal, type DateType,
@@ -959,6 +961,29 @@ function DatexMapEditor({ deals, rows, onClose, onSaved }: { deals: Deal[]; rows
   );
 }
 
+// ── Local Intel alerts (owned) ───────────────────────────────────────────────
+// NEW high-severity negatives from each owned asset's latest Local Intel scan (monthly re-scan
+// or a manual Refresh) — e.g. a competing grocer announced near an anchor. Credit Watch + This week.
+export function LocalIntelAlerts({ onOpenDeal, compact = false }: { onOpenDeal: (id: string) => void; compact?: boolean }) {
+  const [alerts, setAlerts] = useState<LocalIntelAlert[] | null>(null);
+  useEffect(() => { let alive = true; apiLocalIntelAlerts().then(a => { if (alive) setAlerts(a); }); return () => { alive = false; }; }, []);
+  if (!alerts?.length) return null;
+  return (
+    <div style={{ ...card, padding: compact ? "10px 14px" : "12px 16px", marginBottom: 12, borderColor: "#e8b8ab" }}>
+      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: K.red, marginBottom: 6 }}>Local Intel · {alerts.length} new high-severity item{alerts.length === 1 ? "" : "s"}</div>
+      {alerts.slice(0, compact ? 3 : 20).map((a, i) => (
+        <div key={a.dealId + a.id} style={{ padding: "7px 0", borderTop: i ? "1px solid #f3f2ee" : "none", minWidth: 0 }}>
+          <div style={{ fontSize: 13.5, color: K.ink, overflowWrap: "break-word" }}><button onClick={() => onOpenDeal(a.dealId)} style={linkBtn}>{a.property}</button> — {a.headline}</div>
+          <div style={{ fontSize: 12, color: K.gray, marginTop: 2, overflowWrap: "break-word" }}>
+            {[a.category, a.distanceMiles != null ? `~${a.distanceMiles} mi` : null, fmtIntelDate(a.date)].filter(Boolean).join(" · ")}
+            {a.source && /^https?:\/\//i.test(a.source.url) && <> · <a href={a.source.url} target="_blank" rel="noopener noreferrer nofollow" style={{ color: K.charcoal }}>{a.source.title} ↗</a></>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Credit Watch tab ──────────────────────────────────────────────────────────
 const STATUS_RANK: Record<string, number> = { Bankruptcy: 3, "Store closures announced": 2, Watch: 1, OK: 0 };
 const CREDIT_COLS: SortCol<CreditRow>[] = [
@@ -1007,6 +1032,7 @@ function CreditTab({ deals, abstracts, onOpenDeal }: { deals: Deal[]; abstracts:
   const summarize = async (brand: string) => { setSummary(m => ({ ...m, [brand]: "…" })); try { const s = await apiAmSummarizeNews(brand); setSummary(m => ({ ...m, [brand]: s })); } catch (e) { setSummary(m => ({ ...m, [brand]: e instanceof Error ? e.message : "failed" })); } };
   return (
     <>
+      <LocalIntelAlerts onOpenDeal={onOpenDeal} />
       <SectionTitle right={<span style={{ fontSize: 12, color: K.gray }}>{scanning ? "checking headlines…" : `headlines checked daily for the top ${top.length} brands`}</span>}>{showAll ? `${rows.length} brands` : `${flagged.length} flagged of ${rows.length} brands`} · {fmtM(totalRent)} base rent</SectionTitle>
       <div role="radiogroup" aria-label="Which brands" style={{ display: "inline-flex", border: "1px solid #d9d8d2", borderRadius: 8, overflow: "hidden", marginBottom: 10 }}>
         {([[false, `Flagged (${flagged.length})`], [true, `All brands (${rows.length})`]] as const).map(([v, l]) => <button key={String(v)} role="radio" aria-checked={showAll === v} onClick={() => setShowAll(v)} style={{ padding: "7px 12px", minHeight: 34, border: "none", background: showAll === v ? K.charcoal : "#fff", color: showAll === v ? "#fff" : K.charcoal, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{l}</button>)}
@@ -1242,6 +1268,7 @@ export function ThisWeekCard({ deals, onOpenDeal, onSeeAll }: { deals: Deal[]; o
         <div style={{ fontSize: 13, color: K.gray }}>Week of {monday.toLocaleDateString("en-US", { month: "short", day: "numeric" })} · <b style={{ color: thisWeek ? K.red : K.ink }}>{thisWeek} this week</b> · {items.length} in the next 90 days</div>
         <button onClick={onSeeAll} style={{ ...miniBtn, padding: "5px 10px", minHeight: 30 }}>All critical dates →</button>
       </div>
+      <LocalIntelAlerts onOpenDeal={onOpenDeal} compact />
       <DateTimeline items={items.slice(0, 8)} onOpenDeal={onOpenDeal} />
     </div>
   );

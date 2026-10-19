@@ -6,12 +6,14 @@ import { isNonAnchorUse } from "../lib/anchorUse";
 import NoClosingDatePill from "./NoClosingDatePill";
 import PropertyHistoryCard from "./PropertyHistoryCard";
 import UploadHistoryCard, { whoOf, fmtWhen } from "./UploadHistoryCard";
+import LocalIntelCard from "./LocalIntelCard";
+import { intelRedFlags, intelUpside } from "../lib/localIntel";
 import { isClosingDate } from "../lib/closingDate";
 import { createPortal } from "react-dom";
 import type { Deal, ImageBundle, TenantSalesYear, InterestRateSwap, LeaseAbstract } from "../lib/idb";
 import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, apiPollDealStatus, apiIngestDeal, apiAiMessages, apiRefreshDemographics, apiRefreshMarket, apiGetRates,
   apiGetExtractionLessons, apiAddExtractionLesson, apiDeleteExtractionLesson, type ExtractionLesson, type LessonScope,
-  apiListLeaseAbstracts, apiDealUploadedBy, type DealUploader, cachedRead } from "../lib/api";
+  apiListLeaseAbstracts, apiDealUploadedBy, type DealUploader, cachedRead, apiLocalIntel, type LocalIntelResponse } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, openAuditCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress, fmtUSD, withAbstractRecoveries } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
 import { marketSwapRate } from "../lib/assetMgmt";
@@ -1756,6 +1758,12 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
   // Who CREATED this deal and who LAST uploaded to it, plus its Upload history (from the upload log).
   const [uploader, setUploader] = useState<DealUploader | null>(null);
+  // Local Intel scan (local news & development) — feeds Red Flags / Upside live, shown on the AI tab.
+  const [localIntel, setLocalIntel] = useState<LocalIntelResponse | null>(null);
+  useEffect(() => {
+    setLocalIntel(null);
+    apiLocalIntel(d.id).then(setLocalIntel).catch(() => setLocalIntel(null));
+  }, [d.id]);
   useEffect(() => {
     setUploader(null);
     apiDealUploadedBy(d.id).then(setUploader).catch(() => setUploader(null));
@@ -3411,9 +3419,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
 
       {/* Upside items */}
-      {Array.isArray(d.upsideItems) && d.upsideItems.length > 0 && (() => {
+      {((Array.isArray(d.upsideItems) && d.upsideItems.length > 0) || intelUpside(localIntel?.record?.findings ?? []).length > 0) && (() => {
         const priOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
-        const sorted = [...d.upsideItems!].sort((a, b) => (priOrder[a.priority ?? "low"] ?? 2) - (priOrder[b.priority ?? "low"] ?? 2));
+        const sorted = [...(d.upsideItems || []), ...intelUpside(localIntel?.record?.findings ?? [])].sort((a, b) => (priOrder[a.priority ?? "low"] ?? 2) - (priOrder[b.priority ?? "low"] ?? 2));
         return (
           <CollapsibleBox collapsedHeight={300} fadeColor="#f2faf0">
             {(expanded) => { const fs = 1; void expanded; return (
@@ -3470,7 +3478,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         // growth-cap) carry a caution, and that lives in that note, not here.
         const derivedExtra = [...omissionFlags, rolloverFlag, concentrationFlag, specialAssessFlag, stateTaxFlag, ...taxTriggerFlags, debtMaturityFlag, anchorDarkFlag, envFlag, floodFlag, groundLeaseFlag, sizeOutlierFlag, salesOutlierFlag, aboveMarketFlag, vintageFlag, anomalyFlag].filter((f): f is NonNullable<typeof f> => !!f);
         const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
-        const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(unsignedFlag ? [unsignedFlag] : []), ...(salesTrendFlag ? [salesTrendFlag] : []), ...(reassessFlag ? [reassessFlag] : []), ...derivedExtra, ...watchImpact.flags, ...(d.redFlags || [])]
+        const allRedFlags = [...(expenseFlag ? [expenseFlag] : []), ...(unsignedFlag ? [unsignedFlag] : []), ...(salesTrendFlag ? [salesTrendFlag] : []), ...(reassessFlag ? [reassessFlag] : []), ...derivedExtra, ...watchImpact.flags, ...intelRedFlags(localIntel?.record?.findings ?? []), ...(d.redFlags || [])]
           .sort((a, b) => (sevOrder[a.severity ?? "low"] ?? 2) - (sevOrder[b.severity ?? "low"] ?? 2));
         return (allRedFlags.length > 0 || d.analysisStale) && (
           <CollapsibleBox collapsedHeight={300} fadeColor="#faf9f5">
@@ -3491,6 +3499,9 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
           </CollapsibleBox>
         );
       })()}
+
+      {/* Local Intel — local news & development around the site (web scan, sourced). */}
+      <LocalIntelCard dealId={d.id} data={localIntel} onChange={setLocalIntel} />
 
       {/* Lease economics — NEUTRAL data point, not a risk. Below-market rent locked
           in by options is secure, sticky income; the mark-to-market simply isn't
