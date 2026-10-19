@@ -98,6 +98,16 @@ export function buildMarketIndex(allDeals: Deal[]): MarketIndex {
   return idx;
 }
 
+/** "Category benchmark (Grocery, 10–25K SF) · 36 leases" — the basis + sample size behind a Mkt rent figure,
+ *  for a tooltip (the cell itself shows only the dollar value). */
+export function benchmarkBasisText(b: Benchmark): string {
+  if (b.rentMedian == null || !b.basis) return "No market benchmark";
+  const s = (k: number, w: string) => `${k} ${w}${k === 1 ? "" : "s"}`;
+  const head = b.basis === "brand" ? `Same-brand benchmark, ${s(b.rentN, "other center")}`
+    : `${b.basis === "category" ? "Category" : "Market"} benchmark (${b.basisLabel}), ${s(b.rentN, "lease")}`;
+  const sales = b.salesMedian != null ? ` · chain median sales $${b.salesMedian}/SF (${b.salesN} reporting)` : "";
+  return `${head} · median $${b.rentMedian.toFixed(2)}/SF${sales}`;
+}
 export interface Benchmark { rentMedian: number | null; rentN: number; basis: "brand" | "category" | "market" | null; basisLabel: string; salesMedian: number | null; salesN: number }
 export function benchmarkFor(t: Tenant, deal: Deal, idx: MarketIndex): Benchmark {
   const key = brandBenchmarkKey(t.canonicalName || t.name, t.sf), sf = num(t.sf);

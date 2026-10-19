@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-19-roster-flags-right",
+    date: "2026-10-19",
+    category: "improved",
+    title: "Tenant roster: Flags pinned to the right, cleaner market-rent column",
+    detail: "The Flags column now sits at the far right of the tenant roster and stays pinned there while you scroll sideways, with the tenant name still pinned on the left. The Mkt rent column shows just the dollar figure. Hover it (tap on a phone) to see what it's based on and how many leases, for example \"Category benchmark (Grocery, 10–25K SF), 36 leases\". The same detail is added to the below/above-market arrow next to Rent/SF. The flag filters above the table and column sorting work as before.",
+    where: "Deal page → Tenants & Sales → Tenant roster",
+  },
+  {
     id: "2026-10-19-doc-link-privacy",
     date: "2026-10-19",
     category: "improved",

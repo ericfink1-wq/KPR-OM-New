@@ -85,3 +85,13 @@ describe("KPR Standard Rent Roll — fixed columns for every OM", () => {
     expect(standardSummaryRows(subject, sc.summary).find(r => r[0].startsWith("Proposed"))?.[1]).toBe("1 tenants · 1,500 SF · $45,000/yr");
   });
 });
+
+import { benchmarkBasisText } from "../rosterScrub";
+describe("Mkt rent tooltip text (n= moved out of the cell)", () => {
+  it("names the basis and the sample size in words", () => {
+    expect(benchmarkBasisText({ rentMedian: 9.04, rentN: 5, basis: "brand", basisLabel: "same brand, 5 other centers", salesMedian: null, salesN: 0 })).toBe("Same-brand benchmark, 5 other centers · median $9.04/SF");
+    expect(benchmarkBasisText({ rentMedian: 18.5, rentN: 36, basis: "category", basisLabel: "Grocery, 10–25K SF", salesMedian: 420, salesN: 3 })).toBe("Category benchmark (Grocery, 10–25K SF), 36 leases · median $18.50/SF · chain median sales $420/SF (3 reporting)");
+    expect(benchmarkBasisText({ rentMedian: 22, rentN: 133, basis: "market", basisLabel: "PA <5K SF", salesMedian: null, salesN: 0 })).toBe("Market benchmark (PA <5K SF), 133 leases · median $22.00/SF");
+    expect(benchmarkBasisText({ rentMedian: null, rentN: 0, basis: null, basisLabel: "no benchmark", salesMedian: null, salesN: 0 })).toBe("No market benchmark");
+  });
+});

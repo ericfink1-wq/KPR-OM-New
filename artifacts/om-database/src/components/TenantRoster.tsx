@@ -9,13 +9,13 @@ import type { SalesFlag } from "../lib/tenantSalesBenchmark";
 import type { RentFlag } from "../lib/tenantRentBenchmark";
 import { cinemaSalesRead, fmtPerScreen } from "../lib/theaterMetrics";
 import { tjxComboRead } from "../lib/tjxCombo";
-import { FLAG_META, FLAG_ORDER, isProposedTenant, nextRentStep, type ScrubRow, type FlagKey } from "../lib/rosterScrub";
+import { FLAG_META, FLAG_ORDER, benchmarkBasisText, isProposedTenant, nextRentStep, type ScrubRow, type FlagKey } from "../lib/rosterScrub";
 import { fmtLeaseDate, fmtTenantSales, isVacant, isNAPTenant, isATM, isNonGLA, isHoldover, reimbursementChips, passedOptionNotices, tenantKey, toStepString, reimbursementFromAbstract, reimbursementFlag, statedReimbursementFlag, computeOccupancyCost, type RecoveryEntry } from "../lib/utils";
 import { isInvestmentGrade } from "../lib/tenantCredit";
 import { gradeOccupancyCost, type OccGrade } from "../lib/retailCategory";
 import { useWatchlist, lookupWatch, WATCH_STATUS_META } from "../lib/useWatchlist";
 import type { DatexLiveBlock } from "../lib/idb";
-import { stickyFirstCol } from "../lib/stickyCol";
+import { stickyFirstCol, stickyLastCol } from "../lib/stickyCol";
 import { useTopScrollbar } from "../lib/useTopScrollbar";
 import { useIsMobile } from "../hooks/use-mobile";
 import { useMultiSort, chainComparator, isBlank, type SortLevel } from "../lib/multiSort";
@@ -426,11 +426,13 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
   );
 
   const cols: [string, string, boolean][] = [
-    ["name","Tenant",false],...(scrubRows ? [["flags","Flags",false] as [string, string, boolean]] : []),["abstract","",false],["suite","Suite",false],["sf","SF",true],["rentPerSF","Rent/SF",true],...(scrubRows ? [["bench","Mkt rent",true] as [string, string, boolean]] : []),["annualRent","Ann. Rent",true],
+    ["name","Tenant",false],["abstract","",false],["suite","Suite",false],["sf","SF",true],["rentPerSF","Rent/SF",true],...(scrubRows ? [["bench","Mkt rent",true] as [string, string, boolean]] : []),["annualRent","Ann. Rent",true],
     ["leaseStart","Start",false],["leaseExpiry","Expiry",false],["reimbursementMethod","Reimb.",false],
     ["salesPSF","Sales",true],["occupancyCost","Occ Cost",true],
     ["rentSchedule","Next step",false],["renewalOptions","Options",false],["kickout","Kickout",false],
     ["recentlyExercisedRenewal","Recent Renewal",false],["creditRating","Credit",false],
+    // Flags last, pinned to the right edge (Eric, 10/19/26) — always visible while scrolling.
+    ...(scrubRows ? [["flags","Flags",false] as [string, string, boolean]] : []),
   ];
 
   const isVacantRow = (t: Tenant) => isVacant(t.name);
@@ -588,7 +590,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
           <thead>
             <tr style={{ fontSize:10, letterSpacing:"0.03em" }}>
               {cols.map(([k,label,right]) => (
-                <th key={k} title={k === "salesPSF" ? "Sales / SF (latest). Two markers may appear: ↗ / ↘ = year-over-year sales trend; ▲ / ▼ = this store vs the brand's median across your library (green = strong, red = weak)." : NOSORT.has(k) ? undefined : "Click to sort by this column · Shift-click to add it as a tiebreaker"} onClick={NOSORT.has(k) ? undefined : (e) => setSort(k, e)} className={k === "name" ? "freeze-col" : undefined} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: NOSORT.has(k) ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sort.isSorted(k)?"#383a37":"#94928b", fontWeight:600, ...(k === "name" ? stickyFirstCol("#fff", true) : null) }}>{label}{NOSORT.has(k) ? null : arrow(k)}</th>
+                <th key={k} title={k === "salesPSF" ? "Sales / SF (latest). Two markers may appear: ↗ / ↘ = year-over-year sales trend; ▲ / ▼ = this store vs the brand's median across your library (green = strong, red = weak)." : NOSORT.has(k) ? undefined : "Click to sort by this column · Shift-click to add it as a tiebreaker"} onClick={NOSORT.has(k) ? undefined : (e) => setSort(k, e)} className={k === "name" ? "freeze-col" : undefined} style={{ padding:"6px 10px", textAlign:right?"right":"left", cursor: NOSORT.has(k) ? "default" : "pointer", whiteSpace:"nowrap", userSelect:"none", color:sort.isSorted(k)?"#383a37":"#94928b", fontWeight:600, ...(k === "name" ? stickyFirstCol("#fff", true) : k === "flags" ? stickyLastCol("#fff", true) : null) }}>{label}{NOSORT.has(k) ? null : arrow(k)}</th>
               ))}
             </tr>
           </thead>
@@ -673,18 +675,6 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     </div>
                   )}
                 </td>
-                {scrubRows && (
-                  <td style={{ padding:"0 8px", whiteSpace:"nowrap" }}>
-                    {(() => {
-                      const sr = scrubOf(t);
-                      if (!sr || !sr.flags.length) return <span style={{ color:"#d6d0c4" }}>·</span>;
-                      return <span style={{ display:"inline-flex", gap:3 }}>{FLAG_ORDER.filter(f => sr.flags.includes(f)).map(f => {
-                        const m = FLAG_META[f], c = TONE[m.tone];
-                        return <span key={f} title={`${m.label} — ${m.tip}`} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", minWidth:18, height:18, padding:"0 3px", borderRadius:5, fontSize:10, fontWeight:800, color:c.fg, background:c.bg, lineHeight:1 }}>{m.icon}</span>;
-                      })}</span>;
-                    })()}
-                  </td>
-                )}
                 <td style={{ padding:"8px 10px", whiteSpace:"nowrap" }}>
                   {(() => {
                     if (isVacantRow(t) || !t.name || (!onOpenAbstract && !onAddAbstract)) return null;
@@ -744,7 +734,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                     <td style={{ padding:"8px 10px", textAlign:"right", color, fontWeight:rf?700:500, whiteSpace:"nowrap" }}>
                       <span style={{ display:"inline-flex", alignItems:"center", gap:3, justifyContent:"flex-end" }}>
                         {n(t.rentPerSF)!=null?`$${n(t.rentPerSF)!.toFixed(2)}`:"—"}
-                        {rf && <FlagTip content={rf.tip} color={color}><span style={{ fontSize:10, fontWeight:800, color, lineHeight:1 }}>{rf.direction === "below" ? "▼" : "▲"}</span></FlagTip>}
+                        {rf && <FlagTip content={(() => { const b = scrubRows ? scrubOf(t)?.bench : null; return b?.rentMedian ? `${rf.tip} Mkt rent column: ${benchmarkBasisText(b)}.` : rf.tip; })()} color={color}><span style={{ fontSize:10, fontWeight:800, color, lineHeight:1 }}>{rf.direction === "below" ? "▼" : "▲"}</span></FlagTip>}
                       </span>
                     </td>
                   );
@@ -752,7 +742,8 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                 {scrubRows && (() => {
                   const sr = scrubOf(t), b = sr?.bench;
                   if (!b?.rentMedian) return <td style={{ padding:"0 10px", textAlign:"right", color:"#d6d0c4" }}>—</td>;
-                  return <td title={`Market: $${b.rentMedian.toFixed(2)}/SF median rent — ${b.basisLabel} (n=${b.rentN}).${b.salesMedian ? ` Chain median sales $${b.salesMedian}/SF (n=${b.salesN}).` : ""}`} style={{ padding:"0 10px", textAlign:"right", color:"#676767", whiteSpace:"nowrap", fontVariantNumeric:"tabular-nums" }}>${b.rentMedian.toFixed(2)}<span style={{ fontSize:9.5, color:"#94928b", marginLeft:3 }}>{b.basis === "brand" ? "" : b.basis === "category" ? "cat" : "mkt"} n={b.rentN}</span></td>;
+                  // Just the dollar value; the basis + sample size live in the tooltip (tap on a phone).
+                  return <td data-noprop style={{ padding:"0 10px", textAlign:"right", color:"#676767", whiteSpace:"nowrap", fontVariantNumeric:"tabular-nums" }}><FlagTip content={benchmarkBasisText(b)} color="#676767"><span style={{ borderBottom:"1px dotted #c9c6bd", cursor:"help" }}>${b.rentMedian.toFixed(2)}</span></FlagTip></td>;
                 })()}
                 <td style={{ padding:"8px 10px", textAlign:"right", color:"#383a37", whiteSpace:"nowrap" }}>{n(t.annualRent)!=null?`$${Math.round(n(t.annualRent)!).toLocaleString()}`:"—"}</td>
                 <td style={{ padding:"8px 10px", color:"#8b9097", whiteSpace:"nowrap" }}>{fmtLeaseDate(t.leaseStart)}</td>
@@ -952,6 +943,18 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   })()}
                 </td>
                 <td style={{ padding:"8px 10px", fontSize:11, whiteSpace:"nowrap", color:t.creditRating==="Investment Grade"?"#0f9d63":"#837c6e" }}>{t.creditRating||"—"}</td>
+                {scrubRows && (
+                  <td className="kpr-flags-col" style={{ padding:"0 8px", whiteSpace:"nowrap", ...stickyLastCol(t.isDark && !isVacantRow(t) ? "#fbf1e4" : "#fff") }}>
+                    {(() => {
+                      const sr = scrubOf(t);
+                      if (!sr || !sr.flags.length) return <span style={{ color:"#d6d0c4" }}>·</span>;
+                      return <span style={{ display:"inline-flex", gap:3 }}>{FLAG_ORDER.filter(f => sr.flags.includes(f)).map(f => {
+                        const m = FLAG_META[f], c = TONE[m.tone];
+                        return <span key={f} title={`${m.label} — ${m.tip}`} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", minWidth:18, height:18, padding:"0 3px", borderRadius:5, fontSize:10, fontWeight:800, color:c.fg, background:c.bg, lineHeight:1 }}>{m.icon}</span>;
+                      })}</span>;
+                    })()}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -984,7 +987,7 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                   else if (k === "salesPSF") cell = totals.salesPSF != null ? (<>${Math.round(totals.salesPSF).toLocaleString()}{sub(`wtd avg · ${totals.salesReporting} reporting`)}</>) : null;
                   return (
                     <td key={k} className={idx === 0 ? "freeze-col" : undefined}
-                      style={{ padding:"9px 10px", textAlign: right ? "right" : "left", whiteSpace:"nowrap", verticalAlign:"top", ...(idx === 0 ? stickyFirstCol("#faf9f5", false) : null) }}>
+                      style={{ padding:"9px 10px", textAlign: right ? "right" : "left", whiteSpace:"nowrap", verticalAlign:"top", ...(idx === 0 ? stickyFirstCol("#faf9f5", false) : k === "flags" ? stickyLastCol("#faf9f5", false) : null) }}>
                       {cell}
                     </td>
                   );
@@ -1032,9 +1035,8 @@ export default function TenantRoster({ tenants, onTenantClick, onUpdateTenant, t
                 {sr?.bench.rentMedian != null && (<>
                   <H>Market benchmark</H>
                   <div style={{ fontSize:13, color:"#383A37", lineHeight:1.55 }}>
-                    ${sr.bench.rentMedian.toFixed(2)}/SF median rent — {sr.bench.basisLabel} (n={sr.bench.rentN}).
+                    {benchmarkBasisText(sr.bench)}.
                     {sr.mtm != null && n(t.sf) ? ` In-place is ${sr.mtm >= 0 ? `$${Math.round(sr.mtm).toLocaleString()}/yr below` : `$${Math.round(-sr.mtm).toLocaleString()}/yr above`} that.` : ""}
-                    {sr.bench.salesMedian != null ? ` Chain median sales $${sr.bench.salesMedian}/SF (n=${sr.bench.salesN}).` : ""}
                   </div>
                 </>)}
                 {r && (<>

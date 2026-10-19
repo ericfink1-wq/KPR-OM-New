@@ -22,3 +22,17 @@ export function stickyFirstCol(bg: string, isHeader = false): CSSProperties {
     boxShadow: "6px 0 6px -6px rgba(0,0,0,0.12)",
   };
 }
+
+// Pin a narrow LAST column (the roster's Flags) to the right edge so it stays visible while
+// the table scrolls sideways. Unlike the name column it is NOT released on phones — it is
+// only ~70px wide, and the flags are the point of the column (Eric, 10/19/26).
+export function stickyLastCol(bg: string, isHeader = false): CSSProperties {
+  return {
+    position: "sticky",
+    right: 0,
+    zIndex: isHeader ? 3 : 2,
+    background: bg,
+    borderLeft: "1px solid #ecebe6",
+    boxShadow: "-6px 0 6px -6px rgba(0,0,0,0.12)",
+  };
+}

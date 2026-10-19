@@ -1210,7 +1210,7 @@ export function DatexSalesCard({ deal, bench, note }: { deal: Deal; bench?: Anal
                   <td style={num}>{r.salesPSF != null ? `$${r.salesPSF.toFixed(0)}` : "—"}</td>
                   <td style={td}>{r.period ?? "—"}</td>
                   <td style={{ ...num, color: r.atRisk ? K.red : K.ink, fontWeight: r.atRisk ? 700 : 400 }}>{r.occCostPct != null ? `${r.occCostPct.toFixed(1)}%` : "—"}<Src>{r.occCostBasis}</Src></td>
-                  <td style={num}>{r.vsBenchmarkPct != null ? `${r.vsBenchmarkPct > 0 ? "+" : ""}${r.vsBenchmarkPct.toFixed(0)}%` : "—"}{r.benchmarkN ? <Src>n={r.benchmarkN}</Src> : null}</td>
+                  <td style={num} title={r.benchmarkN ? `Vs the library's sales/SF for this brand · ${r.benchmarkN} location${r.benchmarkN === 1 ? "" : "s"}` : undefined}>{r.vsBenchmarkPct != null ? `${r.vsBenchmarkPct > 0 ? "+" : ""}${r.vsBenchmarkPct.toFixed(0)}%` : "—"}</td>
                   <td style={{ ...td, fontSize: 12, color: K.amber }}>{r.flags.join(" · ")}</td>
                 </tr>
               ))}</tbody>

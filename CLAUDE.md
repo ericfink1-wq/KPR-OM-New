@@ -76,6 +76,9 @@ Tests: `__tests__/docPrivacy.test.ts` (+ verified live: Andy-session sweep of ev
   (KPR Standard Rent Roll, fixed `STANDARD_COLUMNS` — don't reorder, a test pins them) + `OmSummaryPDF.tsx` (1 page).
 - Roster is ONE LINE per tenant (`.kpr-roster`: nowrap, fixed row height, sticky head); detail lives in the
   row-click drawer. Don't re-add wrapping columns — put new detail in the drawer.
+- Roster Flags column is LAST and pinned RIGHT (`stickyLastCol`, lib/stickyCol.ts — NOT released on phones, it's narrow);
+  Tenant stays pinned left. Mkt rent cell = the dollar value only; basis + sample size via `benchmarkBasisText`
+  (rosterScrub.ts) in a FlagTip (tap on phone), also appended to the Rent/SF ▲/▼ tip. No inline "n=" labels in tables.
 - Site-wide design system lives in `index.css`: tokens + `.kpr-page-head/-title/-sub/-kicker`, `.kpr-section-head`,
   `.kpr-card`, `.kpr-table` (sticky th, right-aligned numbers, zebra only where no inline bg), `.kpr-chip`,
   `.kpr-btn`, `.kpr-skel`. Fonts: Montserrat (caps heads) / Lora (display) / Roboto (body, tabular nums). The old
