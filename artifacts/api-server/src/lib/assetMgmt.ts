@@ -312,12 +312,24 @@ export function sanitizeOptStatus(r: Record<string, unknown>): Record<string, un
   return prune({ tenant: str(r.tenant, 160), option: str(r.option, 80), noticeDate: isoDate(r.noticeDate), status: st, note: text(r.note ?? r.notes, 600) } as Record<string, unknown>);
 }
 
+/** A swap is "terms pending" exactly when notional, swap rate or maturity is missing — derived
+ *  from the terms on EVERY write (and on read), never a sticky stored flag. A merge that
+ *  completes the terms clears it (Overland / Pointe Plaza kept saying "not priced"). */
+export function swapTermsPending(d: Record<string, unknown>): boolean {
+  const has = (v: unknown) => v != null && v !== "" && Number.isFinite(Number(v));
+  return !(has(d.notional) && has(d.fixedSwapRatePct) && typeof d.maturityDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(d.maturityDate));
+}
+export function withTermsPending(d: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...d };
+  if (swapTermsPending(out)) out.termsPending = true; else delete out.termsPending;
+  return out;
+}
+
 const SANITIZE: Record<EntryKind, (r: Record<string, unknown>) => Record<string, unknown>> = {
   loan: r => withExtras(r, sanitizeLoan(r) as Record<string, unknown>),
   swap: r => {
     const w = withExtras(r, sanitizeSwap(r) as Record<string, unknown>);
-    if (w.notional == null || w.fixedSwapRatePct == null || !w.maturityDate) w.termsPending = true; else delete w.termsPending;
-    return w;
+    return withTermsPending(w);
   },
   pref: r => withExtras(r, sanitizePref(r) as Record<string, unknown>),
   covenant: r => withExtras(r, sanitizeCovenant(r)),
@@ -517,7 +529,8 @@ export function planImport(text: string, owned: OwnedDealRef[], existingIds: Set
     const prev = byId.get(id);
     const isUpdate = existingIds.has(id);
     // An update MERGES: a field the import doesn't carry keeps its saved value.
-    const merged = prev ? { ...prev.data, ...data } : data;
+    let merged = prev ? { ...prev.data, ...data } : data;
+    if (r.kind === "swap") merged = withTermsPending(merged);
     out.push({ kind: r.kind, id, dealId: deal.dealId, property: owned.find(d => d.id === deal.dealId)!.name, data: merged,
       sourceNote: str(r.raw.source ?? r.raw.sourceNote, 300) ?? prev?.sourceNote ?? null, action: isUpdate ? "update" : "create",
       changes: prev ? fieldChanges(prev.data, data) : undefined, matchNote });
@@ -530,14 +543,29 @@ export interface AmRecord { id: string; kind: AmKind; dealId: string | null; dat
 export async function listRecords(kinds: AmKind[] = [...ENTRY_KINDS]): Promise<AmRecord[]> {
   await ensureAssetMgmtTables();
   const r = await db.execute(sql`SELECT id, kind, deal_id, data, source_note, updated_by, updated_at FROM am_records WHERE kind IN (${sql.join(kinds.map(k => sql`${k}`), sql`, `)}) ORDER BY kind, deal_id, id`);
-  return (r.rows as Array<Record<string, unknown>>).map(x => ({ id: String(x.id), kind: x.kind as AmKind, dealId: (x.deal_id as string) ?? null, data: (x.data as Record<string, unknown>) ?? {}, sourceNote: (x.source_note as string) ?? null, updatedBy: (x.updated_by as string) ?? null, updatedAt: new Date(String(x.updated_at)).toISOString() }));
+  return (r.rows as Array<Record<string, unknown>>).map(x => ({ id: String(x.id), kind: x.kind as AmKind, dealId: (x.deal_id as string) ?? null, data: x.kind === "swap" ? withTermsPending((x.data as Record<string, unknown>) ?? {}) : (x.data as Record<string, unknown>) ?? {}, sourceNote: (x.source_note as string) ?? null, updatedBy: (x.updated_by as string) ?? null, updatedAt: new Date(String(x.updated_at)).toISOString() }));
 }
 export async function upsertRecord(id: string, kind: AmKind, dealId: string | null, data: Record<string, unknown>, sourceNote: string | null, by: string): Promise<void> {
   await ensureAssetMgmtTables();
+  if (kind === "swap") data = withTermsPending(data);
   await db.execute(sql`INSERT INTO am_records (id, kind, deal_id, data, source_note, updated_by, updated_at)
     VALUES (${id}, ${kind}, ${dealId}, ${JSON.stringify(data)}::jsonb, ${sourceNote}, ${by}, now())
     ON CONFLICT (id) DO UPDATE SET kind = EXCLUDED.kind, deal_id = EXCLUDED.deal_id, data = EXCLUDED.data,
       source_note = EXCLUDED.source_note, updated_by = EXCLUDED.updated_by, updated_at = now()`);
+}
+/** Startup heal: rewrite stored swaps whose saved "terms pending" flag disagrees with their terms. */
+export async function healSwapTermsPending(): Promise<number> {
+  await ensureAssetMgmtTables();
+  const r = await db.execute(sql`SELECT id, data FROM am_records WHERE kind = 'swap'`);
+  let fixed = 0;
+  for (const row of r.rows as Array<{ id: string; data: Record<string, unknown> }>) {
+    const d = row.data ?? {}, want = withTermsPending(d);
+    if (Boolean(d.termsPending) !== Boolean(want.termsPending)) {
+      await db.execute(sql`UPDATE am_records SET data = ${JSON.stringify(want)}::jsonb WHERE id = ${row.id}`);
+      fixed++;
+    }
+  }
+  return fixed;
 }
 export async function deleteRecord(id: string): Promise<boolean> {
   await ensureAssetMgmtTables();

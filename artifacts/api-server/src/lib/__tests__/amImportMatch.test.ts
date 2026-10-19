@@ -59,3 +59,17 @@ describe("asset-mgmt import matching", () => {
     expect(new Set(p.rows.map(r => r.id)).size).toBe(2);
   });
 });
+
+describe("swap terms pending is derived, never sticky", () => {
+  it("a merge that completes the terms clears the saved flag (Overland / Pointe Plaza)", () => {
+    const sw = rec("swap:o", "swap", "over", { counterparty: "ONB", loanLabel: "ONB Loan", termsPending: true });
+    const p = plan({ swaps: [{ dealId: "over", loanLabel: "ONB Loan", notional: 14_800_000, swapRate: 3.21, allInFixed: 5.06, effectiveDate: "2024-02-15", maturityDate: "2029-02-15", index: "Daily Simple SOFR" }] }, [sw]);
+    expect(p.rows[0].data.termsPending).toBeUndefined();
+    expect(p.rows[0].data.index).toBe("Daily Simple SOFR");
+  });
+  it("still pending when a term is missing", async () => {
+    const { withTermsPending } = await import("../assetMgmt");
+    expect(withTermsPending({ notional: 1e6, fixedSwapRatePct: 3 }).termsPending).toBe(true);
+    expect(withTermsPending({ notional: 1e6, fixedSwapRatePct: 3, maturityDate: "2030-01-01", termsPending: true }).termsPending).toBeUndefined();
+  });
+});

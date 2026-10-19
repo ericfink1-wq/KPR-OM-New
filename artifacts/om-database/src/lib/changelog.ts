@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-19-debt-floating",
+    date: "2026-10-19",
+    category: "improved",
+    title: "Debt tab prices floating loans, counts rate caps, and fits one line per loan",
+    detail: "Floating loans now show an all-in rate estimated from today's 1M Term SOFR (or the loan's index floor, whichever is higher) plus the spread, marked with a ~, so the weighted average rate covers nearly all the debt. Loans under a live rate cap are counted as capped, and the rate tile splits fixed/swapped, capped and floating. Swaps whose terms are now complete (Overland, Pointe Plaza) are priced instead of saying \"terms pending\". The loans table is one line per loan; tap a row to open every field in a side panel.",
+    where: "Asset Mgmt → Debt",
+  },
+  {
     id: "2026-10-19-am-import-match",
     date: "2026-10-19",
     category: "fixed",

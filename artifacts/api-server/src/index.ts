@@ -4,7 +4,7 @@ import { pool } from "@workspace/db";
 import { runStartupSequence } from "./lib/startup";
 import { ensureRateCurvesTable, refreshSwapCurves } from "./lib/rateCurves";
 import { ensureUserPrefsTable } from "./lib/userPrefs";
-import { ensureAssetMgmtTables } from "./lib/assetMgmt";
+import { ensureAssetMgmtTables, healSwapTermsPending } from "./lib/assetMgmt";
 import { ensureUsersTable } from "./routes/auth";
 import { ensureTenantIndexColumns } from "./lib/tenantIndex";
 import { ensureExtractionLessonsTable } from "./lib/extractionLessons";
@@ -69,6 +69,7 @@ const server = app.listen(port, (err) => {
     { name: "rate_curves table", run: () => ensureRateCurvesTable() },
     { name: "user_prefs table", run: () => ensureUserPrefsTable() },
     { name: "asset mgmt tables", run: () => ensureAssetMgmtTables() },
+    { name: "swap terms-pending heal", run: () => healSwapTermsPending().then(log("Re-derived swap terms-pending flags")) },
     // One-time / idempotent data jobs.
     { name: "failed-upload cleanup", run: () => runFailedUploadCleanup().then(plan => log("Failed-upload cleanup done")(plan.filter(a => a.kind !== "keep").length || null)) },
     { name: "write-up guardrails", run: () => sweepAnalysisGuardrails().then(log("Applied write-up guardrails to stored analyses")) },

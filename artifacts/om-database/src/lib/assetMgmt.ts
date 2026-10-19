@@ -55,12 +55,76 @@ export function termSofrSpot(r: RatesPayload | null): { rate: number | null; asO
   return { rate: row?.value ?? null, asOf: row?.asOf ?? null };
 }
 
+// ── Floating-rate terms read from the loan record (fields first, then its own text) ──
+// The Cedar/HPS-Guardian loans carry "1M Term SOFR + 220 bps, 2.75% floor" in the index
+// text and their rate caps in covenants/notes ("Cedar $335M @5.25% to 2/1/28"), so a loan
+// with no spreadBps field used to read "not enough terms".
+const loanText = (d: Record<string, unknown>): string =>
+  Object.entries(d).filter(([k, v]) => typeof v === "string" && /index|spread|floor|cap|hedge|covenant|note|prepay|rate|term|question/i.test(k)).map(([, v]) => String(v)).join("\n");
+export function loanSpreadBps(d: Record<string, unknown>): number | null {
+  const f = n(d.spreadBps);
+  if (f != null) return f;
+  const t = `${s(d.index) ?? ""} ${s(d.rateText) ?? ""} ${s(d.rateType) ?? ""}`;
+  const bps = /(?:\+|plus|spread(?: of)?:?)\s*(\d{2,4})\s*(?:bps?|basis)/i.exec(t) ?? /\bS\s*\+\s*(\d{2,4})\b/i.exec(t);
+  if (bps) { const v = Number(bps[1]); return v > 0 && v < 2000 ? v : null; }
+  const pct = /(?:\+|plus)\s*(\d{1,2}(?:\.\d+)?)\s*%/i.exec(t);
+  if (pct) { const v = Number(pct[1]); return v > 0 && v < 20 ? Math.round(v * 100) : null; }
+  return null;
+}
+export function loanFloorPct(d: Record<string, unknown>): number | null {
+  for (const k of ["indexFloorPct", "floorPct", "sofrFloorPct", "indexFloor", "floor"]) { const v = n(d[k]); if (v != null && v >= 0 && v < 15) return v; }
+  const t = loanText(d);
+  const m = /(\d{1,2}(?:\.\d+)?)\s*%\s*(?:\(?\s*(?:index|sofr)\s*\)?\s*)?floor/i.exec(t) ?? /floor(?:\s*(?:of|at|:|=))?\s*(\d{1,2}(?:\.\d+)?)\s*%/i.exec(t);
+  const v = m ? Number(m[1]) : null;
+  return v != null && v >= 0 && v < 15 ? v : null;
+}
+export interface RateCap { strikePct: number; notional: number | null; expiry: string | null; text: string }
+const toIso = (raw: string): string | null => {
+  let m = /(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = /(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(raw);
+  if (m) { const y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]); return `${y}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`; }
+  const t = Date.parse(raw);
+  return Number.isFinite(t) && /\d{4}/.test(raw) ? new Date(t).toISOString().slice(0, 10) : null;
+};
+const money = (raw: string): number | null => {
+  const m = /\$\s*(\d[\d,]*(?:\.\d+)?)\s*(mm|m|million|k|b|bn)?\b/i.exec(raw);
+  if (!m) return null;
+  const v = Number(m[1].replace(/,/g, "")), u = (m[2] ?? "").toLowerCase();
+  return u === "b" || u === "bn" ? v * 1e9 : u.startsWith("m") ? v * 1e6 : u === "k" ? v * 1e3 : v;
+};
+/** Interest-rate caps written on a loan record (fields, or its own covenants/notes text). */
+export function loanRateCaps(d: Record<string, unknown>): RateCap[] {
+  const out: RateCap[] = [];
+  const strike = n(d.rateCapStrikePct ?? d.capStrikePct ?? d.capStrike ?? d.rateCapPct);
+  if (strike != null && strike > 0 && strike < 15) out.push({ strikePct: strike, notional: n(d.rateCapNotional ?? d.capNotional), expiry: toIso(String(d.rateCapExpiry ?? d.capExpiry ?? d.capMaturity ?? "")), text: "rate cap (entered)" });
+  for (const seg of loanText(d).split(/\n|(?<=\.)\s+(?=[A-Z])/)) {
+    if (!/\bcap\b|\bcaps\b|capped/i.test(seg) || /cap(?:italization)? rate|cam cap|capex|capital/i.test(seg)) continue;
+    // One segment can carry several caps ("Cap A $335M @5.25% to 2/1/28, Cap B $68.5M @4.50% to 2/1/27").
+    const re = /(\$\s*\d[\d,.]*\s*(?:mm|m|million|k|bn|b)?\b)?[^%$]{0,40}?@?\s*(\d{1,2}(?:\.\d+)?)\s*%(?:\s*strike)?[^%$]{0,30}?(?:to|through|thru|until|expir\w*|matur\w*)\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}|[A-Z][a-z]+\.? \d{1,2},? \d{4})/gi;
+    let m: RegExpExecArray | null, hit = false;
+    while ((m = re.exec(seg))) {
+      const k = Number(m[2]);
+      if (!(k > 0 && k < 15)) continue;
+      hit = true;
+      out.push({ strikePct: k, notional: m[1] ? money(m[1]) : null, expiry: toIso(m[3]), text: m[0].trim() });
+    }
+    if (!hit) { const p = /(\d{1,2}(?:\.\d+)?)\s*%/.exec(seg); if (p && Number(p[1]) > 0 && Number(p[1]) < 15) out.push({ strikePct: Number(p[1]), notional: money(seg), expiry: null, text: seg.trim().slice(0, 140) }); }
+  }
+  const seen = new Set<string>();
+  return out.filter(c => { const k = `${c.strikePct}|${c.notional}|${c.expiry}`; if (seen.has(k)) return false; seen.add(k); return true; });
+}
+
 // ── Debt & swaps ──────────────────────────────────────────────────────────────
 export interface DebtRow {
   record: AmRecord; dealId: string; property: string; lender: string | null;
   balance: number | null; balanceIsOriginal: boolean; rateType: string | null; index: string | null; spreadBps: number | null;
   allInPct: number | null; allInSource: string; maturity: string | null; daysToMaturity: number | null; flag: "red" | "amber" | null;
   swaps: SwapRow[]; datexOnly: boolean; superseded: boolean; loanLabel: string | null;
+  /** fixed / swapped / capped (floating with a live rate cap) / floating. */
+  rateClass: "fixed" | "swapped" | "capped" | "floating" | null;
+  /** All-in estimated from today's curve (a floating loan) rather than a stated rate. */
+  estimated: boolean; floorPct: number | null; caps: RateCap[]; cappedMaxPct: number | null;
 }
 export interface SwapRow {
   record: AmRecord; dealId: string; property: string; counterparty: string | null; notional: number | null; fixedSwapRatePct: number | null;
@@ -76,7 +140,8 @@ export function buildSwapRows(records: AmRecord[], names: Map<string, string>, r
     const days = daysUntil(maturity, today), yrs = days != null ? Math.max(0, days / 365.25) : null;
     const mk = rates && yrs != null ? marketSwapRate(rates, yrs, s(d.index)) : { rate: null, curve: null, asOf: null };
     // Terms not documented yet → shown so the hedge is visible, never priced.
-    const pending = d.termsPending === true || notional == null || K == null || !maturity;
+    // Derived from the terms, never a stale stored flag (Overland / Pointe Plaza stayed "pending").
+    const pending = notional == null || K == null || !maturity;
     const b = pending ? { value: null, label: "terms pending — not priced" } : calcSwapBreakage({ notional, fixedRatePct: K, terminationDate: maturity, payFixed: d.payFixed !== false } as never, { valuationDate: today.toISOString().slice(0, 10), marketSwapRatePct: mk.rate });
     return {
       record: r, dealId: r.dealId!, property: names.get(r.dealId!) ?? "—", counterparty: s(d.counterparty), notional, fixedSwapRatePct: K,
@@ -96,35 +161,66 @@ export function buildDebtRows(records: AmRecord[], deals: Deal[], rates: RatesPa
   const enteredDeals = new Set(loans.filter(r => !r.id.startsWith("datex-loan:")).map(r => r.dealId));
   return loans.map(r => {
     const d = r.data, datexOnly = r.id.startsWith("datex-loan:");
-    const cur = n(d.currentBalance), orig = n(d.originalBalance), spread = n(d.spreadBps);
+    const cur = n(d.currentBalance), orig = n(d.originalBalance), spread = loanSpreadBps(d);
     // A swap names its loan by id or by loanLabel (Rockaway: Commons / Town Court / Town Plaza);
     // an unlabelled one belongs to the property's loans.
     const label = s(d.loanLabel);
     const mySwaps = swaps.filter(w => w.dealId === r.dealId
       && (s(w.record.data.loanId) ? w.record.data.loanId === r.id : !w.loanLabel || !label || w.loanLabel.toLowerCase() === label.toLowerCase()));
-    const type = s(d.rateType) ?? (mySwaps.length ? "swapped" : n(d.fixedRatePct) != null && spread == null ? "fixed" : spread != null ? "floating" : null);
-    let allIn = n(d.allInRatePct), src = allIn != null ? "as entered" : "";
+    const idx = s(d.index);
+    const looksFloating = spread != null && /sofr|libor|prime|index|term/i.test(`${idx ?? ""} ${s(d.rateType) ?? ""}`);
+    const type = s(d.rateType) ?? (mySwaps.length ? "swapped" : n(d.fixedRatePct) != null && spread == null ? "fixed" : spread != null || looksFloating ? "floating" : null);
+    const floor = loanFloorPct(d);
+    const caps = loanRateCaps(d);
+    const liveCaps = caps.filter(c => !c.expiry || c.expiry >= today.toISOString().slice(0, 10));
+    let allIn = n(d.allInRatePct), src = allIn != null ? "as entered" : "", estimated = false;
     const priced = mySwaps.find(w => !w.termsPending && w.allInFixedPct != null);
     if (allIn == null && type === "swapped" && priced) { allIn = priced.allInFixedPct; src = "swap fixed + spread"; }
     if (allIn == null && type === "fixed" && n(d.fixedRatePct) != null) { allIn = n(d.fixedRatePct); src = "fixed rate"; }
-    if (allIn == null && type === "floating" && spread != null && spot.rate != null && !isDailySofr(s(d.index))) { allIn = Math.round((spot.rate + spread / 100) * 10000) / 10000; src = `1M Term SOFR ${spot.rate.toFixed(3)}% + spread (live)`; }
+    const floating = /float|capped/i.test(type ?? "");
+    // Highest live strike = the conservative ceiling when a loan sits under more than one cap.
+    const capStrike = floating && liveCaps.length ? Math.max(...liveCaps.map(c => c.strikePct)) : null;
+    if (allIn == null && floating && spread != null) {
+      const daily = isDailySofr(idx);
+      const base = daily && rates?.sofrOvernight ? { rate: rates.sofrOvernight.rate, label: "SOFR overnight" }
+        : spot.rate != null ? { rate: spot.rate, label: "1M Term SOFR" }
+        : rates?.sofrOvernight ? { rate: rates.sofrOvernight.rate, label: "SOFR overnight (1M Term n/a)" } : null;
+      if (base) {
+        let ix = floor != null ? Math.max(base.rate, floor) : base.rate;
+        const floorBinds = floor != null && floor > base.rate;
+        const capBinds = capStrike != null && ix > capStrike;
+        if (capBinds) ix = capStrike!;
+        allIn = Math.round((ix + spread / 100) * 10000) / 10000;
+        estimated = true;
+        src = `est. from curve: ${base.label} ${base.rate.toFixed(3)}%${floorBinds ? ` → ${floor!.toFixed(2)}% floor` : ""}${capBinds ? ` → capped ${capStrike!.toFixed(2)}%` : ""} + ${spread} bps`;
+      }
+    }
+    const rateClass: DebtRow["rateClass"] = type === "fixed" ? "fixed" : type === "swapped" ? "swapped" : floating ? (liveCaps.length ? "capped" : "floating") : null;
     const maturity = s(d.maturityDate), days = daysUntil(maturity, today);
     return {
       record: r, dealId: r.dealId!, property: names.get(r.dealId!)!, lender: s(d.lender), balance: cur ?? orig, balanceIsOriginal: cur == null && orig != null,
-      rateType: type, index: s(d.index), spreadBps: spread, allInPct: allIn, allInSource: src || "not enough terms", maturity, daysToMaturity: days, flag: flagFor(days),
+      rateType: type, index: idx, spreadBps: spread, allInPct: allIn, allInSource: src || "not enough terms", maturity, daysToMaturity: days, flag: flagFor(days),
       swaps: mySwaps, datexOnly, superseded: datexOnly && enteredDeals.has(r.dealId), loanLabel: label,
+      rateClass, estimated, floorPct: floor, caps, cappedMaxPct: capStrike != null && spread != null ? Math.round((Math.max(capStrike, floor ?? 0) + spread / 100) * 10000) / 10000 : null,
     };
   }).sort((a, b) => (a.maturity ?? "9999").localeCompare(b.maturity ?? "9999"));
 }
 
-export interface DebtTotals { totalDebt: number; loans: number; weightedRatePct: number | null; rateCoveragePct: number; pctFixedOrHedged: number | null; wall: Array<{ year: number; amount: number }>; totalMtm: number | null }
+export interface DebtTotals { totalDebt: number; loans: number; weightedRatePct: number | null; rateCoveragePct: number; pctFixedOrHedged: number | null;
+  /** Share of typed balances by class (fixed+swapped / capped / floating); estimatedPct = share of priced debt from the curve. */
+  byClass: { fixedOrSwappedPct: number | null; cappedPct: number | null; floatingPct: number | null; estimatedLoans: number; estimatedPct: number };
+  wall: Array<{ year: number; amount: number }>; totalMtm: number | null }
 export function debtTotals(rows: DebtRow[], swaps: SwapRow[]): DebtTotals {
   const live = rows.filter(r => !r.superseded && r.balance != null);
   const total = live.reduce((t, r) => t + (r.balance ?? 0), 0);
   const priced = live.filter(r => r.allInPct != null);
   const pricedBal = priced.reduce((t, r) => t + r.balance!, 0);
-  const fixedish = live.filter(r => r.rateType === "fixed" || r.rateType === "swapped").reduce((t, r) => t + r.balance!, 0);
+  const fixedish = live.filter(r => r.rateClass === "fixed" || r.rateClass === "swapped" || r.rateClass === "capped").reduce((t, r) => t + r.balance!, 0);
   const typed = live.filter(r => r.rateType).reduce((t, r) => t + r.balance!, 0);
+  const cls = (c: DebtRow["rateClass"]) => live.filter(r => r.rateClass === c).reduce((t, r) => t + r.balance!, 0);
+  const classed = live.filter(r => r.rateClass).reduce((t, r) => t + r.balance!, 0);
+  const pctOf = (v: number) => classed > 0 ? Math.round((v / classed) * 100) : null;
+  const est = priced.filter(r => r.estimated);
   const wall = new Map<number, number>();
   for (const r of live) if (r.maturity) { const y = Number(r.maturity.slice(0, 4)); wall.set(y, (wall.get(y) ?? 0) + r.balance!); }
   const mtms = swaps.map(w => w.mtm).filter((v): v is number => v != null);
@@ -133,6 +229,8 @@ export function debtTotals(rows: DebtRow[], swaps: SwapRow[]): DebtTotals {
     weightedRatePct: pricedBal > 0 ? Math.round((priced.reduce((t, r) => t + r.balance! * r.allInPct!, 0) / pricedBal) * 1000) / 1000 : null,
     rateCoveragePct: total > 0 ? Math.round((pricedBal / total) * 100) : 0,
     pctFixedOrHedged: typed > 0 ? Math.round((fixedish / typed) * 100) : null,
+    byClass: { fixedOrSwappedPct: pctOf(cls("fixed") + cls("swapped")), cappedPct: pctOf(cls("capped")), floatingPct: pctOf(cls("floating")),
+      estimatedLoans: est.length, estimatedPct: pricedBal > 0 ? Math.round((est.reduce((t, r) => t + r.balance!, 0) / pricedBal) * 100) : 0 },
     wall: [...wall.entries()].sort((a, b) => a[0] - b[0]).map(([year, amount]) => ({ year, amount })),
     totalMtm: mtms.length ? mtms.reduce((a, b) => a + b, 0) : null,
   };

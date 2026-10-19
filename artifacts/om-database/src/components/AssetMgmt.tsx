@@ -46,7 +46,7 @@ export function Kpi({ label, value, sub }: { label: string; value: string; sub?:
   );
 }
 function Table({ children, minWidth = 900 }: { children: ReactNode; minWidth?: number }) {
-  return <div style={{ ...card, overflow: "auto", maxHeight: "70vh" }}><table className="kpr-table" style={{ width: "100%", minWidth, borderCollapse: "collapse" }}>{children}</table></div>;
+  return <div style={{ ...card, overflowX: "auto" }}><table className="kpr-table" style={{ width: "100%", minWidth, borderCollapse: "collapse" }}>{children}</table></div>;
 }
 export function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
@@ -167,6 +167,68 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
     </>
   );
 }
+/** Right-hand detail drawer (full screen on a phone). Escape or the backdrop closes it. */
+export function SideDrawer({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  useEffect(() => { const f = (e: KeyboardEvent) => e.key === "Escape" && onClose(); window.addEventListener("keydown", f); return () => window.removeEventListener("keydown", f); }, [onClose]);
+  return (
+    <>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9500, background: "rgba(35,36,34,.32)" }} />
+      <aside role="dialog" aria-label={title} style={{ position: "fixed", zIndex: 9501, top: 0, right: 0, bottom: 0, width: "min(520px, 100vw)", overflowY: "auto", background: "#fff", padding: "16px 18px 28px", boxShadow: "-12px 0 40px rgba(35,36,34,.22)", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+          <div style={{ fontFamily: "'Lora',serif", fontSize: 19, fontWeight: 600, color: K.ink, minWidth: 0, overflowWrap: "anywhere" }}>{title}</div>
+          <button onClick={onClose} aria-label="Close" style={{ ...btn(), padding: "4px 10px", flex: "none" }}>✕</button>
+        </div>
+        {children}
+      </aside>
+    </>
+  );
+}
+function Field({ k, v }: { k: string; v: ReactNode }) {
+  if (v == null || v === "" || v === "—") return null;
+  return <div style={{ padding: "7px 0", borderBottom: `1px solid #f3f2ee` }}><div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: K.gray }}>{k}</div><div style={{ fontSize: 13.5, color: K.ink, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{v}</div></div>;
+}
+const RATE_CLASS_LABEL = { fixed: "Fixed", swapped: "Swapped", capped: "Floating · capped", floating: "Floating" } as const;
+const ell: React.CSSProperties = { ...td, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle" };
+function LoanDrawer({ r, isAdmin, onClose, onEdit, onDelete, onOpenDeal }: { r: DebtRow; isAdmin: boolean; onClose: () => void; onEdit: () => void; onDelete: () => void; onOpenDeal: (id: string) => void }) {
+  const d = r.record.data;
+  const known = new Set(["lender", "loanName", "loanLabel", "originalBalance", "currentBalance", "balanceAsOf", "rateType", "index", "spreadBps", "fixedRatePct", "allInRatePct", "originationDate", "maturityDate", "extensionOptions", "extensionNoticeDate", "amortization", "amortYears", "ioUntil", "amortizationText", "dscrCovenant", "debtYieldCovenantPct", "recourse", "guarantor", "covenants", "prepayment", "notes", "openQuestions", "confidence", "datexLoanId"]);
+  const extras = Object.entries(d).filter(([k, v]) => !known.has(k) && v != null && typeof v !== "object" && String(v).trim() !== "");
+  return (
+    <SideDrawer title={`${r.property}${r.loanLabel ? ` · ${r.loanLabel}` : ""}`} onClose={onClose}>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+        <button style={btn()} onClick={() => onOpenDeal(r.dealId)}>Open deal</button>
+        {isAdmin && <><button style={btn()} onClick={onEdit}>Edit</button><button style={btn()} onClick={onDelete}>Delete</button></>}
+      </div>
+      <Field k="Lender" v={r.lender} />
+      <Field k="Loan name" v={s(d.loanName)} />
+      <Field k="Balance" v={`${fmtM(r.balance)}${r.balanceIsOriginal ? " (original)" : ""}${d.balanceAsOf ? ` as of ${fmtDate(String(d.balanceAsOf))}` : ""}`} />
+      <Field k="Original balance" v={d.originalBalance != null ? fmtM(Number(d.originalBalance)) : null} />
+      <Field k="Rate" v={r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType} />
+      <Field k="Index" v={r.index} />
+      <Field k="Spread" v={r.spreadBps != null ? `${r.spreadBps} bps` : null} />
+      <Field k="Index floor" v={r.floorPct != null ? `${r.floorPct.toFixed(2)}%` : null} />
+      <Field k="All-in" v={r.allInPct != null ? `${fmtPct(r.allInPct, 3)} — ${r.allInSource}` : r.allInSource} />
+      <Field k="Rate caps" v={r.caps.length ? r.caps.map(c => `${c.notional ? fmtM(c.notional) + " " : ""}@ ${c.strikePct.toFixed(2)}%${c.expiry ? ` to ${fmtDate(c.expiry)}` : ""}${c.expiry && c.expiry < new Date().toISOString().slice(0, 10) ? " (expired)" : ""}`).join("\n") + (r.cappedMaxPct != null ? `\nCapped max all-in ${fmtPct(r.cappedMaxPct, 3)}` : "") : null} />
+      <Field k="Fixed rate" v={d.fixedRatePct != null ? fmtPct(Number(d.fixedRatePct), 3) : null} />
+      <Field k="Swaps" v={r.swaps.length ? r.swaps.map(w => w.termsPending ? `Swap${w.counterparty ? ` with ${w.counterparty}` : ""} — terms pending` : `${fmtM(w.notional)} at ${fmtPct(w.fixedSwapRatePct, 4)} to ${fmtDate(w.maturity)}`).join("\n") : null} />
+      <Field k="Originated" v={d.originationDate ? fmtDate(String(d.originationDate)) : null} />
+      <Field k="Maturity" v={r.maturity ? `${fmtDate(r.maturity)}${r.daysToMaturity != null ? ` (${r.daysToMaturity < 0 ? `${-r.daysToMaturity} days ago` : `${r.daysToMaturity} days`})` : ""}` : null} />
+      <Field k="Extension options" v={s(d.extensionOptions)} />
+      <Field k="Extension notice" v={d.extensionNoticeDate ? fmtDate(String(d.extensionNoticeDate)) : null} />
+      <Field k="Amortization" v={[s(d.amortization), d.amortYears ? `${d.amortYears}-yr` : null, d.ioUntil ? `IO to ${fmtDate(String(d.ioUntil))}` : null].filter(Boolean).join(" · ") || null} />
+      <Field k="Amortization terms" v={s(d.amortizationText)} />
+      <Field k="Covenants" v={[s(d.covenants), d.dscrCovenant ? `DSCR ${d.dscrCovenant}x` : null, d.debtYieldCovenantPct ? `Debt yield ${d.debtYieldCovenantPct}%` : null].filter(Boolean).join("\n") || null} />
+      <Field k="Prepayment" v={s(d.prepayment)} />
+      <Field k="Recourse" v={s(d.recourse)} />
+      <Field k="Guarantor" v={s(d.guarantor)} />
+      <Field k="Notes" v={s(d.notes)} />
+      <Field k="Open questions" v={s(d.openQuestions)} />
+      <Field k="Confidence" v={s(d.confidence)} />
+      {extras.map(([k, v]) => <Field key={k} k={k.replace(/([a-z])([A-Z])/g, "$1 $2")} v={String(v)} />)}
+      <Src>Source: {r.record.sourceNote ?? "none noted"}{r.record.updatedBy ? ` · last saved by ${r.record.updatedBy}` : ""}{r.record.updatedAt ? ` ${fmtDate(r.record.updatedAt)}` : ""}</Src>
+    </SideDrawer>
+  );
+}
 function ImportBox({ onDone, onClose }: { onDone: () => void; onClose: () => void }) {
   const [text, setText] = useState("");
   const [plan, setPlan] = useState<AmImportResult | null>(null);
@@ -206,7 +268,7 @@ function ImportBox({ onDone, onClose }: { onDone: () => void; onClose: () => voi
 }
 
 // ── Debt tab ──────────────────────────────────────────────────────────────────
-const LOAN_COLS = ["Property", "Lender", "Balance", "Type", "Index", "Spread", "All-in", "Maturity", "Extension", "Amort.", "Covenants", "Prepayment", "Recourse / guarantor", "Source", ""];
+const LOAN_COLS = ["Property", "Lender", "Balance", "Rate", "All-in", "Maturity", "Extension", "Recourse"];
 const SWAP_COLS = ["Property", "Counterparty", "Notional", "Fixed swap", "All-in fixed", "Effective", "Maturity", "Market (remaining term)", "Mark-to-market", "Source", ""];
 const PREF_COLS = ["Property", "Investor", "Amount", "Pref rate", "Maturity", "Source", ""];
 const s = (v: unknown): string | null => (v == null || String(v).trim() === "" ? null : String(v));
@@ -247,6 +309,7 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
   const toggle = (id: string) => setOpen(o => { const n = new Set(o); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const [edit, setEdit] = useState<{ kind: "loan" | "swap" | "pref"; rec: AmRecord | null } | null>(null);
   const [imp, setImp] = useState(false);
+  const [drawer, setDrawer] = useState<string | null>(null);
   const maxWall = Math.max(1, ...tot.wall.map(w => w.amount));
   const curveAsOf = rates?.termSwapCurve?.asOf ?? null;
   const del = async (id: string) => { if (window.confirm("Delete this record?")) { await apiAmDeleteRecord(id); reload(); } };
@@ -265,8 +328,8 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 10, marginTop: 14 }}>
             <Kpi label="Total debt" value={fmtM(tot.totalDebt)} sub={`${tot.loans} loan${tot.loans === 1 ? "" : "s"} · current balance, else original`} />
-            <Kpi label="Weighted avg rate" value={fmtPct(tot.weightedRatePct, 3)} sub={`all-in · covers ${tot.rateCoveragePct}% of the debt`} />
-            <Kpi label="Fixed or hedged" value={tot.pctFixedOrHedged == null ? "—" : `${tot.pctFixedOrHedged}%`} sub="of debt with a rate type" />
+            <Kpi label="Weighted avg rate" value={fmtPct(tot.weightedRatePct, 3)} sub={`all-in · covers ${tot.rateCoveragePct}% of the debt${tot.byClass.estimatedLoans ? ` · ${tot.byClass.estimatedLoans} floating loan${tot.byClass.estimatedLoans === 1 ? "" : "s"} est. from today's curve` : ""}`} />
+            <Kpi label="Fixed / swapped · capped · floating" value={tot.byClass.fixedOrSwappedPct == null ? "—" : `${tot.byClass.fixedOrSwappedPct}% · ${tot.byClass.cappedPct ?? 0}% · ${tot.byClass.floatingPct ?? 0}%`} sub={tot.pctFixedOrHedged == null ? "of debt with a rate type" : `${tot.pctFixedOrHedged}% fixed or hedged (a live rate cap counts as hedged)`} />
             <Kpi label="Swap mark-to-market" value={fmtM(tot.totalMtm)} sub={`indicative · 1M Term curve${curveAsOf ? ` ${fmtDate(curveAsOf)}` : ""}`} />
           </div>
           <SectionTitle>Maturity wall</SectionTitle>
@@ -280,33 +343,30 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
             ))}
           </div>
           <SectionTitle>Loans</SectionTitle>
-          <Table minWidth={1420}>
-            <thead><tr>{LOAN_COLS.map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
-            <tbody>{rows.map((r: DebtRow) => {
-              const d = r.record.data, isOpen = open.has(r.record.id);
-              const cov = s(d.covenants) ?? ([d.dscrCovenant ? `DSCR ${d.dscrCovenant}x` : null, d.debtYieldCovenantPct ? `DY ${d.debtYieldCovenantPct}%` : null].filter(Boolean).join(" · ") || null);
-              return [
-                <tr key={r.record.id} style={{ opacity: r.superseded ? 0.5 : 1 }}>
-                  <td style={td}><button onClick={() => onOpenDeal(r.dealId)} style={linkBtn}>{r.property}</button>{r.loanLabel && <span style={{ color: K.charcoal, fontWeight: 600 }}> · {r.loanLabel}</span>}{r.superseded && <Src>Datex row — an entered loan covers this property</Src>}</td>
-                  <td style={td}>{r.lender ?? "—"}</td>
-                  <td style={num}>{fmtM(r.balance)}{r.balanceIsOriginal && <Src>original</Src>}</td>
-                  <td style={td}>{r.rateType ?? "—"}</td>
-                  <td style={td}>{r.index ?? "—"}</td>
-                  <td style={num}>{r.spreadBps != null ? `${r.spreadBps} bps` : "—"}</td>
-                  <td style={num}>{fmtPct(r.allInPct, 3)}<Src>{r.allInSource}</Src></td>
-                  <td style={td}>{fmtDate(r.maturity)} {daysPill(r.daysToMaturity, r.flag)}</td>
-                  <td style={td}>{String(d.extensionOptions ?? "—")}{d.extensionNoticeDate ? <Src>notice by {fmtDate(String(d.extensionNoticeDate))}</Src> : null}</td>
-                  <td style={td}>{String(d.amortization ?? "—")}{d.amortYears ? ` · ${d.amortYears}y` : ""}</td>
-                  <td style={{ ...td, maxWidth: 220 }}><Clamp>{cov ?? "—"}</Clamp></td>
-                  <td style={{ ...td, maxWidth: 220 }}><Clamp>{s(d.prepayment) ?? "—"}</Clamp></td>
-                  <td style={td}>{[d.recourse, d.guarantor].filter(Boolean).map(String).join(" · ") || "—"}</td>
-                  <td style={{ ...td, fontSize: 11.5, color: K.gray, maxWidth: 200 }}>{r.record.sourceNote ?? "—"}</td>
-                  <td style={td}><RowActions isOpen={isOpen} onToggle={() => toggle(r.record.id)} isAdmin={isAdmin} onEdit={() => setEdit({ kind: "loan", rec: r.record })} onDelete={() => del(r.record.id)} /></td>
-                </tr>,
-                isOpen && <DetailRow key={r.record.id + ":d"} cols={LOAN_COLS.length} rec={r.record} items={[["Covenants", cov], ["Prepayment", s(d.prepayment)], ["Notes", s(d.notes)], ["Open questions", s(d.openQuestions)], ["Confidence", s(d.confidence)], ["Recourse", s(d.recourse)], ["Guarantor", s(d.guarantor)]]} />,
-              ];
-            })}</tbody>
-          </Table>
+          <div style={{ ...card, overflowX: "auto" }}>
+            <table className="kpr-table" style={{ width: "100%", minWidth: 860, borderCollapse: "collapse", tableLayout: "fixed" }}>
+              <colgroup><col style={{ width: "22%" }} /><col style={{ width: "13%" }} /><col style={{ width: 92 }} /><col style={{ width: "12%" }} /><col style={{ width: 82 }} /><col style={{ width: 150 }} /><col style={{ width: "12%" }} /><col style={{ width: "14%" }} /></colgroup>
+              <thead><tr>{LOAN_COLS.map(h => <th key={h} style={{ ...th, position: "static" }}>{h}</th>)}</tr></thead>
+              <tbody>{rows.map((r: DebtRow) => {
+                const d = r.record.data;
+                const recourse = [d.recourse, d.guarantor].filter(Boolean).map(String).join(" · ") || "—";
+                return (
+                  <tr key={r.record.id} onClick={() => setDrawer(r.record.id)} tabIndex={0} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDrawer(r.record.id); } }} style={{ opacity: r.superseded ? 0.5 : 1, cursor: "pointer", height: 42 }} title="Click for every field">
+                    <td style={ell}><span style={{ fontWeight: 600 }}>{r.property}</span>{r.loanLabel && <span style={{ color: K.gray }}> · {r.loanLabel}</span>}{r.superseded && <span style={{ color: K.gray }}> · Datex row (superseded)</span>}</td>
+                    <td style={ell} title={r.lender ?? undefined}>{r.lender ?? "—"}</td>
+                    <td style={{ ...num, verticalAlign: "middle" }}>{fmtM(r.balance)}{r.balanceIsOriginal ? "*" : ""}</td>
+                    <td style={ell}>{r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType ?? "—"}{r.spreadBps != null && r.rateClass !== "fixed" ? <span style={{ color: K.gray }}> +{r.spreadBps}</span> : null}</td>
+                    <td style={{ ...num, verticalAlign: "middle" }} title={r.allInSource}>{fmtPct(r.allInPct, 2)}{r.estimated ? <span style={{ color: K.amber }} aria-label="estimated from today's curve">~</span> : null}</td>
+                    <td style={ell}>{fmtDate(r.maturity)} {daysPill(r.daysToMaturity, r.flag)}</td>
+                    <td style={ell} title={s(d.extensionOptions) ?? undefined}>{String(d.extensionOptions ?? "—")}</td>
+                    <td style={ell} title={recourse}>{recourse}</td>
+                  </tr>
+                );
+              })}</tbody>
+            </table>
+          </div>
+          <Src>One line per loan — tap a row for every field (covenants, prepayment, caps, notes, source). <span style={{ color: K.amber }}>~</span> = floating all-in estimated from today's 1M Term SOFR (max of the curve and the loan's index floor, plus spread; a live rate cap limits it). * = original balance (no current balance on file).</Src>
+          {(() => { const r = rows.find(x => x.record.id === drawer); return r ? <LoanDrawer r={r} isAdmin={isAdmin} onClose={() => setDrawer(null)} onEdit={() => { setDrawer(null); setEdit({ kind: "loan", rec: r.record }); }} onDelete={() => { setDrawer(null); void del(r.record.id); }} onOpenDeal={onOpenDeal} /> : null; })()}
         </>
       )}
       {swaps.length > 0 && (
