@@ -1,3 +1,4 @@
+import { fmtMoney } from "./money";
 import { stripStoreSuffix } from "./tenantCredit";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -1704,9 +1705,7 @@ export function fmtTenantSales(salesPSF: unknown, sf: unknown): string {
   const psfStr = `$${Math.round(psf).toLocaleString("en-US")} PSF`;
   if (sqft == null) return psfStr;
   const total = psf * sqft;
-  const totalStr = total >= 1_000_000
-    ? `$${(total / 1_000_000).toFixed(1)}M`
-    : `$${Math.round(total / 1000)}k`;
+  const totalStr = fmtMoney(total, { kSuffix: "k" });
   return `${totalStr} / ${psfStr}`;
 }
 
@@ -2003,7 +2002,7 @@ export function buildSystemPrompt(
   // Plaza and Bend). These lists are computed here and are the ONLY source for status
   // questions — the model must not infer status from narrative text.
   const ownedList = getOwnedProperties(active as Deal[]);
-  const money = (v: unknown) => { const x = Number(v); return Number.isFinite(x) && x > 0 ? (x >= 1e6 ? `$${(x / 1e6).toFixed(1).replace(/\.0$/, "")}M` : `$${Math.round(x).toLocaleString()}`) : null; };
+  const money = (v: unknown) => { const x = Number(v); return Number.isFinite(x) && x > 0 ? fmtMoney(x, { below: "full", trim: true }) : null; };
   const nm = (d: Deal) => d.propertyName || d.fileName || d.id;
   const soldClosed = active.filter(d => d.status === "Sold" && /\d{4}-\d{2}-\d{2}/.test(String(d.txnSaleDate || "")));
   const soldNoDate = active.filter(d => d.status === "Sold" && !/\d{4}-\d{2}-\d{2}/.test(String(d.txnSaleDate || "")));

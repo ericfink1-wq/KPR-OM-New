@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { useState } from "react";
 import type { Deal } from "../lib/idb";
 import { DETAIL_MAX_WIDTH } from "../lib/constants";
@@ -11,10 +12,7 @@ interface Props {
 }
 
 function fmt$(v: number | null | undefined): string {
-  if (v == null) return "—";
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `$${Math.round(v / 1_000)}k`;
-  return `$${Math.round(v).toLocaleString()}`;
+  return fmtMoney(v, { kSuffix: "k" });
 }
 
 function fmtDate(s: string | null | undefined): string {

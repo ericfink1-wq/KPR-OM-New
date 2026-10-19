@@ -8,6 +8,7 @@
 // weak sales / high occupancy cost, or a reset inside the hold with no sales to
 // confirm, is the risk. Deterministic, token-free. Sales coverage is thin, so the
 // common output is a measured "verify sales support the premium," not a hard call.
+import { fmtMoney } from "./money";
 import type { Deal, Tenant } from "./idb";
 import type { DerivedFlag } from "./expenseRisk";
 import { isVacant, isNAPTenant, tenantKey, parseLeaseDate, buildLatestSales } from "./utils";
@@ -99,7 +100,7 @@ export function deriveAboveMarketRolldownFlag(deal: Deal, rentIndex: BrandRentIn
     : anyAtRisk || (material && hits.some((h) => h.nearTerm)) ? "medium"
     : "low";
 
-  const fmt = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(2)}M` : `$${Math.round(n / 1000)}K`;
+  const fmt = (n: number) => fmtMoney(n);
   const parts = hits.slice(0, 3).map((h) => {
     const reset = h.resetYear ? `; resets ~${h.resetYear}${h.nearTerm ? " (in hold)" : ""}` : "";
     const sustain = h.kind === "at-risk"

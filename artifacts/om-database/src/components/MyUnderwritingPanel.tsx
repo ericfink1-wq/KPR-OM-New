@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { useState, useEffect } from "react";
 import type { Deal, MyUnderwritingInputs } from "../lib/idb";
 
@@ -19,7 +20,7 @@ function n(v: unknown): number | null {
 function fmt$(val: number | null, decimals = 0): string {
   if (val == null) return "—";
   const abs = Math.abs(val);
-  if (abs >= 1_000_000) return `$${(val / 1_000_000).toFixed(2)}M`;
+  if (abs >= 999_995) return fmtMoney(val);
   return "$" + val.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 

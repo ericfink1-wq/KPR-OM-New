@@ -1,3 +1,4 @@
+import { fmtCompact, fmtMoney } from "../lib/money";
 import { useState, useEffect } from "react";
 
 // ---------------------------------------------------------------------------
@@ -24,16 +25,12 @@ interface RolloverDetail {
 // ---------------------------------------------------------------------------
 
 function fmtRent(n: number | null): string {
-  if (n == null) return "—";
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1_000)}k`;
-  return `$${Math.round(n)}`;
+  return fmtMoney(n, { kSuffix: "k" });
 }
 
 function fmtSF(n: number | null): string {
   if (n == null) return "—";
-  if (n >= 1000) return `${Math.round(n / 1000)}K`;
-  return Math.round(n).toLocaleString();
+  return fmtCompact(n, { dp: 1 });
 }
 
 function fmtDate(d: string | null): string {

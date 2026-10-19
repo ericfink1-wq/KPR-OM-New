@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, Cell, LabelList,
   ResponsiveContainer, Tooltip, ReferenceLine,
@@ -22,9 +23,7 @@ function toNum(v: number | string | null | undefined): number {
 }
 
 function fmtRent(r: number): string {
-  if (r >= 1_000_000) return `$${(r / 1_000_000).toFixed(1)}M`;
-  if (r >= 1_000) return `$${Math.round(r / 1_000)}K`;
-  return `$${Math.round(r)}`;
+  return fmtMoney(r);
 }
 
 const BANDS: RenewalRiskBand[] = ["secure", "likely", "uncertain", "at-risk"];

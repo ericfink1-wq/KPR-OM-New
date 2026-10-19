@@ -1,3 +1,4 @@
+import { fmtMoney } from "./money";
 import type { Deal, LeaseAbstract } from "./idb";
 import type { RatesPayload, AnalystTenantBenchmark } from "./api";
 import { calcSwapBreakage } from "./prepay";
@@ -333,10 +334,10 @@ export function buildCriticalDates(deals: Deal[], records: AmRecord[], abstracts
     const x = r.data, src = r.sourceNote ? `${r.kind === "date" ? "Entered" : "Debt record"} — ${r.sourceNote}` : r.kind === "date" ? "Entered by hand" : "Debt record";
     if (r.kind === "loan") {
       if (r.id.startsWith("datex-loan:") && records.some(o => o.kind === "loan" && o.dealId === r.dealId && !o.id.startsWith("datex-loan:"))) continue;
-      if (s(x.maturityDate)) push({ date: String(x.maturityDate), type: "Loan maturity", dealId: d.id, property: d.propertyName || "—", tenant: null, description: `${s(x.lender) ?? "Loan"}${n(x.currentBalance ?? x.originalBalance) ? ` · $${(n(x.currentBalance ?? x.originalBalance)! / 1e6).toFixed(2)}M` : ""}${s(x.extensionOptions) ? ` · ext: ${s(x.extensionOptions)}` : ""}`, source: src, owner: owner(d), recordId: r.id });
+      if (s(x.maturityDate)) push({ date: String(x.maturityDate), type: "Loan maturity", dealId: d.id, property: d.propertyName || "—", tenant: null, description: `${s(x.lender) ?? "Loan"}${n(x.currentBalance ?? x.originalBalance) ? ` · ${fmtMoney(n(x.currentBalance ?? x.originalBalance)!)}` : ""}${s(x.extensionOptions) ? ` · ext: ${s(x.extensionOptions)}` : ""}`, source: src, owner: owner(d), recordId: r.id });
       if (s(x.extensionNoticeDate)) push({ date: String(x.extensionNoticeDate), type: "Extension notice", dealId: d.id, property: d.propertyName || "—", tenant: null, description: `${s(x.lender) ?? "Loan"} extension notice`, source: src, owner: owner(d), recordId: r.id });
     } else if (r.kind === "swap" && s(x.maturityDate)) {
-      push({ date: String(x.maturityDate), type: "Swap maturity", dealId: d.id, property: d.propertyName || "—", tenant: null, description: `${s(x.counterparty) ?? "Swap"}${n(x.notional) ? ` · $${(n(x.notional)! / 1e6).toFixed(2)}M` : ""}`, source: src, owner: owner(d), recordId: r.id });
+      push({ date: String(x.maturityDate), type: "Swap maturity", dealId: d.id, property: d.propertyName || "—", tenant: null, description: `${s(x.counterparty) ?? "Swap"}${n(x.notional) ? ` · ${fmtMoney(n(x.notional)!)}` : ""}`, source: src, owner: owner(d), recordId: r.id });
     } else if (r.kind === "covenant") {
       const label = covenantLabel(x);
       if (s(x.triggerDate)) push({ date: String(x.triggerDate), type: "Covenant trigger", dealId: d.id, property: d.propertyName || "—", tenant: s(x.linkedTenant), description: s(x.trigger) ?? label, source: src.replace("Debt record", "Covenant"), owner: owner(d), recordId: r.id });
@@ -440,10 +441,10 @@ export function buildCovenantRows(deal: Deal, records: AmRecord[], debt: DebtRow
         if (a.amount == null) { ok = false; break; }
         ds += a.amount; basis = a.basis;
       }
-      if (ok && ds > 0 && noi.value != null) { actual = Math.round((noi.value / ds) * 100) / 100; basis = `${noi.source} ÷ $${(ds / 1e6).toFixed(2)}M debt service (${basis})`; }
+      if (ok && ds > 0 && noi.value != null) { actual = Math.round((noi.value / ds) * 100) / 100; basis = `${noi.source} ÷ ${fmtMoney(ds)} debt service (${basis})`; }
       else basis = noi.value == null ? noi.source : "debt service needs the loan's balance and rate";
     } else if (type === "DY") {
-      if (bal && noi.value != null) { actual = Math.round((noi.value / bal) * 1000) / 10; basis = `${noi.source} ÷ $${(bal / 1e6).toFixed(2)}M balance`; } else basis = "needs NOI and a balance";
+      if (bal && noi.value != null) { actual = Math.round((noi.value / bal) * 1000) / 10; basis = `${noi.source} ÷ ${fmtMoney(bal)} balance`; } else basis = "needs NOI and a balance";
     } else if (type === "LTV") basis = "needs an appraised value — not computed";
     const higherIsBetter = type !== "LTV";
     const headroom = actual != null && th != null ? Math.round(((higherIsBetter ? actual / th : th / actual) - 1) * 1000) / 10 : null;
@@ -483,7 +484,7 @@ export function sinceAcquisition(deal: Deal, records: AmRecord[], today: Date): 
   const out: TimelineItem[] = [];
   const acq = records.find(r => r.kind === "acquisition" && r.dealId === deal.id);
   const close = s(acq?.data.closeDate) ?? s(deal.txnCloseDate);
-  if (close) out.push({ date: close, kind: "close", text: `KPR closed the acquisition${n(acq?.data.purchasePrice ?? deal.txnPurchasePrice) ? ` for $${(n(acq?.data.purchasePrice ?? deal.txnPurchasePrice)! / 1e6).toFixed(1)}M` : ""}${s(acq?.data.seller ?? deal.txnSeller) ? ` from ${s(acq?.data.seller ?? deal.txnSeller)}` : ""}`, source: acq ? "Acquisition record" : "Deal record" });
+  if (close) out.push({ date: close, kind: "close", text: `KPR closed the acquisition${n(acq?.data.purchasePrice ?? deal.txnPurchasePrice) ? ` for ${fmtMoney(n(acq?.data.purchasePrice ?? deal.txnPurchasePrice)!)}` : ""}${s(acq?.data.seller ?? deal.txnSeller) ? ` from ${s(acq?.data.seller ?? deal.txnSeller)}` : ""}`, source: acq ? "Acquisition record" : "Deal record" });
   const dx = (deal as unknown as { datexLive?: Record<string, unknown> }).datexLive;
   for (const l of (dx?.leasing as Array<Record<string, unknown>> | undefined) ?? []) {
     const d = s(l.executed) ?? s(l.submitted);
@@ -498,8 +499,8 @@ export function sinceAcquisition(deal: Deal, records: AmRecord[], today: Date): 
     for (const e of h.events) if (e.kind !== "metric") out.push({ date: d, kind: "change", text: e.text, source: "Property history (document compare)" });
   }
   for (const r of records.filter(x => x.dealId === deal.id)) {
-    if (r.kind === "loan" && s(r.data.originationDate)) out.push({ date: String(r.data.originationDate), kind: "debt", text: `Loan closed: ${s(r.data.lender) ?? "lender"}${s(r.data.loanLabel) ? ` (${s(r.data.loanLabel)})` : ""}${n(r.data.originalBalance) ? ` · $${(n(r.data.originalBalance)! / 1e6).toFixed(2)}M` : ""}`, source: r.sourceNote ?? "Debt record" });
-    if (r.kind === "swap" && s(r.data.tradeDate ?? r.data.effectiveDate)) out.push({ date: String(r.data.tradeDate ?? r.data.effectiveDate), kind: "debt", text: `Swap: ${n(r.data.notional) ? `$${(n(r.data.notional)! / 1e6).toFixed(2)}M ` : ""}fixed at ${n(r.data.fixedSwapRatePct) ?? "?"}%${s(r.data.counterparty) ? ` with ${s(r.data.counterparty)}` : ""}`, source: r.sourceNote ?? "Swap record" });
+    if (r.kind === "loan" && s(r.data.originationDate)) out.push({ date: String(r.data.originationDate), kind: "debt", text: `Loan closed: ${s(r.data.lender) ?? "lender"}${s(r.data.loanLabel) ? ` (${s(r.data.loanLabel)})` : ""}${n(r.data.originalBalance) ? ` · ${fmtMoney(n(r.data.originalBalance)!)}` : ""}`, source: r.sourceNote ?? "Debt record" });
+    if (r.kind === "swap" && s(r.data.tradeDate ?? r.data.effectiveDate)) out.push({ date: String(r.data.tradeDate ?? r.data.effectiveDate), kind: "debt", text: `Swap: ${n(r.data.notional) ? `${fmtMoney(n(r.data.notional)!)} ` : ""}fixed at ${n(r.data.fixedSwapRatePct) ?? "?"}%${s(r.data.counterparty) ? ` with ${s(r.data.counterparty)}` : ""}`, source: r.sourceNote ?? "Swap record" });
     if (r.kind === "date" && s(r.data.date) && String(r.data.date) <= isoUTC(today) && /other|event/i.test(String(r.data.type ?? ""))) out.push({ date: String(r.data.date), kind: "event", text: s(r.data.description) ?? "Event", source: r.sourceNote ?? "Entered" });
   }
   return out.filter(x => x.date <= isoUTC(today)).sort((a, b) => b.date.localeCompare(a.date));
@@ -815,12 +816,12 @@ export function keyDebtDeadlines(deals: Deal[], records: AmRecord[], today: Date
     if (win) out.push({ date: win[0], endDate: win[1], days: daysUntil(win[1], today)!, kind: "Extension notice window", title: `${name} — extension notice window`, detail: `${fmtD(win[0])} – ${fmtD(win[1])}${s(d.extensionOptions) && isoIn(s(d.extensionOptions)!).length < 2 ? ` · ${s(d.extensionOptions)}` : s(d.extensionOptions) ? ` · ${s(d.extensionOptions)!.replace(/[;,.]?\s*notice[^;.]*/i, "").trim()}` : ""}`.replace(/ · $/, ""), dealIds: [r.dealId!], properties: [name] });
     else if (s(d.extensionNoticeDate)) out.push({ date: String(d.extensionNoticeDate), days: daysUntil(String(d.extensionNoticeDate), today)!, kind: "Extension notice", title: `${name} — extension notice due`, detail: s(d.extensionOptions) ?? `${s(d.lender) ?? "Loan"} extension`, dealIds: [r.dealId!], properties: [name] });
     const mat = s(d.maturityDate), md = daysUntil(mat, today);
-    if (mat && md != null && md >= 0 && md <= 365) out.push({ date: mat, days: md, kind: "Loan maturity", title: `${name} — loan matures`, detail: `${s(d.lender) ?? "Loan"}${n(d.currentBalance ?? d.originalBalance) ? ` · $${(n(d.currentBalance ?? d.originalBalance)! / 1e6).toFixed(2)}M` : ""}${s(d.extensionOptions) ? ` · ext: ${s(d.extensionOptions)}` : ""}`, dealIds: [r.dealId!], properties: [name] });
+    if (mat && md != null && md >= 0 && md <= 365) out.push({ date: mat, days: md, kind: "Loan maturity", title: `${name} — loan matures`, detail: `${s(d.lender) ?? "Loan"}${n(d.currentBalance ?? d.originalBalance) ? ` · ${fmtMoney(n(d.currentBalance ?? d.originalBalance)!)}` : ""}${s(d.extensionOptions) ? ` · ext: ${s(d.extensionOptions)}` : ""}`, dealIds: [r.dealId!], properties: [name] });
   }
   for (const { cap, ids } of caps.values()) {
     const props = [...ids].map(id => names.get(id)!);
     const label = props.length >= 3 ? `${portfolioName([...ids], records)} portfolio (${props.length} properties)` : props.join(", ");
-    out.push({ date: cap.expiry!, days: daysUntil(cap.expiry, today)!, kind: "Rate cap expires", title: `${label} — rate cap expires`, detail: `${cap.notional ? `$${(cap.notional / 1e6).toFixed(1)}M ` : ""}cap @ ${cap.strikePct.toFixed(2)}%`, dealIds: [...ids], properties: props });
+    out.push({ date: cap.expiry!, days: daysUntil(cap.expiry, today)!, kind: "Rate cap expires", title: `${label} — rate cap expires`, detail: `${cap.notional ? `${fmtMoney(cap.notional)} ` : ""}cap @ ${cap.strikePct.toFixed(2)}%`, dealIds: [...ids], properties: props });
   }
   return out.filter(x => x.days != null && x.days >= 0 && x.days <= 730).sort((a, b) => a.date.localeCompare(b.date));
 }

@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { useEffect, useMemo } from "react";
 import type { Deal } from "../lib/idb";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
@@ -7,7 +8,7 @@ import { useAmData } from "./AssetMgmt";
 // Home hero live KPIs (Eric, 10/18/26): owned occupancy from Datex, NOI trailing-12 vs budget,
 // total debt + weighted rate, next maturity. Lazy-loaded (it pulls the Asset Mgmt records),
 // so the first screen never waits on it. Every figure says where it came from.
-const fmtM = (v: number) => Math.abs(v) >= 1e9 ? `$${(v / 1e9).toFixed(2)}B` : Math.abs(v) >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.round(v / 1e3)}K`;
+const fmtM = (v: number) => fmtMoney(v);
 const fmtD = (iso: string) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 
 export function heroDatexKpis(owned: Deal[]): { occPct: number | null; occN: number; noiTtm: number | null; noiBudget: number | null; ytdVarPct: number | null; noiN: number } {

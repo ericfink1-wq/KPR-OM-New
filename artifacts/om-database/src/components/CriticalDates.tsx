@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { useMemo, useState } from "react";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
 import type { Deal } from "../lib/idb";
@@ -40,11 +41,7 @@ function num(v: unknown): number | null {
   return isNaN(n) ? null : n;
 }
 
-function fmtMoney(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
-  return `$${Math.round(n)}`;
-}
+
 
 function fmtDate(d: Date): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });

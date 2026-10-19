@@ -1,3 +1,4 @@
+import { fmtMoney } from "./money";
 // ─────────────────────────────────────────────────────────────────────────────
 // Property-tax REASSESSMENT engine, by state (+ DC).
 //
@@ -928,7 +929,7 @@ const yearsUntil = (expiry: string | null | undefined): number | null => {
   if (yr == null || !Number.isFinite(yr)) return null;
   return yr - new Date().getFullYear();
 };
-const fmtUSD = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${Math.round(n).toLocaleString()}`;
+const fmtUSD = (n: number) => fmtMoney(n, { below: "full" });
 
 export function assessTaxTriggers(input: TaxTriggerInput): TaxTrigger[] {
   const out: TaxTrigger[] = [];

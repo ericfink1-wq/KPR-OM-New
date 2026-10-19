@@ -4,6 +4,7 @@
 // else parsed from the tenant name — chains name locations by screen count, e.g.
 // "Regal Trussville 14", "AMC CLASSIC 12", "Cinemark 18") and derives sales/screen.
 // Deterministic, token-free.
+import { fmtMoney } from "./money";
 import type { Tenant } from "./idb";
 
 const num = (v: unknown): number | null => {
@@ -84,7 +85,7 @@ export function salesPerScreen(annualSales: number | null, screens: number | nul
 
 export function fmtPerScreen(v: number | null): string {
   if (v == null) return "—";
-  return v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(2)}M/screen` : `$${Math.round(v / 1000)}k/screen`;
+  return `${fmtMoney(v, { kSuffix: "k" })}/screen`;
 }
 
 export interface CinemaSalesRead {

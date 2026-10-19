@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { useState, useMemo, useEffect } from "react";
 import type { Deal } from "../lib/idb";
 import {
@@ -119,7 +120,7 @@ export default function TenantLink({ deals }: Props) {
   const unlinkParent = (id: string) => { removeUserParentLink(id); setVersion(v => v + 1); };
   const parentLinks: ParentLink[] = getUserParentLinks();
 
-  const fmtRent = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : n > 0 ? `$${Math.round(n).toLocaleString()}` : "—";
+  const fmtRent = (n: number) => n > 0 ? fmtMoney(n, { below: "full" }) : "—";
 
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "18px 18px 40px", width: "100%", boxSizing: "border-box", fontFamily: "'Roboto',sans-serif" }}>

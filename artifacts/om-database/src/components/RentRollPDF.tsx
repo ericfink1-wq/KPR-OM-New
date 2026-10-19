@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import type { Deal, Tenant } from "../lib/idb";
 import { isVacant, isNAPTenant, fmtLeaseDate, formatFullAddress } from "../lib/utils";
@@ -16,12 +17,7 @@ const C = {
 const toN = (v: unknown): number => { const n = Number(v); return isNaN(n) ? 0 : n; };
 const today = (): string => new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 const money0 = (v: number): string => v ? `$${Math.round(v).toLocaleString()}` : "—";
-const moneyBig = (v: number): string => {
-  if (!v) return "—";
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
-  if (v >= 1_000) return `$${Math.round(v / 1_000)}k`;
-  return `$${Math.round(v)}`;
-};
+const moneyBig = (v: number): string => v ? fmtMoney(v, { kSuffix: "k" }) : "—";
 const money2 = (v: number): string => v ? `$${v.toFixed(2)}` : "—";
 const num0 = (v: number): string => v ? Math.round(v).toLocaleString() : "—";
 const pct = (v: number): string => v ? `${v.toFixed(1)}%` : "—";

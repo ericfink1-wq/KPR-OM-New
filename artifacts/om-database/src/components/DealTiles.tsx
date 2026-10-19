@@ -1,3 +1,4 @@
+import { fmtMoney, fmtCompact } from "../lib/money";
 import type { Deal } from "../lib/idb";
 import { STATUS_COLORS } from "../lib/constants";
 import { cityState } from "../lib/utils";
@@ -31,8 +32,8 @@ export default function DealTiles({ deals, onOpen }: Props) {
           const src = coverSrc(d);
           const noiN = Number(d.noi), sfN = Number(d.totalSF), occN = Number(d.occupancy);
           const metrics = [
-            d.noi != null && Number.isFinite(noiN) && noiN > 0 ? `$${noiN >= 1e6 ? (noiN / 1e6).toFixed(1) + "M" : Math.round(noiN / 1e3) + "K"} NOI` : null,
-            d.totalSF != null && Number.isFinite(sfN) && sfN > 0 ? `${sfN >= 1e6 ? (sfN / 1e6).toFixed(1) + "M" : Math.round(sfN / 1e3) + "K"} SF` : null,
+            d.noi != null && Number.isFinite(noiN) && noiN > 0 ? `${fmtMoney(noiN)} NOI` : null,
+            d.totalSF != null && Number.isFinite(sfN) && sfN > 0 ? `${fmtCompact(sfN)} SF` : null,
             d.occupancy != null && Number.isFinite(occN) && occN > 0 ? `${Math.round(occN <= 1 ? occN * 100 : occN)}% occ` : null,
           ].filter(Boolean).join(" · ");
           const uc = d.status === "Under Contract";

@@ -1,3 +1,4 @@
+import { fmtCompact, fmtMoney } from "../lib/money";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import NoClosingDatePill from "./NoClosingDatePill";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -73,9 +74,7 @@ const DEAL_SORT_DEFAULT: SortLevel[] = [{ key: "status", dir: "asc" }, { key: "l
 function fmtPriceShort(v: number | null | undefined): string {
   const n = Number(v);
   if (v == null || !isFinite(n) || n <= 0) return "—";
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
-  return `$${Math.round(n)}`;
+  return fmtMoney(n);
 }
 
 // City display that won't repeat the separate State column: strips a trailing
@@ -1362,7 +1361,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 6, marginTop: 7 }}>
                     {stat("NOI", fmtPriceShort(d.noi))}
-                    {stat("GLA", d.totalSF ? `${Math.round(Number(d.totalSF) / 1000)}K SF` : "—")}
+                    {stat("GLA", d.totalSF ? `${fmtCompact(Number(d.totalSF), { dp: 1 })} SF` : "—")}
                     {stat("Occ", d.occupancy != null ? `${d.occupancy}%` : "—")}
                   </div>
                 </div>
@@ -1540,7 +1539,7 @@ export default function DealGrid({ deals, onOpen, onUpdate, onCompare, onDelete,
                   <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 16, fontWeight: 600, lineHeight: 1.18, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{d.propertyName || d.fileName || "Untitled"}</div>
                   {loc && <div style={{ fontSize: 11, opacity: 0.86, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{loc}</div>}
                   <div style={{ display: "flex", gap: 12, marginTop: 5 }}>
-                    {d.noi != null && <span style={{ fontSize: 11, color: "#9fe08a", fontWeight: 600 }}>${(Number(d.noi)/1e6).toFixed(1)}M NOI</span>}
+                    {d.noi != null && <span style={{ fontSize: 11, color: "#9fe08a", fontWeight: 600 }}>{fmtMoney(Number(d.noi))} NOI</span>}
                     {d.capRate != null && <span style={{ fontSize: 11, color: "#fff", opacity: 0.92, fontWeight: 600 }}>{d.capRate}% cap</span>}
                     {d.walt != null && <span style={{ fontSize: 11, color: Number(d.walt) < 3 ? "#ffb3b3" : "#fff", opacity: 0.92, fontWeight: 600 }}>{d.walt}y WALT</span>}
                   </div>

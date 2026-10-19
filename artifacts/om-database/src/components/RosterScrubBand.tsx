@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { useState } from "react";
 import type { Deal } from "../lib/idb";
 import type { ScrubRow, ScrubSummary } from "../lib/rosterScrub";
@@ -6,7 +7,7 @@ import PdfDownloadButton, { safeFileName } from "./PdfDownloadButton";
 // ROSTER SCRUB band — the top of every deal's Tenants tab (Eric, 10/18/26). The same KPIs,
 // in the same order, for every OM; and the two standard exports built from the same scrub.
 const K = { ink: "#232422", char: "#383A37", gray: "#676767", green: "#5BBA47", greenDk: "#3e8a2f", red: "#b3403f", amber: "#a8640f", line: "#ecebe6" };
-const $m = (v: number | null | undefined) => v == null ? "—" : Math.abs(v) >= 1e6 ? `$${(v / 1e6).toFixed(2)}M` : Math.abs(v) >= 1e3 ? `$${Math.round(v / 1e3).toLocaleString()}K` : `$${Math.round(v)}`;
+const $m = (v: number | null | undefined) => fmtMoney(v);
 const pct = (v: number | null | undefined, d = 1) => v == null ? "—" : `${v.toFixed(d)}%`;
 
 function Tile({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "good" | "bad" | "warn" }) {

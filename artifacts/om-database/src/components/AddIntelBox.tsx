@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { Deal } from "../lib/idb";
@@ -9,7 +10,7 @@ const chip = (bg: string, border: string, color: string): React.CSSProperties =>
 });
 
 function fmtSales(annual: number | null, psf: number | null): string {
-  if (annual != null) return annual >= 1_000_000 ? `$${(annual / 1_000_000).toFixed(1)}M` : `$${Math.round(annual).toLocaleString()}`;
+  if (annual != null) return fmtMoney(annual, { below: "full" });
   if (psf != null) return `$${Math.round(psf)}/SF`;
   return "—";
 }

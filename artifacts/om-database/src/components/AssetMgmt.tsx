@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
@@ -21,7 +22,7 @@ export type AmTab = "debt" | "dates" | "properties" | "credit";
 const TABS: Array<[AmTab, string]> = [["debt", "Debt"], ["dates", "Dates"], ["properties", "Properties"], ["credit", "Credit Watch"]];
 export const K = { green: "#5BBA47", charcoal: "#383A37", ink: "#232422", gray: "#676767", page: "#FAF9F5", line: "#ecebe6", red: "#b3403f", amber: "#b3711a" };
 
-export const fmtM = (v: number | null | undefined) => v == null ? "—" : Math.abs(v) >= 1e6 ? `$${(v / 1e6).toFixed(2)}M` : Math.abs(v) >= 1e3 ? `$${Math.round(v / 1e3).toLocaleString()}K` : `$${Math.round(v).toLocaleString()}`;
+export const fmtM = (v: number | null | undefined) => fmtMoney(v);
 export const fmtPct = (v: number | null | undefined, d = 2) => v == null ? "—" : `${v.toFixed(d)}%`;
 export const fmtDate = (iso: string | null | undefined) => iso ? new Date(iso.slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
 export const card: React.CSSProperties = { background: "#fff", border: `1px solid ${K.line}`, borderRadius: 12, boxShadow: "0 1px 2px rgba(35,36,34,.04)" };

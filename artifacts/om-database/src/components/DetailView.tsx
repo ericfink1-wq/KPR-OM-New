@@ -1,3 +1,4 @@
+import { fmtCompact, fmtMoney } from "../lib/money";
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import MarkSoldDialog from "./MarkSoldDialog";
 import CompScatter from "./CompScatter";
@@ -885,7 +886,7 @@ function CompBenchmarkCard({ deal }: { deal: Deal }) {
   };
   const fmtPct2 = (v: number | null | undefined) => v != null ? `${(+v).toFixed(1)}%` : "—";
   const fmtPsf  = (v: number | null | undefined) => v != null ? `$${Math.round(+v)}` : "—";
-  const fmtM    = (v: number | null | undefined) => v != null ? `$${(+v / 1e6).toFixed(1)}M` : "—";
+  const fmtM    = (v: number | null | undefined) => v != null ? fmtMoney(+v) : "—";
   const fmtSf   = (v: number | null | undefined) => v != null ? `${Number(v).toLocaleString()} SF` : "—";
 
   const capVerdict = (bps: number | null) => {
@@ -2755,7 +2756,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       {(() => {
         const compactUSD = (n: number | null | undefined) => {
           const v = Number(n); if (!Number.isFinite(v) || v <= 0) return null;
-          return v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `$${Math.round(v / 1e3)}K` : `$${Math.round(v)}`;
+          return fmtMoney(v);
         };
         const sfNum = Number(d.totalSF);
         const occN = liveOccupancy != null ? Number(liveOccupancy) : null;
@@ -2768,7 +2769,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         const acqPrice = kprOwned ? compactUSD(d.txnPurchasePrice) : null;
         if (acqPrice) tiles.push({ l: "Acquisition price", v: acqPrice, c: "#5bba47" });
         else { const price = compactUSD(d.askingPrice); if (price) tiles.push({ l: kprOwned ? "OM asking price" : "Price", v: price, c: "#5bba47" }); }
-        if (Number.isFinite(sfNum) && sfNum > 0) tiles.push({ l: "GLA", v: sfNum >= 1000 ? `${Math.round(sfNum / 1000)}K SF` : `${sfNum} SF` });
+        if (Number.isFinite(sfNum) && sfNum > 0) tiles.push({ l: "GLA", v: `${fmtCompact(sfNum, { dp: 1 })} SF` });
         // Owned + a Datex snapshot: today's occupancy from Datex leads; the OM's figure is
         // kept and labelled with its own date (Eric, 10/16/26).
         const dx = d.status === "Owned" ? d.datexLive : null;

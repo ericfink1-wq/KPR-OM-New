@@ -11,6 +11,7 @@
 // edits in the Add-Intel box; buildIntelPatch() applies only the confirmed items. No
 // figure is ever silently mutated.
 
+import { fmtMoney } from "./money";
 import type { Deal, TenantSalesYear, DealIntelEntry } from "./idb";
 import { apiAiMessages, lessonGuidanceClient } from "./api";
 import { robustParseJSON, tenantKey, stripSuiteCode, recomputeRosterMetrics } from "./utils";
@@ -229,7 +230,7 @@ export function buildIntelPatch(deal: Deal, proposal: IntelProposal): Partial<De
     }
     patch.tenantSalesHistory = history;
     appliedBits.push(...okSales.map(s => {
-      const amt = s.annualSales != null ? `$${(s.annualSales / 1_000_000).toFixed(1)}M`
+      const amt = s.annualSales != null ? fmtMoney(s.annualSales)
         : s.salesPSF != null ? `$${Math.round(s.salesPSF)}/SF` : "sales";
       return `${s.rosterMatch || s.tenantName} ${s.year} ${amt}${s.anecdotal ? " (anecdotal)" : ""}`;
     }));

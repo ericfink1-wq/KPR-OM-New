@@ -8,6 +8,7 @@
 // estimate as fact (low estimator confidence -> softer wording + capped severity), and
 // never invent numbers — the flag only fires when the OM gave us the current assessed
 // value and tax bill to size the step-up against.
+import { fmtMoney } from "./money";
 import type { Deal } from "./idb";
 import type { DerivedFlag } from "./expenseRisk";
 import { estimateReassessment, reconcileTaxCapture } from "./taxReassessment";
@@ -15,7 +16,7 @@ import { estimateReassessment, reconcileTaxCapture } from "./taxReassessment";
 const FLAG_PCT = 25;   // minimum tax-bill increase to flag
 const HIGH_PCT = 50;   // a >= 50% jump is a high-severity hit
 
-const fmt$ = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${Math.round(n).toLocaleString()}`;
+const fmt$ = (n: number) => fmtMoney(n, { below: "full" });
 
 export function deriveReassessmentFlag(deal: Deal): DerivedFlag | null {
   const price = Number(deal.txnPurchasePrice ?? deal.askingPrice ?? 0) || 0;

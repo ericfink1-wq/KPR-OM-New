@@ -2,6 +2,12 @@
 
 Persistent context for this repo. Read this fully at the start of every session.
 
+## MONEY FORMAT (Eric, 10/19/26) — one formatter, units roll at 4 digits
+`fmtMoney` (om-database `lib/money.ts`, mirrored verbatim in api-server `lib/money.ts` — a test fails if they drift):
+K → M at 1,000K, M → B at 1,000M, decided on the ROUNDED figure; M/B always 2 dp; options `below:"full"` ($930,000),
+`kSuffix:"k"`, `trim`. `fmtCompact` = the same rule for SF. **Never write a one-off `(x / 1e6).toFixed(n)}M`** — route
+it through these. Boundary tests: `__tests__/money.test.ts`.
+
 ## OVERNIGHT AUDIT BATCH (10/19/26) — Asset Mgmt
 - Floating loans: `loanSpreadBps` / `loanFloorPct` / `loanRateCaps` (om-database lib/assetMgmt.ts) read spread, index floor
   and rate caps from fields OR the loan's own text (index / covenants / notes). All-in = max(1M Term SOFR spot, floor) +

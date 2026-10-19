@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { useState, useRef, useEffect, useMemo } from "react";
 import RecoveryWorking, { recoveryLabel } from "./RecoveryWorking";
 import { createPortal } from "react-dom";
@@ -112,7 +113,7 @@ function OccTip({ val, source, breakdown, grade }: { val: number; source: "state
     return () => { document.removeEventListener("mousedown", h); document.removeEventListener("touchstart", h); };
   }, [open]);
 
-  const fmt$ = (v: number) => v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : `$${Math.round(v).toLocaleString()}`;
+  const fmt$ = (v: number) => fmtMoney(v, { below: "full" });
   const isStated = source === "stated";
 
   // A non-finite occ-cost (e.g. a NaN slipping through from sales data) would

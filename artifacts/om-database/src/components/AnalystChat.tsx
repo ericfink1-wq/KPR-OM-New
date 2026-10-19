@@ -1,3 +1,4 @@
+import { fmtCompact, fmtMoney } from "../lib/money";
 import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
 import type { Deal, LeaseAbstract } from "../lib/idb";
@@ -37,15 +38,10 @@ interface Props {
 
 // ── Formatting helpers ──────────────────────────────────────────────────────
 function fmtSF(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M SF`;
-  if (n >= 1_000) return `${Math.round(n / 1_000)}K SF`;
-  return `${n} SF`;
+  return `${fmtCompact(n, { dp: 1 })} SF`;
 }
 function fmtM(n: number): string {
-  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
-  return `$${n}`;
+  return fmtMoney(n);
 }
 const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v))) ? 0 : Number(v);
 

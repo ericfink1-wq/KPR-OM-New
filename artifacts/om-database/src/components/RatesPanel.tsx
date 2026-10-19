@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Star, Info } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -11,7 +12,7 @@ import { baseRateOptions, sizeLoan, BASE_GROUPS, DEFAULT_BASE_ID } from "../lib/
 
 const TREASURY_TENORS_SHOWN = ["1-Yr", "2-Yr", "3-Yr", "5-Yr", "7-Yr", "10-Yr"];
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
-const usd = (n: number) => n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : `$${Math.round(n).toLocaleString()}`;
+const usd = (n: number) => fmtMoney(n, { below: "full" });
 const ET = "America/New_York";
 const fmtAsOf = (iso: string | null | undefined) => {
   if (!iso) return "—";

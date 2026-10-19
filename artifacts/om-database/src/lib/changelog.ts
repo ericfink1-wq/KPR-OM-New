@@ -48,6 +48,13 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-19-money-format",
+    date: "2026-10-19",
+    category: "improved",
+    title: "Dollar amounts roll up to the next unit",
+    detail: "Money figures never show four digits before the unit any more: $1,250K reads $1.25M and $1,098.76M reads $1.10B, with millions and billions shown to two decimals. This is the same everywhere — tiles, tables, the maturity wall, side panels, PDFs and the analyst chat.",
+  },
+  {
     id: "2026-10-19-occupancy-check",
     date: "2026-10-19",
     category: "fixed",

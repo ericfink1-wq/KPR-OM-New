@@ -1,3 +1,4 @@
+import { fmtCompact, fmtMoney } from "../lib/money";
 import { useState, useMemo, useCallback } from "react";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
 import { EyeOff } from "lucide-react";
@@ -11,9 +12,7 @@ import { exportAggregateToExcel, type AggColumn } from "../lib/exportExcel";
 // ---------------------------------------------------------------------------
 
 function fmtRent(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1_000)}k`;
-  return `$${Math.round(n)}`;
+  return fmtMoney(n, { kSuffix: "k" });
 }
 
 function num(v: number | string | null | undefined): number | null {
@@ -725,7 +724,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
               const avgSF = sfRows.length > 0 ? Math.round(sfRows.reduce((s, r) => s + r.totalSF, 0) / sfRows.reduce((s, r) => s + r.locationCount, 0)) : null;
               return (
                 <>
-                  {totalGLA > 0 && <StatBox label="Total GLA" value={totalGLA >= 1000000 ? `${(totalGLA/1000000).toFixed(1)}M SF` : `${(totalGLA/1000).toFixed(0)}K SF`} sub="across active tenants" />}
+                  {totalGLA > 0 && <StatBox label="Total GLA" value={`${fmtCompact(totalGLA, { dp: 1 })} SF`} sub="across active tenants" />}
                   {avgSF != null && <StatBox label="Avg Tenant SF" value={avgSF.toLocaleString()} sub="per location" />}
                 </>
               );
@@ -830,7 +829,7 @@ export default function TenantAnalytics({ deals, filter: filterProp, onTenantCli
                         <div style={{ width:`${(row.totalSF/maxSF)*100}%`, background:"#b08968", height:"100%", borderRadius:4 }} />
                       </div>
                       <span style={{ width:70, textAlign:"right", fontSize:11, color:"#55544f", fontWeight:600, flexShrink:0 }}>
-                        {row.totalSF >= 1000 ? `${(row.totalSF/1000).toFixed(0)}K SF` : `${row.totalSF.toLocaleString()} SF`}
+                        {`${fmtCompact(row.totalSF, { dp: 1 })} SF`}
                       </span>
                       <span style={{ width:40, textAlign:"right", fontSize:10, color:"#b3b1aa", flexShrink:0 }}>
                         {row.locationCount} loc{row.locationCount !== 1 ? "s" : ""}

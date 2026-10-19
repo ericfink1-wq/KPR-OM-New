@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { useEffect, useMemo, useState } from "react";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
@@ -14,7 +15,7 @@ import { apiListAllLeaseAbstracts } from "../lib/api";
 //     (co-tenancy cascade, tier 1 = trips on that anchor alone).
 // Both computed live from the roster + the watchlist + lease abstracts; nothing stored.
 
-const money = (n: number) => n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}K` : `$${Math.round(n)}`;
+const money = (n: number) => fmtMoney(n);
 const STATUS_TONE: Record<string, string> = { liquidating: "#b3261e", bankruptcy: "#b3261e", distressed: "#c2410c", watch: "#a16207" };
 
 export default function OwnedRiskCards({ deals, onOpenDeal, onNav }: { deals: Deal[]; onOpenDeal: (id: string) => void; onNav?: (dest: string) => void }) {

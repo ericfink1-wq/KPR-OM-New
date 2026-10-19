@@ -4,6 +4,7 @@
 // omitted rather than printed empty. Pulls in the retail-mix intelligence so every memo
 // leads with the defensive/discretionary read an IC cares about.
 
+import { fmtCompact, fmtMoney } from "./money";
 import type { Deal, Tenant } from "./idb";
 import { isAnchorUse } from "./anchorUse";
 import { isVacant, isNAPTenant, tenantKey } from "./utils";
@@ -47,7 +48,7 @@ const n = (v: unknown): number | null => {
 };
 const money = (v: unknown): string | null => {
   const x = n(v); if (x == null) return null;
-  if (Math.abs(x) >= 1_000_000) return `$${(x / 1_000_000).toFixed(2)}M`;
+  if (Math.abs(x) >= 999_995) return fmtMoney(x);
   if (Math.abs(x) >= 1_000) return `$${Math.round(x).toLocaleString()}`;
   return `$${x.toLocaleString()}`;
 };
@@ -201,8 +202,8 @@ export function buildICMemoModel(deal: Deal, opts: ICMemoOptions = {}): ICMemoMo
   if (waltN != null && waltN >= 5.5) highlights.push(`${waltN.toFixed(1)}-yr WALT — durable, long-dated income`);
   if (igGLApct != null && igGLApct >= 25) highlights.push(`Investment-grade anchors — ${igGLApct}% of occupied GLA`);
   if (mixData && mixData.resilienceScore >= 58) highlights.push(`${mixData.resilienceScore}/100 e-commerce resilience · ${mixData.necessityRentPct}% necessity/service`);
-  if (inc3 != null && inc3 >= 90000) highlights.push(`Affluent trade area — $${Math.round(inc3 / 1000)}k avg HH income (3-mi)`);
-  else if (pop3 != null && pop3 >= 100000) highlights.push(`Dense trade area — ${Math.round(pop3 / 1000)}k population (3-mi)`);
+  if (inc3 != null && inc3 >= 90000) highlights.push(`Affluent trade area — ${fmtMoney(inc3, { kSuffix: "k" })} avg HH income (3-mi)`);
+  else if (pop3 != null && pop3 >= 100000) highlights.push(`Dense trade area — ${fmtCompact(pop3, { kSuffix: "k" })} population (3-mi)`);
   const strongAnchors = anchorDetail.filter((a) => a.salesVsChain != null && a.salesVsChain >= 15).slice(0, 2);
   if (strongAnchors.length) highlights.push(`Anchors outproducing chain: ${strongAnchors.map((a) => `${a.name} +${a.salesVsChain}%`).join(", ")}`);
 

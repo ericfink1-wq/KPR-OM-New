@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { useEffect, useMemo, useState } from "react";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
 import type { Deal, LeaseAbstract } from "../lib/idb";
@@ -26,11 +27,7 @@ interface AnchorRow {
   hits: DealHit[];
 }
 
-function fmtMoney(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
-  return `$${Math.round(n)}`;
-}
+
 
 const TIER_LABEL: Record<number, string> = {
   1: "trips on this anchor alone",

@@ -12,6 +12,7 @@
 //   • Unit-of-measure sanity (occupancy as a fraction, cap rate as basis points).
 // Only fires on genuine CONTRADICTIONS — never on values that are simply absent.
 
+import { fmtMoney } from "./money";
 import { normalizeDate, occCostCorroboratedBySales } from "./importFixes";
 import { checkCoTenancyStructure, isPerAnchorTrigger, collectAnchorLeaves, type CoTenancyLike } from "./coTenancyStructure";
 
@@ -35,7 +36,7 @@ const isVacantName = (name: unknown): boolean => {
   const s = String(name ?? "").trim().toLowerCase();
   return !s || s === "-" || /^(vacant|available|avail|spec(ulative)?|white\s*box|tbd|to\s+be\s+leased)\b/.test(s);
 };
-const usd = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(2)}M` : `$${Math.round(n).toLocaleString()}`;
+const usd = (n: number) => fmtMoney(n, { below: "full" });
 const sf = (n: number) => `${Math.round(n).toLocaleString()} SF`;
 // Parse an ISO-ish date (YYYY-MM-DD…) to epoch ms; null when it isn't a real date.
 const parseISO = (v: unknown): number | null => {

@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
 import { createPortal } from "react-dom";
@@ -46,7 +47,6 @@ function meta(status: string) {
   return STATUS_META[status] || STATUS_META.watch;
 }
 
-const fmtMoney = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `$${Math.round(n / 1_000)}K` : `$${Math.round(n)}`;
 const fmtSF = (n: number) => n > 0 ? `${Math.round(n).toLocaleString()} SF` : "—";
 const fmtNewsDate = (iso: string | null) => {
   if (!iso) return "";

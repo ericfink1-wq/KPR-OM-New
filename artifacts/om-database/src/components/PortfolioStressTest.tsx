@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { useEffect, useMemo, useState } from "react";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import { apiListAllLeaseAbstracts } from "../lib/api";
@@ -15,9 +16,7 @@ interface Props {
 }
 
 function fmtRent(r: number): string {
-  if (r >= 1_000_000) return `$${(r / 1_000_000).toFixed(2)}M`;
-  if (r >= 1_000) return `$${Math.round(r / 1_000)}K`;
-  return `$${Math.round(r)}`;
+  return fmtMoney(r);
 }
 
 export default function PortfolioStressTest({ tenantName, brands, deals, onOpenDeal }: Props) {

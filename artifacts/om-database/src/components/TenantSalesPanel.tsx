@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { useState, useMemo, useRef, useEffect } from "react";
 import RecoveryWorking, { recoveryLabel } from "./RecoveryWorking";
 import { createPortal } from "react-dom";
@@ -39,10 +40,7 @@ type SortKey = "name" | "salesPSF" | "annualSales" | "sf" | "occupancyCost";
 type SortDir = "asc" | "desc";
 
 function fmt$(v: number | null | undefined): string {
-  if (v == null) return "—";
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `$${Math.round(v / 1000)}k`;
-  return `$${v.toFixed(0)}`;
+  return fmtMoney(v, { kSuffix: "k" });
 }
 
 function fmtPSF(v: number | null | undefined): string {
@@ -155,7 +153,7 @@ function OccTip({ val, source, breakdown, grade }: { val: number; source: "state
     return () => { document.removeEventListener("mousedown", h); document.removeEventListener("touchstart", h); };
   }, [open]);
 
-  const fmt$ = (v: number) => v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : `$${Math.round(v).toLocaleString()}`;
+  const fmt$ = (v: number) => fmtMoney(v, { below: "full" });
   const isStated = source === "stated";
 
   return (

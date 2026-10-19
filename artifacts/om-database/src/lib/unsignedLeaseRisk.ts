@@ -4,6 +4,7 @@
 // only the leaseStatus + annualRent fields already on each tenant — no
 // re-extraction needed — and flags how much in-place base rent depends on them.
 
+import { fmtMoney } from "./money";
 import type { Deal, Tenant } from "./idb";
 import { isVacant, isNAPTenant } from "./utils";
 
@@ -44,7 +45,7 @@ export function deriveUnsignedLeaseFlag(deal: Deal): DerivedFlag | null {
   // base rent. Used only to size the exposure (pct), so a rough basis is fine.
   const rosterRent = tenants.reduce((s, t) => s + (num(t.annualRent) ?? 0), 0);
   const basis = num(deal.grossPotentialRent) ?? (rosterRent > 0 ? rosterRent : null);
-  const fmt$ = (v: number) => v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : `$${Math.round(v).toLocaleString()}`;
+  const fmt$ = (v: number) => fmtMoney(v, { below: "full" });
   const names = (list: Tenant[]) => list.map((t) => t.name).filter(Boolean).slice(0, 6).join(", ");
 
   if (unexecuted.length > 0) {

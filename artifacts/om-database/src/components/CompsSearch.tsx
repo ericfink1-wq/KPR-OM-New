@@ -1,3 +1,4 @@
+import { fmtCompact, fmtMoney } from "../lib/money";
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import { useTopScrollbar } from "../lib/useTopScrollbar";
 import CompScatter from "./CompScatter";
@@ -107,17 +108,12 @@ function fmtDate(s: string | null): string {
 }
 
 function fmtM(n: number | null): string {
-  if (n == null) return "—";
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1_000)}k`;
-  return `$${Math.round(n)}`;
+  return fmtMoney(n, { kSuffix: "k" });
 }
 
 function fmtSf(n: number | null): string {
   if (n == null) return "—";
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M sf`;
-  if (n >= 1_000) return `${Math.round(n / 1_000)}k sf`;
-  return `${Math.round(n)} sf`;
+  return `${fmtCompact(n, { kSuffix: "k" })} sf`;
 }
 
 function fmtPct(n: number | null): string {
@@ -186,9 +182,7 @@ type DupInfo = {
   betterSourceExists: boolean; bestTierName: string;
 };
 function fmtVolume(v: number): string {
-  if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
-  if (v >= 1e6) return `$${Math.round(v / 1e6)}M`;
-  return `$${Math.round(v).toLocaleString()}`;
+  return fmtMoney(v, { below: "full" });
 }
 
 // ---------------------------------------------------------------------------

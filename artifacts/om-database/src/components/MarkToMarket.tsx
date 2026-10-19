@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import { isBelowMarket, countsInUpside, MIN_PEERS_FOR_DOLLARS } from "../lib/mtmCount";
 import { useMemo, useState } from "react";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
@@ -53,12 +54,7 @@ function ordinal(p: number): string {
   return v + (s[(m - 20) % 10] || s[m] || s[0]);
 }
 
-function fmtMoney(n: number): string {
-  const a = Math.abs(n);
-  if (a >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (a >= 1_000) return `$${Math.round(n / 1_000)}K`;
-  return `$${Math.round(n)}`;
-}
+
 
 export default function MarkToMarket({ deals, onOpenDeal }: Props) {
   const [threshold, setThreshold] = useState(15);

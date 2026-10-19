@@ -2,6 +2,7 @@
 // broker's format (Eric, 10/18/26): property · pricing · roster scrub · top tenants · rollover ·
 // flags · demographics · comps. Everything comes from the deal record + the roster scrub
 // (lib/rosterScrub) — no AI. A missing figure prints "—", never a guess.
+import { fmtMoney } from "../lib/money";
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import type { Deal } from "../lib/idb";
 import { FLAG_META, FLAG_ORDER, type ScrubRow, type ScrubSummary } from "../lib/rosterScrub";
@@ -24,7 +25,7 @@ const s = StyleSheet.create({
   bar: { height: 7, backgroundColor: C.green, borderRadius: 1.5 },
   foot: { position: "absolute", bottom: 12, left: 26, right: 26, fontSize: 6, color: C.faint },
 });
-const $m = (v: unknown) => { const n = Number(v); return v == null || v === "" || !Number.isFinite(n) ? "—" : Math.abs(n) >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : Math.abs(n) >= 1e3 ? `$${Math.round(n / 1e3).toLocaleString()}K` : `$${Math.round(n)}`; };
+const $m = (v: unknown) => { const n = Number(v); return v == null || v === "" || !Number.isFinite(n) ? "—" : fmtMoney(n); };
 const pct = (v: number | null | undefined, d = 1) => (v == null ? "—" : `${v.toFixed(d)}%`);
 const n0 = (v: unknown) => (v == null || v === "" || !Number.isFinite(Number(v)) ? "—" : Math.round(Number(v)).toLocaleString());
 

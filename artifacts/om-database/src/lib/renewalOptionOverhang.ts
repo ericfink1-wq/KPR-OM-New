@@ -6,6 +6,7 @@
 // the extraction already captures into structure, classifies each below-market
 // lease's upside as capturable ("free") vs option-locked ("encumbered"), and
 // derives a token-free red flag. Deterministic; no model call.
+import { fmtMoney } from "./money";
 import type { Deal, Tenant } from "./idb";
 import { isVacant, isNAPTenant, tenantKey } from "./utils";
 
@@ -251,7 +252,7 @@ export function deriveOptionOverhangNote(deal: Deal, rentIndex: BrandRentIndex):
 
   hits.sort((a, b) => b.lockedAnnual - a.lockedAnnual);
   const lockedTotal = hits.reduce((s, h) => s + h.lockedAnnual, 0);
-  const fmt = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(2)}M` : `$${Math.round(n / 1000)}K`;
+  const fmt = (n: number) => fmtMoney(n);
   const worst = hits.slice(0, 3).map((h) =>
     `${h.name} renews at $${h.optionRentPSF.toFixed(2)}/SF vs ~$${h.median.toFixed(2)} brand median (${Math.round(h.gapPct)}% below${h.years ? `, options run ~${h.years} yrs` : ""})`
   ).join("; ");

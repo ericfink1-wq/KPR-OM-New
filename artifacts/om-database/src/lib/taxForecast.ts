@@ -15,6 +15,7 @@
 //                       un-abated (stabilized) figure at expiry (cliff or phase-out).
 //   3. Levy growth    — ongoing millage/levy creep applied on top every year.
 // A cross-check then validates the projection against the OM's own pro-forma tax line.
+import { fmtMoney } from "./money";
 import { estimateReassessment, type ReassessInput, type Confidence } from "./taxReassessment";
 
 export interface LevyGrowth { pct: number; basis: "assessed_cap" | "levy_cap" | "typical"; note: string; confidence: Confidence; }
@@ -75,7 +76,7 @@ const lower = (a: Confidence, b: Confidence): Confidence => {
   return o[a] <= o[b] ? a : b;
 };
 const num = (v: unknown): number => Number(v) || 0;
-const fmt$ = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${Math.round(n).toLocaleString()}`;
+const fmt$ = (n: number) => fmtMoney(n, { below: "full" });
 
 export function forecastTaxes(input: TaxForecastInput): TaxForecast | null {
   const r = estimateReassessment(input);

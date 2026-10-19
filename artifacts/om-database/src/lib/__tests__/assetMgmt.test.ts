@@ -185,6 +185,6 @@ describe("owned deal page: debt service, covenants, plan vs actual", () => {
     expect(optionLabel({ number: "2nd Renewal", length: "5 yrs" })).toBe("2nd Renewal · 5 yrs");
     expect(driveLinks(rec("l", "loan", "x", { sourceDocs: [{ id: "1AbCdEfGhIjKlMnOpQrStUvWxYz0123", name: "Loan agreement" }] }))).toEqual([{ url: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123/view", name: "Loan agreement" }]);
     const t = sinceAcquisition(deal("q", { txnCloseDate: "2024-05-01", txnPurchasePrice: 28_700_000 } as Partial<Deal>), [], TODAY);
-    expect(t[0].text).toBe("KPR closed the acquisition for $28.7M");
+    expect(t[0].text).toBe("KPR closed the acquisition for $28.70M");
   });
 });

@@ -1,3 +1,4 @@
+import { fmtMoney } from "./money";
 // PROPERTY HISTORY (Eric, 10/17/26): "newer data should win versus the older data, but it's
 // also always good to have historical data baked into the analysis — re-tenanting of big
 // spaces, bankruptcies, backfills, et cetera — so we keep a running history of what happened
@@ -61,7 +62,7 @@ export function sameTenant(a: { name?: unknown; sf?: unknown; suite?: unknown },
   return sizeAgrees(num(a.sf), num(b.sf));
 }
 
-const money = (n: number) => n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : `$${Math.round(n).toLocaleString()}`;
+const money = (n: number) => fmtMoney(n, { below: "full" });
 const sfTxt = (n: number | null) => n ? `${Math.round(n).toLocaleString()} SF` : "";
 // When the document's picture applies: the rent-roll date — unless it's the OM's forward-dated
 // ASSUMED closing (common: "as of 1/1/27"), then the OM's own date, then the upload.

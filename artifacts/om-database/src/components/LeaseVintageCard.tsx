@@ -1,3 +1,4 @@
+import { fmtMoney } from "../lib/money";
 import type { Deal } from "../lib/idb";
 import { analyzeLeaseVintage, type VintageBucket } from "../lib/leaseVintage";
 
@@ -13,9 +14,7 @@ const BUCKET_COLORS: Record<VintageBucket["key"], string> = {
 };
 
 function fmtRent(r: number): string {
-  if (r >= 1_000_000) return `$${(r / 1_000_000).toFixed(1)}M`;
-  if (r >= 1_000) return `$${Math.round(r / 1_000)}K`;
-  return `$${Math.round(r)}`;
+  return fmtMoney(r);
 }
 
 export default function LeaseVintageCard({ deal }: { deal: Deal }) {
