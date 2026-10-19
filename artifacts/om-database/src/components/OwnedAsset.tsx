@@ -232,7 +232,7 @@ export function OwnedFinancing({ deal }: { deal: Deal }) {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: "0 22px", marginTop: 6 }}>
               <div>
                 <Line l="Balance" v={fmtM(r.balance)} sub={r.balanceIsOriginal ? "original balance" : d.balanceAsOf ? `as of ${fmtDate(String(d.balanceAsOf))}` : undefined} />
-                <Line l="Rate" v={`${fmtPct(r.allInPct, 3)} ${r.rateType ?? ""}`} sub={`${r.allInSource}${r.index ? ` · ${r.index}` : ""}${r.spreadBps != null ? ` + ${r.spreadBps} bps` : ""}`} />
+                <Line l="Rate" v={`${fmtPct(r.allInPct, 3)}${r.estimated ? "~" : ""} ${r.rateType ?? ""}${r.partlySwapped ? " (partly)" : ""}`} sub={`${r.allInSource}${r.index ? ` · ${r.index}` : ""}${r.spreadBps != null ? ` + ${r.spreadBps} bps` : ""}`} />
                 <Line l="Annual debt service" v={fmtM(ds.amount)} sub={ds.basis} />
                 <Line l="DSCR (actual)" v={dscr != null ? `${dscr.toFixed(2)}x` : "—"} sub={noi.source} />
                 <Line l="Debt yield" v={r.balance && noi.value != null ? fmtPct((noi.value / r.balance) * 100, 1) : "—"} />

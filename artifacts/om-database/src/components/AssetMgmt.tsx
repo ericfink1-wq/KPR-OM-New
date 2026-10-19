@@ -198,10 +198,16 @@ function Field({ k, v }: { k: string; v: ReactNode }) {
   return <div style={{ padding: "7px 0", borderBottom: `1px solid #f3f2ee` }}><div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: K.gray }}>{k}</div><div style={{ fontSize: 13.5, color: K.ink, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{v}</div></div>;
 }
 const RATE_CLASS_LABEL = { fixed: "Fixed", swapped: "Swapped", capped: "Floating · capped", floating: "Floating" } as const;
+// "$23.5M of $26.0M" — one decimal unless that would drop a digit ($13.65M stays $13.65M).
+const partlyTxt = (r: DebtRow) => { if (!r.partlySwapped) return null; const { swapped, balance } = r.partlySwapped;
+  const dp = [swapped, balance].every(v => Math.abs(v / 1e5 - Math.round(v / 1e5)) < 1e-6) ? 1 : 2;
+  return `partly swapped (${fmtMoney(swapped, { dp })} of ${fmtMoney(balance, { dp })})`; };
+const rateLabel = (r: DebtRow) => `${r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType ?? "—"}${r.spreadBps != null && r.rateClass !== "fixed" ? ` +${r.spreadBps}` : ""}`;
+const allInTip = (r: DebtRow) => `${r.allInBasis ? `Source: ${r.allInBasis} — ` : ""}${r.allInSource}`;
 const ell: React.CSSProperties = { ...td, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle" };
 function LoanDrawer({ r, isAdmin, onClose, onEdit, onDelete, onOpenDeal }: { r: DebtRow; isAdmin: boolean; onClose: () => void; onEdit: () => void; onDelete: () => void; onOpenDeal: (id: string) => void }) {
   const d = r.record.data;
-  const known = new Set(["lender", "loanName", "loanLabel", "originalBalance", "currentBalance", "balanceAsOf", "rateType", "index", "spreadBps", "fixedRatePct", "allInRatePct", "originationDate", "maturityDate", "extensionOptions", "extensionNoticeDate", "amortization", "amortYears", "ioUntil", "amortizationText", "dscrCovenant", "debtYieldCovenantPct", "recourse", "guarantor", "covenants", "prepayment", "notes", "openQuestions", "confidence", "datexLoanId"]);
+  const known = new Set(["lender", "loanName", "loanLabel", "originalBalance", "currentBalance", "balanceAsOf", "rateType", "index", "spreadBps", "fixedRatePct", "allInRatePct", "originationDate", "maturityDate", "extensionOptions", "extensionNoticeDate", "amortization", "amortYears", "ioUntil", "ioEndDate", "amortizationText", "dscrCovenant", "debtYieldCovenantPct", "recourse", "guarantor", "covenants", "prepayment", "notes", "openQuestions", "confidence", "datexLoanId"]);
   const extras = Object.entries(d).filter(([k, v]) => !known.has(k) && v != null && typeof v !== "object" && String(v).trim() !== "");
   return (
     <SideDrawer title={`${r.property}${r.loanLabel ? ` · ${r.loanLabel}` : ""}`} onClose={onClose}>
@@ -213,11 +219,12 @@ function LoanDrawer({ r, isAdmin, onClose, onEdit, onDelete, onOpenDeal }: { r: 
       <Field k="Loan name" v={s(d.loanName)} />
       <Field k="Balance" v={`${fmtM(r.balance)}${r.balanceIsOriginal ? " (original)" : ""}${d.balanceAsOf ? ` as of ${fmtDate(String(d.balanceAsOf))}` : ""}`} />
       <Field k="Original balance" v={d.originalBalance != null ? fmtM(Number(d.originalBalance)) : null} />
-      <Field k="Rate" v={r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType} />
+      <Field k="Rate" v={[rateLabel(r), partlyTxt(r)].filter(Boolean).join(" · ")} />
       <Field k="Index" v={r.index} />
       <Field k="Spread" v={r.spreadBps != null ? `${r.spreadBps} bps` : null} />
       <Field k="Index floor" v={r.floorPct != null ? `${r.floorPct.toFixed(2)}%` : null} />
-      <Field k="All-in" v={r.allInPct != null ? `${fmtPct(r.allInPct, 3)} — ${r.allInSource}` : r.allInSource} />
+      <Field k="All-in" v={r.allInPct != null ? `${fmtPct(r.allInPct, 3)}${r.estimated ? " (estimate)" : ""} — ${r.allInSource}` : r.allInSource} />
+      <Field k="All-in source" v={r.allInBasis} />
       <Field k="Rate caps" v={r.caps.length ? r.caps.map(c => `${c.notional ? fmtM(c.notional) + " " : ""}@ ${c.strikePct.toFixed(2)}%${c.expiry ? ` to ${fmtDate(c.expiry)}` : ""}${c.expiry && c.expiry < new Date().toISOString().slice(0, 10) ? " (expired)" : ""}`).join("\n") + (r.cappedMaxPct != null ? `\nCapped max all-in ${fmtPct(r.cappedMaxPct, 3)}` : "") : null} />
       <Field k="Fixed rate" v={d.fixedRatePct != null ? fmtPct(Number(d.fixedRatePct), 3) : null} />
       <Field k="Swaps" v={r.swaps.length ? r.swaps.map(w => w.termsPending ? `Swap${w.counterparty ? ` with ${w.counterparty}` : ""} — terms pending` : `${fmtM(w.notional)} at ${fmtPct(w.fixedSwapRatePct, 4)} to ${fmtDate(w.maturity)}`).join("\n") : null} />
@@ -225,7 +232,7 @@ function LoanDrawer({ r, isAdmin, onClose, onEdit, onDelete, onOpenDeal }: { r: 
       <Field k="Maturity" v={r.maturity ? `${fmtDate(r.maturity)}${r.daysToMaturity != null ? ` (${r.daysToMaturity < 0 ? `${-r.daysToMaturity} days ago` : `${r.daysToMaturity} days`})` : ""}` : null} />
       <Field k="Extension options" v={s(d.extensionOptions)} />
       <Field k="Extension notice" v={d.extensionNoticeDate ? fmtDate(String(d.extensionNoticeDate)) : null} />
-      <Field k="Amortization" v={[s(d.amortization), d.amortYears ? `${d.amortYears}-yr` : null, d.ioUntil ? `IO to ${fmtDate(String(d.ioUntil))}` : null].filter(Boolean).join(" · ") || null} />
+      <Field k="IO / Amort" v={r.ioAmort} />
       <Field k="Amortization terms" v={s(d.amortizationText)} />
       <Field k="Covenants" v={[s(d.covenants), d.dscrCovenant ? `DSCR ${d.dscrCovenant}x` : null, d.debtYieldCovenantPct ? `Debt yield ${d.debtYieldCovenantPct}%` : null].filter(Boolean).join("\n") || null} />
       <Field k="Prepayment" v={s(d.prepayment)} />
@@ -377,7 +384,7 @@ function ImportBox({ onDone, onClose }: { onDone: () => void; onClose: () => voi
 }
 
 // ── Debt tab ──────────────────────────────────────────────────────────────────
-const LOAN_COLS = ["Property", "Lender", "Balance", "Rate", "All-in", "Maturity", "Extension", "Recourse"];
+const LOAN_COLS = ["Property", "Lender", "Balance", "Rate", "All-in", "IO / Amort", "Maturity", "Extension", "Recourse"];
 const SWAP_COLS = ["Property", "Counterparty", "Notional", "Fixed swap", "All-in fixed", "Effective", "Maturity", "Market (remaining term)", "Mark-to-market", "Sources", ""];
 const PREF_COLS = ["Property", "Investor", "Amount", "Current pay", "All-in", "Current pay / yr", "Accrues / yr", "Redemption"];
 const s = (v: unknown): string | null => (v == null || String(v).trim() === "" ? null : String(v));
@@ -459,15 +466,15 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
                 <button key={r.record.id} onClick={() => setDrawer(r.record.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: "2px 10px", width: "100%", textAlign: "left", background: "#fff", border: "none", borderTop: k ? "1px solid #f3f2ee" : "none", padding: "11px 14px", cursor: "pointer", opacity: r.superseded ? 0.5 : 1, fontFamily: "inherit" }}>
                   <span style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.property}{r.loanLabel ? <span style={{ color: K.gray, fontWeight: 400 }}> · {r.loanLabel}</span> : null}</span>
                   <span style={{ fontSize: 13.5, color: K.ink, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{fmtM(r.balance)}{r.balanceIsOriginal ? "*" : ""}</span>
-                  <span style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ fontSize: 12, color: K.gray, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.lender ?? "—"} · {r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType ?? "—"} · {fmtDate(r.maturity)}</span><span style={{ flex: "none" }}><DocBadge rec={r.record} /></span></span>
+                  <span style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ fontSize: 12, color: K.gray, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.lender ?? "—"} · {rateLabel(r)}{r.partlySwapped ? " · partly" : ""} · {fmtDate(r.maturity)}</span><span style={{ flex: "none" }}><DocBadge rec={r.record} /></span></span>
                   <span style={{ fontSize: 12, color: K.gray, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtPct(r.allInPct, 2)}{r.estimated ? <span style={{ color: K.amber }}>~</span> : null}</span>
                 </button>
               ))}
             </div>
           ) : (
           <div style={{ ...card, overflowX: "auto" }}>
-            <table className="kpr-table" style={{ width: "100%", minWidth: 860, borderCollapse: "collapse", tableLayout: "fixed" }}>
-              <colgroup><col style={{ width: "21%" }} /><col style={{ width: "12%" }} /><col style={{ width: 92 }} /><col style={{ width: "15%" }} /><col style={{ width: 82 }} /><col style={{ width: 150 }} /><col style={{ width: "12%" }} /><col style={{ width: "14%" }} /></colgroup>
+            <table className="kpr-table" style={{ width: "100%", minWidth: 1000, borderCollapse: "collapse", tableLayout: "fixed" }}>
+              <colgroup><col style={{ width: "18%" }} /><col style={{ width: "10%" }} /><col style={{ width: 92 }} /><col style={{ width: "17%" }} /><col style={{ width: 82 }} /><col style={{ width: "13%" }} /><col style={{ width: 150 }} /><col style={{ width: "9%" }} /><col style={{ width: "11%" }} /></colgroup>
               <thead><tr>{LOAN_COLS.map(h => <th key={h} style={{ ...th, position: "static" }}>{h}</th>)}</tr></thead>
               <tbody>{rows.map((r: DebtRow) => {
                 const d = r.record.data;
@@ -477,8 +484,9 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
                     <td style={{ ...ell, overflow: "visible" }}><div style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={{ fontWeight: 600 }}>{r.property}</span>{r.loanLabel && <span style={{ color: K.gray }}> · {r.loanLabel}</span>}{r.superseded && <span style={{ color: K.gray }}> · Datex row (superseded)</span>}</span><span style={{ flex: "none" }}><DocBadge rec={r.record} /></span></div></td>
                     <td style={ell} title={r.lender ?? undefined}>{r.lender ?? "—"}</td>
                     <td style={{ ...num, verticalAlign: "middle" }}>{fmtM(r.balance)}{r.balanceIsOriginal ? "*" : ""}</td>
-                    <td style={ell}>{r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType ?? "—"}{r.spreadBps != null && r.rateClass !== "fixed" ? <span style={{ color: K.gray }}> +{r.spreadBps}</span> : null}</td>
-                    <td style={{ ...num, verticalAlign: "middle" }} title={r.allInSource}>{fmtPct(r.allInPct, 2)}{r.estimated ? <span style={{ color: K.amber }} aria-label="estimated from today's curve">~</span> : null}</td>
+                    <td style={ell} title={[rateLabel(r), partlyTxt(r)].filter(Boolean).join(" · ")}>{r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType ?? "—"}{r.spreadBps != null && r.rateClass !== "fixed" ? <span style={{ color: K.gray }}> +{r.spreadBps}</span> : null}{r.partlySwapped ? <span style={{ color: K.amber }}> · {partlyTxt(r)}</span> : null}</td>
+                    <td style={{ ...num, verticalAlign: "middle" }} title={allInTip(r)}>{fmtPct(r.allInPct, 2)}{r.estimated ? <span style={{ color: K.amber }} aria-label={r.allInBasis === "blended" ? "blended estimate (partly swapped)" : "estimated from today's curve"}>~</span> : null}</td>
+                    <td style={ell} title={r.ioAmort ?? undefined}>{r.ioAmort ?? "—"}</td>
                     <td style={ell}>{fmtDate(r.maturity)} {daysPill(r.daysToMaturity, r.flag)}</td>
                     <td style={ell} title={s(d.extensionOptions) ?? undefined}>{String(d.extensionOptions ?? "—")}</td>
                     <td style={ell} title={recourse}>{recourse}</td>
@@ -488,7 +496,7 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
             </table>
           </div>
           )}
-          <Src>One line per loan — tap a row for every field (covenants, prepayment, caps, notes, source). <span style={{ color: K.amber }}>~</span> = floating all-in estimated from today's 1M Term SOFR (max of the curve and the loan's index floor, plus spread; a live rate cap limits it). * = original balance (no current balance on file).</Src>
+          <Src>One line per loan — tap a row for every field (covenants, prepayment, caps, notes, source). <span style={{ color: K.amber }}>~</span> = all-in estimated from today's 1M Term SOFR (max of the curve and the loan's index floor, plus spread; a live rate cap limits it) — for a partly swapped loan, the swapped part at the swap rate and the rest at that estimate. A linked live swap always beats the stored rate type. Hover the All-in for its source. * = original balance (no current balance on file).</Src>
           {(() => { const r = rows.find(x => x.record.id === drawer); return r ? <LoanDrawer r={r} isAdmin={isAdmin} onClose={() => setDrawer(null)} onEdit={() => { setDrawer(null); setEdit({ kind: "loan", rec: r.record }); }} onDelete={() => { setDrawer(null); void del(r.record.id); }} onOpenDeal={onOpenDeal} /> : null; })()}
         </>
       )}

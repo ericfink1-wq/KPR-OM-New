@@ -228,7 +228,7 @@ export function sanitizeLoan(r: Record<string, unknown>): LoanRec {
     amortization: amort.includes("partial") ? "partial IO" : /\bio\b|interest[- ]only/.test(amort) ? "IO" : amort.includes("amort") ? "amortizing" : undefined,
     // "IO to 1/15/2030, then 30-yr amortization" → ioUntil + amortYears, read from the text.
     amortYears: num(r.amortYears, 1, 50) ?? num(/(\d{2})[- ]?(?:yr|year)s?\s*amort/i.exec(String(r.amortization ?? ""))?.[1], 1, 50),
-    ioUntil: isoDate(r.ioUntil) ?? isoDate(/(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2})/.exec(String(r.ioPeriod ?? r.interestOnly ?? (/\bIO\b|interest[- ]only/i.test(String(r.amortization ?? "")) ? r.amortization : "")))?.[1]),
+    ioUntil: isoDate(r.ioUntil ?? r.ioEndDate) ?? isoDate(/(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2})/.exec(String(r.ioPeriod ?? r.interestOnly ?? (/\bIO\b|interest[- ]only/i.test(String(r.amortization ?? "")) ? r.amortization : "")))?.[1]),
     amortizationText: str(r.amortization, 300),
     dscrCovenant: num(r.dscrCovenant ?? r.dscr, 0.5, 5), debtYieldCovenantPct: pct(r.debtYieldCovenantPct ?? r.debtYieldCovenant),
     recourse: str(r.recourse), guarantor: str(r.guarantor), datexLoanId: num(r.datexLoanId, 0), notes: text(r.notes),
@@ -268,7 +268,7 @@ export function sanitizeDate(r: Record<string, unknown>): DateRec {
 // ── Columns we don't model are KEPT, not silently dropped (Eric's 10/18 seed lost its
 //    covenant, prepayment and Drive-link columns to a whitelist). Bounded, primitive-ish only.
 const META_KEYS = new Set(["kind", "id", "dealId", "bldgId", "BLDGID", "property", "propertyName", "source", "sourceNote"]);
-const ALIAS_KEYS = new Set(["sources", "missingDocs", "spread", "spreadPct", "spread_bps", "originalAmount", "balance", "name", "fixedRate", "allInRate", "startDate", "maturity",
+const ALIAS_KEYS = new Set(["ioEndDate", "sources", "missingDocs", "spread", "spreadPct", "spread_bps", "originalAmount", "balance", "name", "fixedRate", "allInRate", "startDate", "maturity",
   "dscr", "debtYieldCovenant", "swapRate", "allIn", "terminationDate", "floatingIndex", "label", "prepaymentTerms", "prepay", "provider",
   "prefRatePct", "rate", "allInPct", "currentPay", "cashPayPct", "accrualPct", "accrued", "accrual", "rateSteps", "steps", "price", "closingDate", "noiAtClose", "goingInCap", "capRate", "kpOwnershipPct", "kpPercent", "jv", "partner"]);
 function withExtras(raw: Record<string, unknown>, clean: Record<string, unknown>): Record<string, unknown> {

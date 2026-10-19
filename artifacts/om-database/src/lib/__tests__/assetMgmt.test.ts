@@ -35,7 +35,7 @@ describe("debt & swaps", () => {
   it("all-in = swap fixed + spread for a swapped loan (Bensalem 4.08% + 2.36% = 6.44%)", () => {
     const b = rows.find(r => r.dealId === "bens")!;
     expect(b.allInPct).toBeCloseTo(6.44, 4);
-    expect(b.allInSource).toBe("swap fixed + spread");
+    expect(b.allInBasis).toBe("swap"); expect(b.partlySwapped).toBeNull();
   });
   it("floating = live 1M Term SOFR spot + spread; flags a maturity inside 12 months red", () => {
     const w = rows.find(r => r.record.id === "loan:w")!;

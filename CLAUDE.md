@@ -14,6 +14,12 @@ it through these. Boundary tests: `__tests__/money.test.ts`.
   spread, capped at the highest LIVE strike; `estimated:true` (shown "~"). `rateClass` fixed/swapped/capped/floating →
   `debtTotals.byClass`; a live cap counts as hedged. Swap `termsPending` is DERIVED from the terms everywhere
   (`withTermsPending` on sanitize, import merge, upsert, read; startup heal) — never trust a stored flag.
+- Swapped loans (Andy, 10/19/26): a LIVE linked swap (not matured) makes a loan "swapped" whatever `rateType` says
+  (Bensalem stored "fixed 6.44%"); link = loanId, else label match, else unlabelled, else the property's ONLY loan.
+  Live priced notional < 99.5% of balance → `partlySwapped`, all-in BLENDED (swap all-in on the notional + curve/floor +
+  spread on the rest, `estimated`); an entered all-in that just equals the swap rate is ignored for the blend.
+  `allInBasis` = swap / curve est. / fixed note / blended / as entered (All-in tooltip + drawer). `ioAmortLabel` →
+  IO / Amort column from `ioUntil` (alias `ioEndDate`) + `amortYears` + maturity; "—" when unknown.
 - Dates: `keyDebtDeadlines` (cap expiries grouped across loans, extension-notice WINDOWS parsed from text, maturities ≤12 mo)
   pinned above the window; `collapsePortfolioCovenants` (same type+date+description on ≥3 properties → one
   "<Name> portfolio (N properties)" row, name from `portfolioName`). Owner = acquisition row `assetManager` → Datex.

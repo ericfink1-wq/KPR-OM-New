@@ -126,6 +126,12 @@ export interface DebtRow {
   rateClass: "fixed" | "swapped" | "capped" | "floating" | null;
   /** All-in estimated from today's curve (a floating loan) rather than a stated rate. */
   estimated: boolean; floorPct: number | null; caps: RateCap[]; cappedMaxPct: number | null;
+  /** What drove the all-in (Andy, 10/19/26): swap / curve est. / fixed note / blended (partial swap) / as entered. */
+  allInBasis: "swap" | "curve est." | "fixed note" | "blended" | "as entered" | null;
+  /** Live swap notional below the balance → the all-in is blended. */
+  partlySwapped: { swapped: number; balance: number } | null;
+  /** "IO full term" / "IO to Jan 2030, then 25-yr" / "30-yr amort"; null = unknown. */
+  ioAmort: string | null;
 }
 export interface SwapRow {
   record: AmRecord; dealId: string; property: string; counterparty: string | null; notional: number | null; fixedSwapRatePct: number | null;
@@ -154,55 +160,109 @@ export function buildSwapRows(records: AmRecord[], names: Map<string, string>, r
   });
 }
 
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const monYr = (iso: string) => `${MON[Number(iso.slice(5, 7)) - 1] ?? ""} ${iso.slice(0, 4)}`.trim();
+/** "IO full term" / "IO to Jan 2030, then 25-yr" / "30-yr amort" — from ioUntil (alias ioEndDate) + amortYears + maturity. Null = unknown. */
+export function ioAmortLabel(d: Record<string, unknown>): string | null {
+  const io = s(d.ioUntil) ?? s(d.ioEndDate), yrs = n(d.amortYears), mat = s(d.maturityDate), kind = String(d.amortization ?? "").toLowerCase();
+  const then = yrs ? `${yrs}-yr` : "amortizing";
+  if (io && mat) return io.slice(0, 10) >= mat.slice(0, 10) ? "IO full term" : `IO to ${monYr(io)}, then ${then}`;
+  if (io) return `IO to ${monYr(io)}${yrs ? `, then ${yrs}-yr` : ""}`;
+  if (kind === "io" && !yrs) return "IO full term";
+  if (kind === "partial io") return `Partial IO, then ${then}`;
+  if (yrs) return `${yrs}-yr amort`;
+  if (kind === "amortizing") return "Amortizing";
+  return null;
+}
+
 export function buildDebtRows(records: AmRecord[], deals: Deal[], rates: RatesPayload | null, today: Date): DebtRow[] {
   const names = new Map(deals.map(d => [d.id, d.propertyName || "Untitled"]));
   const swaps = buildSwapRows(records, names, rates, today);
   const spot = termSofrSpot(rates);
+  const todayIso = today.toISOString().slice(0, 10);
   const loans = records.filter(r => r.kind === "loan" && r.dealId && names.has(r.dealId));
   const enteredDeals = new Set(loans.filter(r => !r.id.startsWith("datex-loan:")).map(r => r.dealId));
+  // Loans that "count" on a property — Datex-only rows drop out once a loan is entered.
+  const loansOn = (dealId: string) => loans.filter(l => l.dealId === dealId && (!l.id.startsWith("datex-loan:") || !enteredDeals.has(dealId)));
+  const labelOf = (r: AmRecord) => s(r.data.loanLabel)?.toLowerCase() ?? null;
   return loans.map(r => {
     const d = r.data, datexOnly = r.id.startsWith("datex-loan:");
-    const cur = n(d.currentBalance), orig = n(d.originalBalance), spread = loanSpreadBps(d);
+    const cur = n(d.currentBalance), orig = n(d.originalBalance), loanSpread = loanSpreadBps(d);
+    const balance = cur ?? orig;
     // A swap names its loan by id or by loanLabel (Rockaway: Commons / Town Court / Town Plaza);
-    // an unlabelled one belongs to the property's loans.
-    const label = s(d.loanLabel);
-    const mySwaps = swaps.filter(w => w.dealId === r.dealId
-      && (s(w.record.data.loanId) ? w.record.data.loanId === r.id : !w.loanLabel || !label || w.loanLabel.toLowerCase() === label.toLowerCase()));
+    // an unlabelled one belongs to the property's loans. A labelled swap whose label matches no
+    // loan on the property still belongs to the property's ONLY loan (label drift between files).
+    const label = s(d.loanLabel), siblings = loansOn(r.dealId!);
+    const mySwaps = swaps.filter(w => {
+      if (w.dealId !== r.dealId) return false;
+      if (s(w.record.data.loanId)) return w.record.data.loanId === r.id;
+      if (!w.loanLabel || !label) return true;
+      const wl = w.loanLabel.toLowerCase();
+      if (wl === label.toLowerCase()) return true;
+      return siblings.length === 1 && siblings[0].id === r.id && !siblings.some(l => labelOf(l) === wl);
+    });
+    // Live = not matured. Any live linked swap makes the loan SWAPPED whatever rateType says
+    // (Bensalem: stored "fixed 6.44%" is a SOFR+236 loan swapped to 6.44%).
+    const liveSwaps = mySwaps.filter(w => !w.maturity || w.maturity >= todayIso);
+    const pricedSwaps = liveSwaps.filter(w => !w.termsPending && w.allInFixedPct != null);
+    const spread = loanSpread ?? (liveSwaps.length ? n(liveSwaps.find(w => n(w.record.data.spreadBps) != null)?.record.data.spreadBps) : null);
     const idx = s(d.index);
     const looksFloating = spread != null && /sofr|libor|prime|index|term/i.test(`${idx ?? ""} ${s(d.rateType) ?? ""}`);
-    const type = s(d.rateType) ?? (mySwaps.length ? "swapped" : n(d.fixedRatePct) != null && spread == null ? "fixed" : spread != null || looksFloating ? "floating" : null);
+    const type = liveSwaps.length ? "swapped"
+      : s(d.rateType) ?? (mySwaps.length ? "swapped" : n(d.fixedRatePct) != null && spread == null ? "fixed" : spread != null || looksFloating ? "floating" : null);
     const floor = loanFloorPct(d);
     const caps = loanRateCaps(d);
-    const liveCaps = caps.filter(c => !c.expiry || c.expiry >= today.toISOString().slice(0, 10));
-    let allIn = n(d.allInRatePct), src = allIn != null ? "as entered" : "", estimated = false;
-    const priced = mySwaps.find(w => !w.termsPending && w.allInFixedPct != null);
-    if (allIn == null && type === "swapped" && priced) { allIn = priced.allInFixedPct; src = "swap fixed + spread"; }
-    if (allIn == null && type === "fixed" && n(d.fixedRatePct) != null) { allIn = n(d.fixedRatePct); src = "fixed rate"; }
-    const floating = /float|capped/i.test(type ?? "");
-    // Highest live strike = the conservative ceiling when a loan sits under more than one cap.
-    const capStrike = floating && liveCaps.length ? Math.max(...liveCaps.map(c => c.strikePct)) : null;
-    if (allIn == null && floating && spread != null) {
+    const liveCaps = caps.filter(c => !c.expiry || c.expiry >= todayIso);
+    const capStrike = liveCaps.length ? Math.max(...liveCaps.map(c => c.strikePct)) : null;
+    // Floating all-in off today's curve: max(index, floor) + spread, capped at the highest live strike.
+    const curveRate = (sp: number) => {
       const daily = isDailySofr(idx);
       const base = daily && rates?.sofrOvernight ? { rate: rates.sofrOvernight.rate, label: "SOFR overnight" }
         : spot.rate != null ? { rate: spot.rate, label: "1M Term SOFR" }
         : rates?.sofrOvernight ? { rate: rates.sofrOvernight.rate, label: "SOFR overnight (1M Term n/a)" } : null;
-      if (base) {
-        let ix = floor != null ? Math.max(base.rate, floor) : base.rate;
-        const floorBinds = floor != null && floor > base.rate;
-        const capBinds = capStrike != null && ix > capStrike;
-        if (capBinds) ix = capStrike!;
-        allIn = Math.round((ix + spread / 100) * 10000) / 10000;
-        estimated = true;
-        src = `est. from curve: ${base.label} ${base.rate.toFixed(3)}%${floorBinds ? ` → ${floor!.toFixed(2)}% floor` : ""}${capBinds ? ` → capped ${capStrike!.toFixed(2)}%` : ""} + ${spread} bps`;
-      }
+      if (!base) return null;
+      let ix = floor != null ? Math.max(base.rate, floor) : base.rate;
+      const floorBinds = floor != null && floor > base.rate;
+      const capBinds = capStrike != null && ix > capStrike;
+      if (capBinds) ix = capStrike!;
+      return { pct: Math.round((ix + sp / 100) * 10000) / 10000,
+        label: `${base.label} ${base.rate.toFixed(3)}%${floorBinds ? ` → ${floor!.toFixed(2)}% floor` : ""}${capBinds ? ` → capped ${capStrike!.toFixed(2)}%` : ""} + ${sp} bps` };
+    };
+    const entered = n(d.allInRatePct);
+    let allIn: number | null = null, src = "", estimated = false, basis: DebtRow["allInBasis"] = null, partly: DebtRow["partlySwapped"] = null;
+    if (type === "swapped" && pricedSwaps.length) {
+      const swapped = pricedSwaps.reduce((t, w) => t + (w.notional ?? 0), 0);
+      const swapFixed = swapped > 0 ? pricedSwaps.reduce((t, w) => t + (w.notional ?? 0) * w.allInFixedPct!, 0) / swapped : pricedSwaps[0].allInFixedPct!;
+      const fixedTxt = `${+swapFixed.toFixed(3)}%`;
+      if (balance != null && swapped > 0 && swapped < balance * 0.995) {
+        // Partial swap: swapped part at the swap all-in, the rest floats at curve + spread.
+        partly = { swapped, balance };
+        const rest = spread != null ? curveRate(spread) : null;
+        // A human-entered all-in that is just the swap rate is the bug Andy flagged — blend instead.
+        if (entered != null && Math.abs(entered - swapFixed) > 0.01) { allIn = entered; src = "as entered"; basis = "as entered"; }
+        else if (rest) {
+          allIn = Math.round(((swapped * swapFixed + (balance - swapped) * rest.pct) / balance) * 10000) / 10000;
+          estimated = true; basis = "blended";
+          src = `blended: ${fmtMoney(swapped)} at swap ${fixedTxt} + ${fmtMoney(balance - swapped)} unswapped at ${rest.label}`;
+        } else src = `partly swapped — unswapped ${fmtMoney(balance - swapped)} can't be priced (${spread == null ? "no loan spread on file" : "no SOFR rate"})`;
+      } else if (entered != null) { allIn = entered; src = "as entered"; basis = "as entered"; }
+      else { allIn = Math.round(swapFixed * 10000) / 10000; src = `swap all-in fixed ${fixedTxt}`; basis = "swap"; }
+    } else if (entered != null) { allIn = entered; src = "as entered"; basis = "as entered"; }
+    else if (type === "swapped" && liveSwaps.length) src = "swap terms pending — not priced";
+    else if (type === "fixed" && n(d.fixedRatePct) != null) { allIn = n(d.fixedRatePct); src = "fixed rate per note"; basis = "fixed note"; }
+    const floating = /float|capped/i.test(type ?? "");
+    if (allIn == null && !src && floating && spread != null) {
+      const c = curveRate(spread);
+      if (c) { allIn = c.pct; estimated = true; basis = "curve est."; src = `est. from curve: ${c.label}`; }
     }
     const rateClass: DebtRow["rateClass"] = type === "fixed" ? "fixed" : type === "swapped" ? "swapped" : floating ? (liveCaps.length ? "capped" : "floating") : null;
     const maturity = s(d.maturityDate), days = daysUntil(maturity, today);
     return {
-      record: r, dealId: r.dealId!, property: names.get(r.dealId!)!, lender: s(d.lender), balance: cur ?? orig, balanceIsOriginal: cur == null && orig != null,
+      record: r, dealId: r.dealId!, property: names.get(r.dealId!)!, lender: s(d.lender), balance, balanceIsOriginal: cur == null && orig != null,
       rateType: type, index: idx, spreadBps: spread, allInPct: allIn, allInSource: src || "not enough terms", maturity, daysToMaturity: days, flag: flagFor(days),
       swaps: mySwaps, datexOnly, superseded: datexOnly && enteredDeals.has(r.dealId), loanLabel: label,
-      rateClass, estimated, floorPct: floor, caps, cappedMaxPct: capStrike != null && spread != null ? Math.round((Math.max(capStrike, floor ?? 0) + spread / 100) * 10000) / 10000 : null,
+      rateClass, estimated, floorPct: floor, caps, cappedMaxPct: floating && capStrike != null && spread != null ? Math.round((Math.max(capStrike, floor ?? 0) + spread / 100) * 10000) / 10000 : null,
+      allInBasis: basis, partlySwapped: partly, ioAmort: ioAmortLabel(d),
     };
   }).sort((a, b) => (a.maturity ?? "9999").localeCompare(b.maturity ?? "9999"));
 }

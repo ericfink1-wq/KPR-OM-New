@@ -140,3 +140,56 @@ describe("record sources", () => {
     expect(recordSources(rec("e", "loan", "c1", {})).count).toBe(0);
   });
 });
+
+describe("swapped / partly swapped loans + IO / Amort (Andy, 10/19/26)", () => {
+  const ds = [{ id: "p", propertyName: "Pointe Plaza" }, { id: "b", propertyName: "Plaza at Bensalem" }, { id: "r", propertyName: "Rockaway" }, { id: "x", propertyName: "Solo" }] as unknown as Deal[];
+  it("partial swap blends: swapped part at the swap all-in, the rest at curve SOFR + spread, marked ~", () => {
+    const rows = buildDebtRows([
+      rec("lp", "loan", "p", { currentBalance: 26e6, rateType: "floating", index: "1M Term SOFR", spreadBps: 200, maturityDate: "2030-01-01" }),
+      rec("sp", "swap", "p", { notional: 23.5e6, fixedSwapRatePct: 3.8, spreadBps: 200, maturityDate: "2030-01-01" }),
+    ], ds, rates, today);
+    const r = rows[0];
+    expect(r.rateClass).toBe("swapped");
+    expect(r.partlySwapped).toEqual({ swapped: 23.5e6, balance: 26e6 });
+    expect(r.allInBasis).toBe("blended");
+    expect(r.estimated).toBe(true);
+    expect(r.allInPct).toBeCloseTo((23.5 * 5.8 + 2.5 * (3.95 + 2)) / 26, 3);
+    expect(r.allInSource).toMatch(/blended/);
+  });
+  it("a fully swapped loan is unchanged: swap all-in, not estimated", () => {
+    const r = buildDebtRows([
+      rec("lr", "loan", "r", { currentBalance: 22.72e6, rateType: "floating", spreadBps: 175, loanLabel: "Commons", maturityDate: "2031-01-01" }),
+      rec("sr", "swap", "r", { notional: 22.72e6, fixedSwapRatePct: 3.6, spreadBps: 175, loanLabel: "Commons", maturityDate: "2031-01-01" }),
+    ], ds, rates, today)[0];
+    expect(r.allInPct).toBeCloseTo(5.35, 4); expect(r.allInBasis).toBe("swap"); expect(r.estimated).toBe(false); expect(r.partlySwapped).toBeNull();
+  });
+  it("rateType floating/fixed + a linked live swap → uses the swap, never curve SOFR + spread (Bensalem → Swapped +236)", () => {
+    for (const rateType of ["floating", "fixed"]) {
+      const r = buildDebtRows([
+        rec("lb", "loan", "b", { currentBalance: 13.65e6, rateType, fixedRatePct: rateType === "fixed" ? 6.44 : undefined, index: "1M Term SOFR + 236 bps", loanLabel: "M&T loan", maturityDate: "2030-02-01" }),
+        rec("sb", "swap", "b", { notional: 13.65e6, fixedSwapRatePct: 4.08, spreadBps: 236, loanLabel: "M&T Senior", maturityDate: "2030-02-01" }),
+      ], ds, rates, today)[0];
+      expect(r.rateClass).toBe("swapped");
+      expect(r.spreadBps).toBe(236);
+      expect(r.allInPct).toBeCloseTo(6.44, 4);
+      expect(r.allInBasis).toBe("swap");
+      expect(r.estimated).toBe(false);
+    }
+  });
+  it("a matured swap no longer overrides the loan", () => {
+    const r = buildDebtRows([
+      rec("lx", "loan", "x", { currentBalance: 10e6, rateType: "floating", spreadBps: 200 }),
+      rec("sx", "swap", "x", { notional: 10e6, fixedSwapRatePct: 3, spreadBps: 200, maturityDate: "2025-01-01" }),
+    ], ds, rates, today)[0];
+    expect(r.rateClass).toBe("floating"); expect(r.allInBasis).toBe("curve est.");
+  });
+  it("IO / Amort label from ioUntil|ioEndDate + amortYears + maturity", () => {
+    const lbl = (data: Record<string, unknown>) => buildDebtRows([rec("l", "loan", "x", data)], ds, rates, today)[0].ioAmort;
+    expect(lbl({ ioEndDate: "2030-01-15", amortYears: 25, maturityDate: "2032-01-15" })).toBe("IO to Jan 2030, then 25-yr");
+    expect(lbl({ ioUntil: "2029-03-01", amortYears: 30, maturityDate: "2031-03-01" })).toBe("IO to Mar 2029, then 30-yr");
+    expect(lbl({ ioUntil: "2031-03-01", maturityDate: "2031-03-01" })).toBe("IO full term");
+    expect(lbl({ amortization: "IO", maturityDate: "2031-03-01" })).toBe("IO full term");
+    expect(lbl({ amortYears: 30, amortization: "amortizing" })).toBe("30-yr amort");
+    expect(lbl({ lender: "X" })).toBeNull();
+  });
+});
