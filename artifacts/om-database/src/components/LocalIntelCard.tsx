@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { apiLocalIntelScan, apiLocalIntelDismiss, type LocalIntelResponse, type IntelFinding } from "../lib/api";
-import { INTEL_CATEGORY_LABEL, intelMeta, safeHref } from "../lib/localIntel";
+import { INTEL_CATEGORY_LABEL, intelMeta, safeHref, groupByCategory } from "../lib/localIntel";
 
-// Local Intel card (Eric, 10/19/26): local news & development around the site from a web
-// scan — competing supply, tenant health, demand, access, municipal, property-specific.
-// Every item is dated and sourced; admins / the owner can Refresh and mark an item "Not
-// relevant" (sticks across re-scans). High-severity negatives also appear in Red Flags.
+// Local Intel box (Eric, 10/19/26) — a standalone, RAW view on the Summary tab: EVERY finding
+// the web scan returned (low-severity and positive items too), grouped by category, each with
+// its date and source links. Admins / the owner can Refresh and mark an item "Not relevant"
+// (sticks across re-scans). The important items are separately woven into Red Flags, Upside
+// and the AI grade; this box is where all of it can be read as found.
 const IMPACT: Record<IntelFinding["impact"], { label: string; color: string; bg: string }> = {
   negative: { label: "Negative", color: "#a1361f", bg: "#fbece8" },
   positive: { label: "Positive", color: "#2f6b1c", bg: "#ecf6e5" },
@@ -43,12 +44,13 @@ export default function LocalIntelCard({ dealId, data, onChange }: { dealId: str
     <div id="section-localintel" style={{ background: "#fff", border: "1px solid #dfddd6", borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 700, color: "#6b6a65" }}>Local Intel</div>
+          <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 16, fontWeight: 600, color: "#232422" }}>Local Intel — what the internet found</div>
           <div style={{ fontSize: 11.5, color: "#8a8983", marginTop: 3 }}>
             {rec?.scannedAt
               ? <>Last scanned {new Date(rec.scannedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}{rec.trigger === "monthly" ? " (monthly re-scan)" : rec.trigger === "new-om" ? " (after upload)" : ""} · local news within ~{rec.radiusMiles} mi · {rec.searchesUsed} searches</>
               : "Not scanned yet — local news, competing stores, tenant closures, road and zoning changes near the site."}
           </div>
+          {rec?.scannedAt && <div style={{ fontSize: 11.5, color: "#8a8983", marginTop: 2 }}>Everything the scan returned, as found. The important items also appear in Red Flags, Upside and the AI grade.</div>}
         </div>
         {data.canScan && data.configured && (
           <button onClick={refresh} disabled={scanning} style={{ ...btn, opacity: scanning ? 0.6 : 1, cursor: scanning ? "default" : "pointer" }}
@@ -65,9 +67,12 @@ export default function LocalIntelCard({ dealId, data, onChange }: { dealId: str
         <div style={{ fontSize: 12.5, color: "#676767", marginTop: 10 }}>Nothing material found in the last 24 months{dismissed.length ? " (other than items marked not relevant)" : ""}.</div>
       )}
 
-      {shown.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", marginTop: 8 }}>
-          {shown.map(f => {
+      {shown.length > 0 && groupByCategory(shown).map(([cat, items]) => (
+        <div key={cat} style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#383a37", paddingBottom: 4, borderBottom: "1.5px solid #e6e4de" }}>
+            {INTEL_CATEGORY_LABEL[cat]} <span style={{ color: "#8a8983", fontWeight: 600 }}>· {items.length}</span>
+          </div>
+          {items.map(f => {
             const imp = IMPACT[f.impact];
             const meta = intelMeta(f);
             return (
@@ -75,13 +80,13 @@ export default function LocalIntelCard({ dealId, data, onChange }: { dealId: str
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 4 }}>
                   <span style={{ fontSize: 9.5, fontWeight: 700, color: SEV[f.severity], border: `1px solid ${SEV[f.severity]}55`, padding: "1px 6px", borderRadius: 3, textTransform: "uppercase" }}>{f.severity}</span>
                   <span style={{ fontSize: 10.5, fontWeight: 700, color: imp.color, background: imp.bg, padding: "2px 7px", borderRadius: 4 }}>{imp.label}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: "#676767", background: "#f3f2ee", padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>{INTEL_CATEGORY_LABEL[f.category]}</span>
                   {f.isNew && !f.dismissed && <span style={{ fontSize: 9.5, fontWeight: 800, color: "#fff", background: "#5bba47", padding: "2px 6px", borderRadius: 3 }}>NEW</span>}
                   {f.dismissed && <span style={{ fontSize: 10.5, color: "#8a8983" }}>marked not relevant</span>}
                 </div>
                 <div style={{ fontSize: 13.5, fontWeight: 600, color: "#232422", lineHeight: 1.4, overflowWrap: "break-word" }}>{f.headline}</div>
                 {f.whyItMatters && <div style={{ fontSize: 12.5, color: "#55584f", lineHeight: 1.5, marginTop: 2 }}>{f.whyItMatters}</div>}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", alignItems: "center", marginTop: 5, fontSize: 11.5, color: "#8a8983" }}>
+                  {!f.date && <span>Undated</span>}
                   {meta && <span title={f.distanceBasis === "geocoded" ? "Distance measured from both addresses" : f.distanceBasis === "reported" ? "Distance as the source states it" : f.distanceMiles != null ? "Approximate distance" : ""}>{meta}</span>}
                   {f.sources.map((s, i) => { const h = safeHref(s.url); return h ? (
                     <a key={i} href={h} target="_blank" rel="noopener noreferrer nofollow" style={{ color: "#2c6e9b", textDecoration: "none", overflowWrap: "anywhere" }}>{s.title || new URL(h).hostname} ↗</a>
@@ -97,7 +102,7 @@ export default function LocalIntelCard({ dealId, data, onChange }: { dealId: str
             );
           })}
         </div>
-      )}
+      ))}
       {dismissed.length > 0 && (
         <button onClick={() => setShowDismissed(s => !s)} style={{ marginTop: 4, background: "transparent", border: "none", padding: "6px 0", color: "#2c6e9b", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Roboto',sans-serif" }}>
           {showDismissed ? "Hide items marked not relevant" : `Show ${dismissed.length} marked not relevant`}

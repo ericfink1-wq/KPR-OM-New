@@ -3500,9 +3500,6 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         );
       })()}
 
-      {/* Local Intel — local news & development around the site (web scan, sourced). */}
-      <LocalIntelCard dealId={d.id} data={localIntel} onChange={setLocalIntel} />
-
       {/* Lease economics — NEUTRAL data point, not a risk. Below-market rent locked
           in by options is secure, sticky income; the mark-to-market simply isn't
           capturable in the hold. Only its genuine-risk cases carry a caution line. */}
@@ -3548,6 +3545,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
 
       {/* What changed between this property's earlier documents and now. */}
       <PropertyHistoryCard deal={d} />
+
+      {/* Local Intel — the RAW view: every finding the web scan returned, grouped by category
+          (Eric, 10/19/26). The important ones are ALSO woven into Red Flags / Upside / the grade. */}
+      <LocalIntelCard dealId={d.id} data={localIntel} onChange={setLocalIntel} />
 
       {/* Every file uploaded against this deal — what, what it did, who, when. */}
       <UploadHistoryCard data={uploader} />

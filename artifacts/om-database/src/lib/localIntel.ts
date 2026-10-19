@@ -7,6 +7,15 @@ export const INTEL_CATEGORY_LABEL: Record<IntelCategory, string> = {
   access: "Access & infrastructure", municipal: "Municipal", property: "Property-specific",
 };
 
+export const INTEL_CATEGORY_ORDER: IntelCategory[] = ["competing_supply", "tenant_health", "demand", "access", "municipal", "property"];
+const SEV_RANK = { high: 0, medium: 1, low: 2 } as const;
+/** Every finding grouped by category (fixed order), each group by severity then newest first. Empty groups omitted. */
+export function groupByCategory(fs: IntelFinding[]): Array<[IntelCategory, IntelFinding[]]> {
+  return INTEL_CATEGORY_ORDER
+    .map(c => [c, fs.filter(f => f.category === c).sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity] || (b.date ?? "").localeCompare(a.date ?? ""))] as [IntelCategory, IntelFinding[]])
+    .filter(([, items]) => items.length > 0);
+}
+
 /** "Jun 2026" / "Jun 12, 2026" from YYYY-MM or YYYY-MM-DD. */
 export function fmtIntelDate(d: string | null): string | null {
   if (!d) return null;

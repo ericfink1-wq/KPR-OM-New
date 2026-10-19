@@ -16,7 +16,9 @@ marker `local_intel_meta` — NO new table. Auto: PUT of a new document / first 
 `enqueueLocalIntel` (skipped if scanned <7 days); the open app's `useLocalIntelTick` → `POST /local-intel/tick` runs ONE
 queued scan (claim with SKIP LOCKED; skips `_ingestBy`/processing rows; ≤25 auto scans/day); the tick also queues Owned
 deals not scanned in 30 days (once a day). Manual Refresh / dismiss = admin or owner (`POST /deals/:id/local-intel/scan`,
-`/dismiss`). UI: `LocalIntelCard` (AI Analysis tab, after Red Flags); high-severity negatives → Red Flags and positives →
+`/dismiss`). UI: `LocalIntelCard` = the RAW view (Eric, 10/19/26: "a clearly separate, standalone box") — "Local Intel — what
+the internet found" on the SUMMARY tab, EVERY finding (low + positive too) grouped by category (`groupByCategory`) with date +
+sources; the weaving is separate: high-severity negatives → Red Flags and positives →
 Upside LIVE (`intelRedFlags`/`intelUpside`, nothing written to the deal); grade sees `localIntel` in the roster snapshot +
 the LOCAL INTEL prompt rule; owned alerts (`GET /local-intel/alerts`) on Credit Watch + home This week. The MCP doesn't
 expose it yet. Tests: localIntel.test.ts (api), localIntelUi.test.ts (web). NOTE: Fred Meyer Bend's record has NO
