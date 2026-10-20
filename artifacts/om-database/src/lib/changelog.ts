@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-20-om-date-misread",
+    date: "2026-10-20",
+    category: "fixed",
+    title: "OM dates no longer picked up from a tenant's lease date",
+    detail: "Some OMs were dated by a lease date printed near the front (Latham Farms' 2026 OM read as October 2015, from Dick's original lease), so the roster said \"as of 2015\" and remaining-term checks were off by a decade. A date the property's own rent roll contradicts is now rejected, and deals already affected re-date themselves.",
+    where: "Deal page → Tenants (the \"As of\" tag on the roster)",
+  },
+  {
     id: "2026-10-19-local-intel",
     date: "2026-10-19",
     category: "new",

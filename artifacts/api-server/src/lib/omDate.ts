@@ -71,18 +71,38 @@ function scan(text: string, now: Date): string | null {
   return null;
 }
 
+type RosterRow = { leaseStart?: unknown; leaseExpiry?: unknown; originalLeaseDate?: unknown };
+const isoOf = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null);
+/** A candidate the deal's OWN roster proves is not the OM's date (Latham Farms, 10/20/26: the
+ *  cover text carried Dick's 2015-10-21 lease date and the 2026 OM was dated 2015). Rejected when
+ *  it IS a tenant's lease date, or when the roster lists a lease that had already COMMENCED more
+ *  than 18 months after it — an OM can't describe a store that opened years after it printed. */
+export function contradictsRoster(date: string, tenants: unknown, uploadedAt?: string | null): boolean {
+  if (!Array.isArray(tenants) || !tenants.length) return false;
+  const up = isoOf(uploadedAt) ?? "9999-12-31";
+  let latestStarted: string | null = null;
+  for (const t of tenants as RosterRow[]) {
+    if (!t || typeof t !== "object") continue;
+    for (const k of ["leaseStart", "leaseExpiry", "originalLeaseDate"] as const) if (isoOf(t[k]) === date) return true;
+    const s = isoOf(t.leaseStart);
+    if (s && s <= up && (!latestStarted || s > latestStarted)) latestStarted = s;
+  }
+  return !!latestStarted && Date.parse(date) < Date.parse(latestStarted) - 548 * 86400_000;
+}
+
 /** Pure. The cover first; then only LABELLED dates elsewhere — a whole OM is full of lease and
  *  sale dates that are not its own, so an unlabelled date past the cover is never taken. */
-export function findOmDate(input: { sourceText?: string | null; fileName?: string | null; uploadedAt?: string | null }, now = new Date()): { omDate: string; omDateSource: OmDateSource } | null {
+export function findOmDate(input: { sourceText?: string | null; fileName?: string | null; uploadedAt?: string | null; tenants?: unknown }, now = new Date()): { omDate: string; omDateSource: OmDateSource } | null {
+  const ok = (d: string | null): d is string => !!d && !contradictsRoster(d, input.tenants, input.uploadedAt);
   const cover = (input.sourceText ?? "").slice(0, 1500);
   const fromCover = cover ? scan(cover, now) : null;
-  if (fromCover && nearUpload(fromCover, input.uploadedAt)) return { omDate: fromCover, omDateSource: "pdf" };
+  if (ok(fromCover) && nearUpload(fromCover, input.uploadedAt)) return { omDate: fromCover, omDateSource: "pdf" };
   // No date on the cover (common): a labelled date anywhere — the rent roll's "as of", a
   // footer "dated …" — still beats the upload date (Eric, 10/17/26).
   const fromBody = input.sourceText ? labelledDate(input.sourceText, now, input.uploadedAt) : null;
-  if (fromBody) return { omDate: fromBody, omDateSource: "pdf" };
+  if (ok(fromBody)) return { omDate: fromBody, omDateSource: "pdf" };
   const fromName = input.fileName ? scan(input.fileName.replace(/\.(pdf|xlsx?)$/i, ""), now) : null;
-  if (fromName) return { omDate: fromName, omDateSource: "file-name" };
+  if (ok(fromName)) return { omDate: fromName, omDateSource: "file-name" };
   // The upload-date stand-in only for a record that came from a DOCUMENT — a hand-added
   // property (no file, no text) has no OM to date.
   const fromDoc = !!(input.fileName && input.fileName.trim()) || !!(input.sourceText && input.sourceText.trim());

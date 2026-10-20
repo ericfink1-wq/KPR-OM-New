@@ -54,3 +54,27 @@ describe("OM date — labelled dates past the cover (Eric, 10/17/26)", () => {
     expect(findOmDate({ sourceText: filler + " Kohl's lease commenced March 2019", uploadedAt: "2026-09-01" }, now)?.omDateSource).toBe("upload-date");
   });
 });
+
+describe("OM date — the roster disproves a misread (Latham Farms, 10/20/26)", () => {
+  // Real case: the 2026 OM's opening text carried Dick's 2015-10-21 original lease date and the
+  // deal was dated 2015 — the roster then read "as of Oct 21, 2015" next to a 2026 Chick-fil-A.
+  const tenants = [
+    { name: "Dick's House of Sport", leaseStart: "2016-08-01", originalLeaseDate: "2015-10-21", leaseExpiry: "2032-01-31" },
+    { name: "Chick-Fil-A", leaseStart: "2026-04-01", leaseExpiry: "2041-03-31" },
+  ];
+  const text = "LATHAM FARMS  Latham, NY  Dick's lease dated October 21, 2015  Newmark";
+  it("rejects a cover date that is a tenant's lease date", () => {
+    expect(findOmDate({ sourceText: text, fileName: "Latham Farms OM 2026", uploadedAt: "2026-09-29T17:47:15Z", tenants }, now))
+      .toEqual({ omDate: "2026-09-29", omDateSource: "upload-date" });
+  });
+  it("rejects a date years before a lease the roster shows already open", () => {
+    expect(findOmDate({ sourceText: "LATHAM FARMS  March 2019", uploadedAt: "2026-09-29", tenants: [{ leaseStart: "2026-04-01" }] }, now)?.omDateSource).toBe("upload-date");
+  });
+  it("keeps a genuine older OM (New Garden 2021, roster from 2021)", () => {
+    expect(findOmDate({ sourceText: "NEW GARDEN CROSSING  OFFERING MEMORANDUM  February 2021", uploadedAt: "2026-09-02", tenants: [{ leaseStart: "2020-11-01" }, { leaseStart: "2022-03-01" }] }, now))
+      .toEqual({ omDate: "2021-02-01", omDateSource: "pdf" });
+  });
+  it("ignores future (signed, not yet open) leases", () => {
+    expect(findOmDate({ sourceText: "OFFERING MEMORANDUM  March 2025", uploadedAt: "2025-04-01", tenants: [{ leaseStart: "2027-01-01" }] }, now)?.omDate).toBe("2025-03-01");
+  });
+});
