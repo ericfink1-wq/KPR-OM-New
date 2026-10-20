@@ -647,6 +647,8 @@ price if Eric gives them). Confirmed closings Eric hands over go in `RECORDED_SA
 Pompano Marketplace ($53,000,000) + Sunshine Plaza ($56,000,000) sold 2026-07-28 to Kimco;
 Shops at Crossroads sold 2026-06-29 for $38,750,000 (buyer not given — leave blank, never
 guess); Bolton Plaza bought 2019-08-01 for $18,050,000, sold 2026-04-21 for $22,875,000.
+Somerset Square (Glastonbury CT) sold 2026-10-20 to Asana Partners for $29,000,000 — the first entry with
+`markSold: true`, which flips a still-Owned record to Sold on startup (Owned → Sold only, fill-blanks for the txn fields).
 **An older OM covered by a newer OM for the same property → NEWER WINS (Eric, 10/17/26:
 "newer info is always best").** Keep the newer record; carry over only HUMAN-entered fields
 (acq*/debt*/pref*/txn*/disp*, notes, review, Datex, sales history) where the newer one is blank —

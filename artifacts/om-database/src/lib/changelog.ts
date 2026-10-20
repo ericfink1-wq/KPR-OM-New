@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-20-somerset-square-sold",
+    date: "2026-10-20",
+    category: "data",
+    title: "Somerset Square (Glastonbury) is now marked Sold",
+    detail: "Somerset Square closed today, sold to Asana Partners for $29.0M. It now shows as Sold with its closing date, buyer and price, sits in KPR's own sale comps, and has dropped off the owned-property views (Asset Mgmt, Datex refresh).",
+    where: "Deal page → Somerset Square; Comps (KPR's own trades)",
+  },
+  {
     id: "2026-10-20-email-gmail-and-links",
     date: "2026-10-20",
     category: "fixed",
