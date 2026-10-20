@@ -33,10 +33,11 @@ describe("Somerset Square closing (10/20/26)", () => {
   const somerset = RECORDED_SALES.find(s => s.name === "Somerset Square")!;
   it("flips the owned record to Sold with the closing date, buyer and price", () => {
     expect(salePatch({ status: "Owned", txnCloseDate: "2016-10-20", txnPurchasePrice: 26600000 }, somerset))
-      .toEqual({ status: "Sold", txnSaleDate: "2026-10-20", txnBuyer: "Asana Partners", txnSalePrice: 29000000 });
+      .toEqual({ status: "Sold", txnSaleDate: "2026-10-20", txnBuyer: "Asana Partners", txnSalePrice: 29000000, dispExitCap: 6.85 });
   });
   it("is a no-op once recorded, and never flips a non-Owned status", () => {
-    expect(salePatch({ status: "Sold", txnSaleDate: "2026-10-20", txnBuyer: "Asana Partners", txnSalePrice: 29000000 }, somerset)).toBeNull();
+    expect(salePatch({ status: "Sold", txnSaleDate: "2026-10-20", txnBuyer: "Asana Partners", txnSalePrice: 29000000, dispExitCap: 6.85 }, somerset)).toBeNull();
+    expect(salePatch({ status: "Sold", txnSaleDate: "2026-10-20", txnBuyer: "Asana Partners", txnSalePrice: 29000000 }, somerset)).toEqual({ dispExitCap: 6.85 });
     expect(salePatch({ status: "Passed" }, somerset)).toBeNull();
   });
   it("only a sale flagged markSold flips status", () => {

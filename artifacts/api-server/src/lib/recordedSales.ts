@@ -15,6 +15,8 @@ export interface RecordedSale {
   id: string; name: string; txnSaleDate: string; txnBuyer?: string; txnSalePrice?: number;
   // KPR's original purchase, when Eric supplied it with the sale.
   txnCloseDate?: string; txnPurchasePrice?: number;
+  // Sale cap rate (percent) on KPR's own NOI, when Eric gives it — feeds the disposition comp.
+  dispExitCap?: number;
   // Eric confirmed the closing for a deal still marked Owned → flip it to Sold (same fields the
   // Mark Sold dialog writes). Only ever flips Owned → Sold; any other status is left alone.
   markSold?: boolean;
@@ -27,8 +29,8 @@ export const RECORDED_SALES: RecordedSale[] = [
   { id: "kpr-sold-bolton-plaza", name: "Bolton Plaza", txnSaleDate: "2026-04-21", txnSalePrice: 22875000, txnCloseDate: "2019-08-01", txnPurchasePrice: 18050000 },
   { id: "1781018408735-iawdlv1", name: "Sunshine Plaza", txnSaleDate: "2026-07-28", txnBuyer: "Kimco", txnSalePrice: 56000000 },
   { id: "1782135445555-qd67vrz", name: "Shops at Crossroads", txnSaleDate: "2026-06-29", txnSalePrice: 38750000 },
-  // Somerset Square (Glastonbury CT): closed 10/20/26 to Asana Partners for $29.0M (Eric, 10/20/26).
-  { id: "1781012306039-nsu4bu9", name: "Somerset Square", txnSaleDate: "2026-10-20", txnBuyer: "Asana Partners", txnSalePrice: 29000000, markSold: true },
+  // Somerset Square (Glastonbury CT): closed 10/20/26 to Asana Partners for $29.0M (Eric, 10/20/26); 6.85% cap on KPR's $1,985,597 sale-analysis NOI.
+  { id: "1781012306039-nsu4bu9", name: "Somerset Square", txnSaleDate: "2026-10-20", txnBuyer: "Asana Partners", txnSalePrice: 29000000, dispExitCap: 6.85, markSold: true },
 ];
 
 const blank = (v: unknown) => v == null || (typeof v === "string" && v.trim() === "") || (typeof v === "number" && !(v > 0));
@@ -40,7 +42,7 @@ export function salePatch(data: Record<string, unknown>, sale: RecordedSale): Re
   const patch: Record<string, string | number> = {};
   if (flip) patch.status = "Sold";
   const fill = (k: keyof RecordedSale) => { const v = sale[k]; if (v != null && v !== "" && typeof v !== "boolean" && blank(data[k])) patch[k] = v as string | number; };
-  fill("txnSaleDate"); fill("txnBuyer"); fill("txnSalePrice"); fill("txnCloseDate"); fill("txnPurchasePrice");
+  fill("txnSaleDate"); fill("txnBuyer"); fill("txnSalePrice"); fill("txnCloseDate"); fill("txnPurchasePrice"); fill("dispExitCap");
   return Object.keys(patch).length ? patch : null;
 }
 
