@@ -339,6 +339,23 @@ export async function apiResetMemberPassword(id: string, newPassword?: string): 
   return { email: j.email || "", password: j.password, twoFactorEnabled: !!j.twoFactorEnabled };
 }
 
+// Safety valves when email can't be delivered: a fresh reset (1 h) / verification (24 h) link
+// handed to the admin instead of emailed.
+export async function apiMemberLink(id: string, kind: "reset" | "verify"): Promise<{ email: string; link: string; expiresAt: string }> {
+  const r = await apiFetch(`/auth/users/${id}/${kind === "reset" ? "reset-link" : "verify-link"}`, { method: "POST" });
+  const j = await r.json().catch(() => ({})) as { error?: string; email?: string; link?: string; expiresAt?: string };
+  if (!r.ok || !j.link) throw new Error(j.error || "Couldn't create the link.");
+  return { email: j.email || "", link: j.link, expiresAt: j.expiresAt || "" };
+}
+
+export interface TestEmailResult { ok: boolean; via: "smtp" | "resend" | "none"; from: string | null; to: string; detail?: string }
+export async function apiSendTestEmail(): Promise<TestEmailResult> {
+  const r = await apiFetch("/auth/test-email", { method: "POST" });
+  const j = await r.json().catch(() => ({})) as Partial<TestEmailResult> & { error?: string };
+  if (!r.ok) throw new Error(j.error || `Test email request failed (HTTP ${r.status}).`);
+  return { ok: !!j.ok, via: j.via ?? "none", from: j.from ?? null, to: j.to ?? "", detail: j.detail };
+}
+
 // --- Extraction lessons (operator-taught rules) ---
 export type LessonScope = "all" | "om" | "rent-roll" | "lease-options" | "sales" | "flyer" | "swap" | "loan";
 export interface ExtractionLesson { id: string; scope: LessonScope; lesson: string; createdAt: string; createdBy: string | null }

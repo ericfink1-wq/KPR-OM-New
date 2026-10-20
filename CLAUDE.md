@@ -2,6 +2,20 @@
 
 Persistent context for this repo. Read this fully at the start of every session.
 
+## EMAIL = ONE SHARED MAILER, GMAIL SMTP FIRST (10/20/26)
+Emails weren't reaching anyone: no `RESEND_FROM`, so Resend sent from `onboarding@resend.dev`, which only delivers to
+the Resend account owner (verifying kprcenters.com needs IT DNS). `api lib/mailer.ts` is now the ONLY sender
+(`sendEmail({to, subject, text, attachments?, fromName?})` → `{ok, via, from, detail}`, never throws, logs every
+outcome): SMTP via nodemailer when `SMTP_USER` + `SMTP_PASS` are set (`SMTP_HOST` default smtp.gmail.com, `SMTP_PORT`
+465 = implicit TLS, `SMTP_SECURE` overrides, from = `SMTP_FROM` or "<fromName|KPR OM Database> <SMTP_USER>"; spaces in
+a Gmail app password are stripped); Resend (`RESEND_API_KEY`/`RESEND_FROM`) only when SMTP isn't configured. auth.ts
+and feedback.ts both use it — **a new email anywhere goes through it, never a direct fetch to Resend.** nodemailer is
+a runtime dependency AND a build.mjs external — keep both. Safety valves (admin, Members): `POST
+/auth/users/:id/reset-link` (approved only, 1 h) and `/verify-link` (unverified only, 24 h) RETURN the link, never email
+it; `POST /auth/test-email` sends to the signed-in admin and returns the exact result. forgot-password /
+resend-verification keep their generic responses; a failed send logs "… EMAIL NOT DELIVERED" at error level naming the
+Members button. Tests: `mailer.test.ts` (incl. a real SMTP conversation against a local fake server).
+
 ## LOCAL INTEL (10/19/26) — web-research scan per deal (Eric: "didn't know a Trader Joe's is opening ~1 mi from our Fred Meyer in Bend")
 `api lib/localIntel.ts` (PURE, tested: `siteFacts` → `buildQueries`. QUERY PLAN FIX (10/19/26 — the first live Bend scan ran 9
 searches and MISSED the Trader Joe's because competing supply was ONE long OR query): `anchorCategory` (grocery / off_price /

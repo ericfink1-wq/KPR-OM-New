@@ -11,37 +11,12 @@ import { generateSecret, verifyTotp, otpauthUri } from "../lib/totp";
 import { needs2faReverify } from "../lib/twoFactorPolicy";
 import { whatsNewCutoff } from "../lib/whatsNew";
 import { isDocOwner } from "../lib/docPrivacy";
+import { sendEmail as sendMail } from "../lib/mailer";
 
 const router = Router();
 
-// Shared transactional-email sender (Resend). Logs the outcome so delivery
-// failures are visible in the server logs instead of silently swallowed.
-// IMPORTANT: the default sender "onboarding@resend.dev" is Resend's SHARED test
-// address, which can ONLY deliver to YOUR OWN Resend-account email. To email
-// other people (e.g. a newly-approved user), verify a domain in Resend and set
-// RESEND_FROM (e.g. 'KPR OM Database <noreply@kprcenters.com>'). Never throws.
-async function sendEmail(to: string, subject: string, text: string): Promise<{ ok: boolean; detail?: string }> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) { logger.warn({ to, subject }, "email skipped — RESEND_API_KEY not set"); return { ok: false, detail: "no api key" }; }
-  const from = process.env.RESEND_FROM || "KPR OM Database <onboarding@resend.dev>";
-  try {
-    const r = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to, subject, text }),
-    });
-    const body = await r.text();
-    if (!r.ok) {
-      logger.error({ to, subject, status: r.status, body, from }, "email send FAILED (Resend rejected it)");
-      return { ok: false, detail: `HTTP ${r.status}: ${body}` };
-    }
-    logger.info({ to, subject }, "email sent");
-    return { ok: true };
-  } catch (err) {
-    logger.error({ err, to, subject }, "email send threw");
-    return { ok: false, detail: err instanceof Error ? err.message : "error" };
-  }
-}
+// Outbound email goes through the ONE shared mailer (lib/mailer.ts: Gmail SMTP, Resend fallback).
+const sendEmail = (to: string, subject: string, text: string) => sendMail({ to, subject, text });
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || "efink@kprcenters.com").trim().toLowerCase();
@@ -130,8 +105,7 @@ export function ensureUsersTable(): Promise<void> {
   return tableReady;
 }
 
-// Best-effort: email the owner when someone requests an account. Reuses the
-// Resend setup used for feedback. Never throws to the caller.
+// Best-effort: email the owner when someone requests an account. Never throws to the caller.
 async function notifyNewSignup(email: string, name: string | null): Promise<void> {
   const to = process.env.SIGNUP_EMAIL_TO || process.env.FEEDBACK_EMAIL_TO || "efink@kprcenters.com";
   await sendEmail(to, `New account request: ${email}`,
@@ -166,17 +140,24 @@ async function notifyApproved(email: string, name: string | null, loginUrl: stri
     `${name ? name + "," : "Hi,"}\n\nYour account for the KPR OM Database has been approved. You can now sign in with the email and password you created when you requested access:\n\n${loginUrl}\n\nIf you've forgotten your password, use the "Forgot password?" link on the sign-in screen.`);
 }
 
-// Best-effort: email a password-reset link. Never throws to the caller.
+// Best-effort: email a password-reset link. Never throws to the caller. The user only ever
+// sees a generic "check your inbox", so a failure is logged LOUDLY with the way out.
 async function sendResetEmail(email: string, link: string): Promise<void> {
-  await sendEmail(email, "Reset your KPR OM Database password",
+  const r = await sendEmail(email, "Reset your KPR OM Database password",
     `We received a request to reset your password.\n\nReset it here (this link expires in 1 hour):\n${link}\n\nIf you didn't request this, you can safely ignore this email.`);
+  if (!r.ok) logger.error({ email, via: r.via, detail: r.detail }, "PASSWORD-RESET EMAIL NOT DELIVERED — the user saw a generic message; an admin can use Members → Copy reset link");
 }
 
 // Best-effort: email an address-verification link. Never throws.
 async function sendVerifyEmail(email: string, link: string): Promise<void> {
-  await sendEmail(email, "Verify your email — KPR OM Database",
+  const r = await sendEmail(email, "Verify your email — KPR OM Database",
     `Welcome to the KPR OM Database.\n\nPlease confirm this email address by clicking the link below (it expires in 24 hours):\n\n${link}\n\nAfter you verify, an administrator will review and approve your access.\n\nIf you didn't request an account, you can safely ignore this email.`);
+  if (!r.ok) logger.error({ email, via: r.via, detail: r.detail }, "VERIFICATION EMAIL NOT DELIVERED — an admin can use Members → Copy verify link or Mark verified");
 }
+
+const RESET_TTL_MS = 60 * 60 * 1000;
+const resetLink = (origin: string, email: string, token: string) => `${origin}/?reset=1&email=${encodeURIComponent(email)}&token=${token}`;
+const verifyLink = (origin: string, email: string, token: string) => `${origin}/?verify=1&email=${encodeURIComponent(email)}&token=${token}`;
 
 // The app origin for building emailed links (reset / verify).
 function appOrigin(req: Request): string {
@@ -205,8 +186,8 @@ router.post("/auth/register", async (req, res) => {
       id: genId(), email, passwordHash: hashPassword(password), name, status: "pending", isAdmin: false,
       emailVerified: false, verifyTokenHash: sha256(verifyToken), verifyTokenExpires: new Date(Date.now() + VERIFY_TTL_MS),
     });
-    const link = `${appOrigin(req)}/?verify=1&email=${encodeURIComponent(email)}&token=${verifyToken}`;
-    void sendVerifyEmail(email, link).catch(() => { /* best-effort */ });
+    const link = verifyLink(appOrigin(req), email, verifyToken);
+    void sendVerifyEmail(email, link).catch((err) => logger.error({ err, email }, "verification email threw"));
     void notifyNewSignup(email, name).catch(() => { /* best-effort */ });
     res.status(201).json({ ok: true, status: "pending", needsVerification: true });
   } catch (err) {
@@ -621,8 +602,8 @@ router.post("/auth/resend-verification", async (req, res) => {
         await db.update(usersTable)
           .set({ verifyTokenHash: sha256(token), verifyTokenExpires: new Date(Date.now() + VERIFY_TTL_MS) })
           .where(eq(usersTable.id, user.id));
-        const link = `${appOrigin(req)}/?verify=1&email=${encodeURIComponent(email)}&token=${token}`;
-        void sendVerifyEmail(email, link).catch(() => { /* best-effort */ });
+        const link = verifyLink(appOrigin(req), email, token);
+        void sendVerifyEmail(email, link).catch((err) => logger.error({ err, email }, "verification email threw"));
       }
     }
     res.json({ ok: true });
@@ -643,11 +624,10 @@ router.post("/auth/forgot-password", async (req, res) => {
       if (user && user.status === "approved") {
         const token = randomBytes(32).toString("hex");
         await db.update(usersTable)
-          .set({ resetTokenHash: sha256(token), resetTokenExpires: new Date(Date.now() + 60 * 60 * 1000) })
+          .set({ resetTokenHash: sha256(token), resetTokenExpires: new Date(Date.now() + RESET_TTL_MS) })
           .where(eq(usersTable.id, user.id));
-        const origin = (typeof req.headers.origin === "string" && req.headers.origin) || `https://${req.headers.host}`;
-        const link = `${origin}/?reset=1&email=${encodeURIComponent(email)}&token=${token}`;
-        void sendResetEmail(email, link).catch(() => { /* best-effort */ });
+        const link = resetLink(appOrigin(req), email, token);
+        void sendResetEmail(email, link).catch((err) => logger.error({ err, email }, "reset email threw"));
       }
     }
     res.json({ ok: true });
@@ -712,6 +692,45 @@ router.post("/auth/users/:id/verify", requireAdmin, async (req, res) => {
     .set({ emailVerified: true, verifyTokenHash: null, verifyTokenExpires: null })
     .where(eq(usersTable.id, String(req.params.id)));
   res.json({ ok: true });
+});
+
+// POST /api/auth/users/:id/reset-link — safety valve when email can't be delivered: makes a
+// 1-hour reset token and RETURNS the link to the admin (nothing is emailed). Approved users
+// only, same as forgot-password. Issuing a new link replaces any earlier one.
+router.post("/auth/users/:id/reset-link", requireAdmin, async (req, res) => {
+  await ensureUsersTable();
+  const user = (await db.select().from(usersTable).where(eq(usersTable.id, String(req.params.id))))[0];
+  if (!user) { res.status(404).json({ error: "User not found." }); return; }
+  if (user.status !== "approved") { res.status(400).json({ error: "Only approved members can reset a password." }); return; }
+  const token = randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + RESET_TTL_MS);
+  await db.update(usersTable).set({ resetTokenHash: sha256(token), resetTokenExpires: expiresAt }).where(eq(usersTable.id, user.id));
+  logger.info({ adminId: req.session.userId, targetId: user.id, targetEmail: user.email }, "admin issued a password-reset link (not emailed)");
+  res.json({ ok: true, email: user.email, link: resetLink(appOrigin(req), user.email, token), expiresAt });
+});
+
+// POST /api/auth/users/:id/verify-link — same valve for an unverified sign-up: a fresh
+// 24-hour verification link returned to the admin, not emailed.
+router.post("/auth/users/:id/verify-link", requireAdmin, async (req, res) => {
+  await ensureUsersTable();
+  const user = (await db.select().from(usersTable).where(eq(usersTable.id, String(req.params.id))))[0];
+  if (!user) { res.status(404).json({ error: "User not found." }); return; }
+  if (user.emailVerified) { res.status(400).json({ error: "This email is already verified." }); return; }
+  const token = randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + VERIFY_TTL_MS);
+  await db.update(usersTable).set({ verifyTokenHash: sha256(token), verifyTokenExpires: expiresAt }).where(eq(usersTable.id, user.id));
+  logger.info({ adminId: req.session.userId, targetId: user.id, targetEmail: user.email }, "admin issued a verification link (not emailed)");
+  res.json({ ok: true, email: user.email, link: verifyLink(appOrigin(req), user.email, token), expiresAt });
+});
+
+// POST /api/auth/test-email — admin sends a test message to THEIR OWN address and gets the
+// exact outcome back (transport, From line, the server's reply or error) to show on screen.
+router.post("/auth/test-email", requireAdmin, async (req, res) => {
+  const to = req.session.userEmail;
+  if (!to) { res.status(400).json({ error: "Your session has no email address — sign out and back in." }); return; }
+  const r = await sendEmail(to, "Test email — KPR OM Database",
+    `This is a test from the KPR OM Database (sent ${new Date().toISOString()}).\n\nIf you can read this, password-reset, verification and approval emails can reach people.`);
+  res.json({ ...r, to });
 });
 
 // POST /api/auth/users/:id/approve

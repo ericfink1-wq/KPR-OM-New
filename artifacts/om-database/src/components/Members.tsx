@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, apiVerifyMember, apiResetMember2fa, apiResetMemberPassword, apiLoginEvents, apiUploadLog, apiRenameMember, type MemberAccount, type LoginEvent, type UploadLogEntry } from "../lib/api";
+import { apiListMembers, apiApproveMember, apiRejectMember, apiSetMemberAdmin, apiDeleteMember, apiVerifyMember, apiResetMember2fa, apiResetMemberPassword, apiLoginEvents, apiUploadLog, apiRenameMember, apiMemberLink, apiSendTestEmail, type MemberAccount, type TestEmailResult, type LoginEvent, type UploadLogEntry } from "../lib/api";
 
 // Compact "time ago" for the last-seen / last-login line.
 function relTime(iso: string | null | undefined): string | null {
@@ -31,6 +31,8 @@ export default function Members({ onClose }: { onClose: () => void }) {
   const [openMember, setOpenMember] = useState<string | null>(null); // member whose sign-in history is expanded
   const [resetPw, setResetPw] = useState<{ email: string; password: string; twoFactorEnabled: boolean } | null>(null); // temp password to show once
   const [copied, setCopied] = useState(false);
+  const [linkDlg, setLinkDlg] = useState<{ kind: "reset" | "verify"; email: string; link: string; expiresAt: string } | null>(null);
+  const [testMail, setTestMail] = useState<TestEmailResult | { error: string } | "sending" | null>(null);
 
   const load = useCallback(() => {
     setError(null);
@@ -81,8 +83,7 @@ export default function Members({ onClose }: { onClose: () => void }) {
   };
 
   // Approve has its own handler so we can report whether the "you're approved"
-  // email actually went out (Resend's test sender can only email the account
-  // owner — so if it fails, the admin needs to tell the user manually).
+  // email actually went out — if it fails, the admin needs to tell the user manually.
   const approve = async (u: MemberAccount) => {
     setBusy(u.id); setNotice(null);
     try {
@@ -105,6 +106,26 @@ export default function Members({ onClose }: { onClose: () => void }) {
       setResetPw(r);
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn't reset the password — try again."); }
     finally { setBusy(null); }
+  };
+
+  // A reset / verify link the admin hands over themselves (text, Slack…) when email can't reach
+  // the person. Nothing is emailed; the link works once and expires.
+  const makeLink = async (u: MemberAccount, kind: "reset" | "verify") => {
+    setBusy(u.id); setError(null);
+    try {
+      const r = await apiMemberLink(u.id, kind);
+      let ok = false;
+      try { await navigator.clipboard.writeText(r.link); ok = true; } catch { /* shown in the dialog to copy by hand */ }
+      setCopied(ok);
+      setLinkDlg({ kind, ...r });
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn't create the link — try again."); }
+    finally { setBusy(null); }
+  };
+
+  const sendTest = async () => {
+    setTestMail("sending");
+    try { setTestMail(await apiSendTestEmail()); }
+    catch (e) { setTestMail({ error: e instanceof Error ? e.message : String(e) }); }
   };
 
   const pending = (rows || []).filter(r => r.status === "pending");
@@ -161,11 +182,13 @@ export default function Members({ onClose }: { onClose: () => void }) {
         {/* Approval requires a verified email; if it can't be delivered, the admin can override with Mark verified. */}
         {(u.status === "pending" || u.status === "rejected") && !u.emailVerified
           && btn("Mark verified", () => act(u.id, () => apiVerifyMember(u.id)), "#9a5b12", busy === u.id)}
+        {!u.emailVerified && btn("Copy verify link", () => makeLink(u, "verify"), "#9a5b12", busy === u.id)}
         {u.status === "pending" && u.emailVerified && btn("✓ Approve", () => approve(u), "#0f7a3d", busy === u.id)}
         {u.status === "pending" && btn("Decline", () => act(u.id, () => apiRejectMember(u.id)), "#b3261e", busy === u.id)}
         {u.status === "rejected" && u.emailVerified && btn("Approve", () => approve(u), "#0f7a3d", busy === u.id)}
         {btn("Rename", () => rename(u), "#4f4d48", busy === u.id)}
         {u.status === "approved" && btn(u.isAdmin ? "Remove admin" : "Make admin", () => act(u.id, () => apiSetMemberAdmin(u.id, !u.isAdmin)), "#4f4d48", busy === u.id)}
+        {u.status === "approved" && btn("Copy reset link", () => makeLink(u, "reset"), "#2c6e9b", busy === u.id)}
         {u.status === "approved" && btn("Reset password", () => resetPassword(u), "#2c6e9b", busy === u.id)}
         {u.status === "approved" && btn("Reset 2FA", () => { if (window.confirm(`Reset two-factor for ${u.email}? They'll sign in with just their password next time and set it up again. Use this if they've lost their authenticator and backup codes.`)) act(u.id, () => apiResetMember2fa(u.id)); }, "#9a5b12", busy === u.id)}
         {btn("Remove", () => { if (window.confirm(`Remove ${u.email}? They'll lose access and would have to request a new account.`)) act(u.id, () => apiDeleteMember(u.id)); }, "#c0392b", busy === u.id)}
@@ -205,6 +228,24 @@ export default function Members({ onClose }: { onClose: () => void }) {
         <div style={{ padding: "16px 18px", overflowY: "auto" }}>
           {error && <div style={{ color: "#c0392b", fontSize: 12.5, marginBottom: 12 }}>⚠ {error}</div>}
           {notice && <div style={{ color: notice.includes("did NOT send") ? "#92400e" : "#0f7a3d", background: notice.includes("did NOT send") ? "#fef6e7" : "#eef7ee", border: `1px solid ${notice.includes("did NOT send") ? "#f5c842" : "#cfe9c4"}`, borderRadius: 8, padding: "8px 11px", fontSize: 12.5, marginBottom: 12, lineHeight: 1.45 }}>{notice}</div>}
+          {/* Is email actually reaching people? Sends to the signed-in admin and shows the server's exact answer. */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+            {btn(testMail === "sending" ? "Sending…" : "✉ Send test email", sendTest, "#2c6e9b", testMail === "sending")}
+            <span style={{ fontSize: 11, color: "#9b9992" }}>Sends to your own address to check password-reset, verification and approval emails can go out.</span>
+          </div>
+          {testMail && testMail !== "sending" && (() => {
+            const ok = "ok" in testMail && testMail.ok;
+            const text = "error" in testMail
+              ? testMail.error
+              : testMail.ok
+                ? `Sent to ${testMail.to} via ${testMail.via === "smtp" ? "Gmail/SMTP" : "Resend"} from ${testMail.from}. Check that inbox (and spam).${testMail.detail ? ` Server said: ${testMail.detail}` : ""}`
+                : `NOT sent to ${testMail.to}${testMail.via !== "none" ? ` (via ${testMail.via === "smtp" ? "Gmail/SMTP" : "Resend"}, from ${testMail.from})` : ""}: ${testMail.detail || "unknown error"}`;
+            return (
+              <div style={{ color: ok ? "#0f7a3d" : "#b3261e", background: ok ? "#eef7ee" : "#fdeaea", border: `1px solid ${ok ? "#cfe9c4" : "#f0c4c0"}`, borderRadius: 8, padding: "8px 11px", fontSize: 12, marginBottom: 12, lineHeight: 1.45, wordBreak: "break-word", userSelect: "text" }}>
+                {ok ? "✓ " : "⚠ "}{text}
+              </div>
+            );
+          })()}
           {!rows && <div style={{ color: "#94928b", fontSize: 13, padding: "20px 0", textAlign: "center" }}>Loading…</div>}
 
           {rows && pending.length > 0 && (
@@ -282,6 +323,30 @@ export default function Members({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       </div>
+
+      {linkDlg && (
+        <>
+          <div onClick={() => setLinkDlg(null)} style={{ position: "fixed", inset: 0, zIndex: 9800, background: "rgba(38,40,31,0.5)" }} />
+          <div role="dialog" aria-label={linkDlg.kind === "reset" ? "Password reset link" : "Verification link"} style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 9801, width: "min(460px, 94vw)", background: "#fff", border: "1px solid #dcdad3", borderRadius: 14, boxShadow: "0 18px 56px rgba(38,40,31,0.32)", padding: "20px 22px", fontFamily: "'Roboto',sans-serif" }}>
+            <div style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 17, fontWeight: 600, color: "#232422", marginBottom: 4 }}>{linkDlg.kind === "reset" ? "Password reset link" : "Email verification link"}</div>
+            <div style={{ fontSize: 12.5, color: "#676767", lineHeight: 1.5, marginBottom: 14 }}>
+              {copied ? "Copied to your clipboard. " : ""}Send this to <b style={{ color: "#232422" }}>{linkDlg.email}</b> yourself (text, Teams, a normal email) — nothing was emailed.
+              {linkDlg.kind === "reset" ? " Opening it lets them choose a new password." : " Opening it confirms their address; then approve them here."}
+              {linkDlg.expiresAt ? ` It works once and expires ${new Date(linkDlg.expiresAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.` : ""}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f7f4ec", border: "1px solid #e5ddcc", borderRadius: 10, padding: "10px 12px", marginBottom: 14 }}>
+              <code style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: "#232422", fontFamily: "ui-monospace, Menlo, monospace", wordBreak: "break-all", userSelect: "all" }}>{linkDlg.link}</code>
+              <button onClick={() => { navigator.clipboard?.writeText(linkDlg.link).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 2000); }).catch(() => {}); }}
+                style={{ flexShrink: 0, background: copied ? "#0f7a3d" : "#2c6e9b", color: "#fff", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                {copied ? "✓ Copied" : "Copy"}
+              </button>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={() => setLinkDlg(null)} style={{ background: "#232422", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Done</button>
+            </div>
+          </div>
+        </>
+      )}
 
       {resetPw && (
         <>

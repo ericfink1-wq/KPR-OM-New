@@ -4,6 +4,7 @@ import { feedbackTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 
 import { requireAuth, requireAdmin } from "../middleware/auth";
+import { sendEmail } from "../lib/mailer";
 
 const router = Router();
 
@@ -24,7 +25,7 @@ router.post("/feedback", requireAuth, async (req, res) => {
       return;
     }
 
-    // Parse any attached images (data URLs) into Resend attachment objects. Cap the
+    // Parse any attached images (data URLs) into email attachments. Cap the
     // count and total size defensively so a huge paste can't blow past email limits.
     const attachments: Array<{ filename: string; content: string }> = [];
     if (Array.isArray(body.images)) {
@@ -37,7 +38,7 @@ router.post("/feedback", requireAuth, async (req, res) => {
         const ext = m[1] === "jpeg" ? "jpg" : m[1];
         const b64 = m[2];
         totalBytes += Math.floor(b64.length * 0.75);
-        if (totalBytes > 18 * 1024 * 1024) break;  // ~18MB ceiling, well under Resend's 40MB
+        if (totalBytes > 18 * 1024 * 1024) break;  // ~18MB ceiling, under Gmail's 25MB / Resend's 40MB
         attachments.push({ filename: `screenshot-${i + 1}.${ext}`, content: b64 });
       }
     }
@@ -58,47 +59,21 @@ router.post("/feedback", requireAuth, async (req, res) => {
     let emailError: string | null = null;
 
     try {
-      const apiKey = process.env.RESEND_API_KEY;
-      if (!apiKey) {
-        emailStatus = "skipped";
-      } else {
-        const to = process.env.FEEDBACK_EMAIL_TO || "efink@kprcenters.com";
-        const summary = [
-          "New KPR feedback",
-          `Type: ${row.type}`,
-          `From: ${row.name || "anonymous"}`,
-          `Page: ${row.page || "unknown"}`,
-          `Time: ${row.createdAt.toISOString()}`,
-          attachments.length ? `Screenshots: ${attachments.length} attached` : null,
-          "",
-          row.message,
-        ].filter(Boolean).join("\n");
-
-        const emailResp = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: "KPR Feedback <onboarding@resend.dev>",
-            to,
-            subject: `New KPR feedback: ${row.type}`,
-            text: summary,
-            ...(attachments.length ? { attachments } : {}),
-          }),
-        });
-
-        const respBody = await emailResp.text().catch(() => "");
-        req.log.info({ status: emailResp.status, body: respBody.slice(0, 200) }, "Resend response");
-
-        if (emailResp.ok) {
-          emailStatus = "sent";
-        } else {
-          emailStatus = "failed";
-          emailError = `HTTP ${emailResp.status}: ${respBody}`.slice(0, 300);
-        }
-      }
+      const to = process.env.FEEDBACK_EMAIL_TO || "efink@kprcenters.com";
+      const summary = [
+        "New KPR feedback",
+        `Type: ${row.type}`,
+        `From: ${row.name || "anonymous"}`,
+        `Page: ${row.page || "unknown"}`,
+        `Time: ${row.createdAt.toISOString()}`,
+        attachments.length ? `Screenshots: ${attachments.length} attached` : null,
+        "",
+        row.message,
+      ].filter(Boolean).join("\n");
+      const r = await sendEmail({ to, subject: `New KPR feedback: ${row.type}`, text: summary, attachments, fromName: "KPR Feedback" });
+      if (r.ok) emailStatus = "sent";
+      else if (r.via === "none") emailStatus = "skipped";
+      else { emailStatus = "failed"; emailError = (r.detail ?? "failed").slice(0, 300); }
     } catch (emailErr) {
       emailStatus = "failed";
       emailError = (emailErr instanceof Error ? emailErr.message : String(emailErr)).slice(0, 300);

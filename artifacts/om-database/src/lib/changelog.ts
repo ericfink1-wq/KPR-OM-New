@@ -48,6 +48,15 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-20-email-gmail-and-links",
+    date: "2026-10-20",
+    category: "fixed",
+    title: "Site emails now go out through Gmail, with a backup when they don't",
+    detail: "Password-reset, sign-up verification and approval emails were only reaching one inbox. They now send through a Gmail account. Members has a \"Send test email\" button that shows the exact result on screen, and \"Copy reset link\" / \"Copy verify link\" buttons give you a link to send the person yourself if an email ever doesn't arrive.",
+    where: "Members (admin menu)",
+    adminOnly: true,
+  },
+  {
     id: "2026-10-20-om-date-misread",
     date: "2026-10-20",
     category: "fixed",
