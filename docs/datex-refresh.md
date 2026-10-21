@@ -188,7 +188,8 @@ time when they are actually needed, since that table is ~2,100 rows per month.
 returned 340,824 SF for a 300,386 SF building, because it carries rows that are not leasable
 area. `Occupancy` already reports totals, unit counts and the segment split.
 
-**Never source GLA from `Buildings`.** `BLDGGLA` is 0 on 46 buildings, and `OCCGLA` is the
+**Never source GLA from `Buildings`.** Since 10/21/26 it has no GLA fields at all (Datex
+removed them). Before that, `BLDGGLA` was 0 on 46 buildings, and `OCCGLA` was the
 SHOP-occupied figure rather than the total. Dividing one by the other is where a reported
 "48.9% occupancy" at Cooks Corner came from; the true figure is 67.2% against a 67.6%
 acquisition snapshot — a move of 0.4 points, not nineteen.

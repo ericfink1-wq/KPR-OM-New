@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-21-datex-options",
+    date: "2026-10-21",
+    category: "improved",
+    title: "Claude now knows Datex has tenant renewal options",
+    detail: "Datex now sends each tenant's renewal options, with notice dates and option rents, so Claude will check option notice dates there instead of saying they're missing. ROFRs, purchase and termination rights still come from the lease, since Datex doesn't carry them.",
+    where: "Claude access (the KPR connector)",
+  },
+  {
     id: "2026-10-21-unsaved-uploads",
     date: "2026-10-21",
     category: "fixed",

@@ -103,8 +103,9 @@ export const DATEX_SOURCE_NOTES = {
     "Do NOT drop zero-rent rows when computing area. Big Lots occupies 40,000 SF at $0 rent " +
     "with no dot suffix — a real dark anchor. A rent filter silently deletes it.",
   buildingsGlaUnusable:
-    "Buildings.BLDGGLA is 0 on 46 buildings, and Buildings.OCCGLA is the SHOP-occupied " +
-    "figure, not the total. Dividing one by the other produced the bogus '48.9% occupancy' " +
+    "Buildings has no GLA fields (Datex removed BLDGGLA/OCCGLA 10/21/26); before that BLDGGLA was " +
+    "0 on 46 buildings and OCCGLA was the SHOP-occupied figure, not the total. Dividing one by the " +
+    "other produced the bogus '48.9% occupancy' " +
     "at Cooks Corner, where the true figure is 67.2% against a 67.6% acquisition snapshot.",
   fixedWidthIds:
     "Datex character fields are fixed-width and carry trailing spaces, so BLDGID must be " +

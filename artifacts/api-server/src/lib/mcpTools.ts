@@ -357,9 +357,10 @@ const OWNED_AUTHORITY_NOTE =
   "KPR-OWNED ASSET — DATEX IS AUTHORITATIVE, NOT THIS RECORD. Datex is KPR's " +
   "property-management system of record and holds the live picture of this property: " +
   "current rents and NNN, budget vs actual, occupancy history, tenant sales, tenant ledgers, " +
-  "loans, percentage-rent breakpoints and the active leasing pipeline. (Datex's TenantOptions " +
-  "table returns NO rows through the connector — verified 10/16/26 — so option and notice " +
-  "dates must come from the executed lease; never read that silence as 'no options'.) What you have here is the ACQUISITION-ERA SNAPSHOT taken from the offering " +
+  "loans, percentage-rent breakpoints, renewal options with notice dates and the active leasing " +
+  "pipeline. (Datex's TenantOptions table holds RENEWAL options only — since 10/21/26 — with no " +
+  "exercised/lapsed flag; ROFRs, purchase and termination rights are not in it and must come " +
+  "from the executed lease. Never read Datex silence on those as 'none'.) What you have here is the ACQUISITION-ERA SNAPSHOT taken from the offering " +
   "documents at the time of the deal — it does not track anything that has happened since. " +
   "Take every live fact from Datex. Use this record only for what Datex has no reason to " +
   "hold: the original marketed underwriting, and this deal's place in the market corpus.";
@@ -388,7 +389,7 @@ function ownedAssetNotice(rows: Array<{ dealStatus?: unknown }>): Record<string,
       `datexAuthoritative). For those, DATEX IS THE SOURCE OF TRUTH, not this record — ` +
       `what you have here is the acquisition-era snapshot from the offering documents and ` +
       `it does not track anything since. Take current rent, occupancy and sales from ` +
-      `Datex (options and notice dates: from the lease — Datex's options table is empty), and treat those as AS OF TODAY — it is fed daily. These rows ` +
+      `Datex (renewal options and notice dates: Datex TenantOptions; ROFRs, purchase and termination rights: the lease), and treat those as AS OF TODAY — it is fed daily. These rows ` +
       `remain valid as MARKET data points; they are not valid as a statement of what KPR ` +
       `collects today.`,
   };
@@ -1067,7 +1068,7 @@ const leaseAbstracts: McpToolDef = {
     "verifiedAgainstExecutedDoc:false is UNVERIFIED — say so rather than stating it as fact. " +
     "NOTE THE SOURCE SPLIT ON A KPR-OWNED PROPERTY: the executed documents here GOVERN the lease " +
     "terms — Datex does not override a signed lease — but Datex is where you learn what has " +
-    "HAPPENED since (current billed rent, occupancy, sales). Datex's options table is EMPTY through the connector, so option status and notice dates must come from the lease and its amendments — never infer 'no options' from Datex. " +
+    "HAPPENED since (current billed rent, occupancy, sales). Datex's TenantOptions table holds RENEWAL options with notice dates and option rent (no ROFR, purchase or termination rights, and no exercised/lapsed flag), so check upcoming notice dates there and take option terms and every other right from the lease and its amendments — never infer 'no rights' from Datex. " +
     "Use both: terms from the abstract, current state from Datex.",
   inputSchema: {
     type: "object",
@@ -1111,7 +1112,7 @@ const leaseAbstracts: McpToolDef = {
         "The abstract GOVERNS the lease terms — it is built from the executed lease and its " +
         "amendments, and neither a rent roll nor Datex overrides a signed document. But on a " +
         "KPR-OWNED property Datex holds what has happened SINCE: currently billed rent, " +
-        "occupancy, sales (its options table is empty — option/notice dates come from the lease). Terms from here, current " +
+        "occupancy, sales, renewal-option notice dates (not ROFRs or termination rights — those come from the lease). Terms from here, current" +
         "state from Datex — and if the two disagree, that is a finding to raise, not a " +
         "discrepancy to reconcile silently.",
       count: match.length,
@@ -1924,8 +1925,9 @@ present a corpus-wide roll-up as KPR's own exposure or holdings.
 **Which source wins.** KPR also runs Datex, its property-management system of record, as a
 separate connector. Datex holds the live, detailed picture of the properties KPR actually
 OWNS — current rents and NNN, budgets, occupancy history, tenant sales, ledgers,
-loans, leasing pipeline. (Its tenant-options table is empty through the connector, so option
-and notice dates come from the executed lease — Datex silence is not "no options".) It is fed daily by the team, so for an owned, ACTIVE
+loans, leasing pipeline, renewal options with notice dates. (Its TenantOptions table holds
+renewal options only, with no exercised/lapsed flag — ROFRs, purchase and termination rights
+come from the executed lease, and Datex silence on them is not "none".) It is fed daily by the team, so for an owned, ACTIVE
 asset treat Datex as AS OF TODAY — quote it as the current figure, with none of the
 as-of hedging this library requires. For any fact about a KPR-owned property, go to Datex
 first; it is more current and more complete than this library will ever be. Owned records

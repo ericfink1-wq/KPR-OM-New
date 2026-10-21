@@ -33,7 +33,7 @@ HOW DATEX WORKS (QUIRKS)
 - Values have trailing spaces. Use "contains", not "eq", on ID and name fields.
 - Building IDs are mostly CITY-based, not property names. Find them in the Buildings entity and confirm by address. Watch for duplicate names, condo associations, and inactive sibling entities. Some properties span multiple building IDs, so combine them.
 - Some entities are exposed but empty. Confirm rows exist before relying on one.
-- Don't take GLA or occupancy from the Buildings entity (often zero). Compute from Occupancy / TenantsMetrics.
+- GLA and occupancy come from the Occupancy entity (TotalGLA, TotalGLAOccupied, VacancyPercentage). Buildings no longer has GLA fields.
 - TenantsMetrics includes superseded lease versions (TenantIds with suffixes like ".0.00011" and zero dollars). Exclude them or GLA double-counts. Total GLA should tie to the sum of live SuiteSQFT.
 - Rolling12Sales is wrong when LastSalesPeriod is older than the row's Period. Sum SalesHistory monthly rows instead. LastSalesPeriod 190001 = never reported.
 - A $0 in MonthlyNNN/AnnualNNN does not mean no recoveries. Tenants billed annually in arrears ("PY CAM", "PY Insurance", "PY real estate taxes") show $0 there. Check TenantLedger by IncomeCategory over at least 24 months.
@@ -41,7 +41,7 @@ HOW DATEX WORKS (QUIRKS)
 - TenantLedger: filter dates on TransactionDate (TransactionPeriod doesn't support ranges); tenant name groups on TenantFlags.
 
 WHAT DATEX DOESN'T COVER (missing ≠ "no")
-- Tenant options (renewals, ROFRs, purchase options): empty. Ask me for the lease.
+- Tenant options: TenantOptions has renewal options with notice dates and option rent, but NOT ROFRs, purchase or termination rights, and no exercised/lapsed flag. Ask me for the lease for those.
 - Loans: incomplete. Ask me for the loan documents.
 - TI and leasing commission costs: blank. Ask me for the lease or commission agreement.
 - Co-tenancy flag: blank, not "No." Ask me for the lease.

@@ -444,11 +444,16 @@ Shipped end-to-end and smoke-tested against a real Postgres + the real MCP hands
   Datex NNN into the comparison inflates the Datex side by the entire recovery load (~$8–15/SF
   in retail) and manufactures a phantom above-market finding. Also: `TenantsMetrics` is MONTHLY
   history keyed by `Period` (YYYYMM) — "current" is the LATEST period, never an arbitrary row.
-  Datex EXPOSES `TenantOptions` (option AND notice dates in its schema) — **but it returns ZERO
-  rows through the connector (verified live 10/16/26; Tenants/Breakpoints return data, so it
-  isn't access).** Option/notice dates therefore come from the executed lease; never read Datex
-  silence as "no options". If the Datex vendor wires that view up, revert this everywhere
-  (OWNED_AUTHORITY_NOTE, lease_abstracts, MCP_SERVER_INSTRUCTIONS in mcpTools.ts, the skill).
+  **`TenantOptions` IS POPULATED since 10/21/26** (was 0 rows 10/16; Datex fixed it on Eric's
+  ask) — ~1,650 rows across ~49 buildings, verified vs the web app (Chipotle #1686 Franklin = 4
+  options). RENEWAL options only (`OptionType` always "Rent"): OptionDate, NoticeDate,
+  TermMonths, Rate+RateDescription (null/0 = not loaded), OptionNotes. NO exercised/lapsed flag
+  (past-dated rows are history) and NO ROFR / purchase / termination rights — those still come
+  from the executed lease. Updated in OWNED_AUTHORITY_NOTE, ownedAssetNotice, lease_abstracts,
+  MCP_SERVER_INSTRUCTIONS (mcpTools.ts) and the skill. Same day Datex REMOVED `BLDGGLA`/`OCCGLA`
+  from `Buildings` (now BuildingId/BuildingName/Address1/City/State/ZipCode/EntityId/
+  SquareFootageType/Inactive) and added `OwnershipType` to `Occupancy`. The job kit never read
+  Buildings GLA, so the auto-refresh is unaffected; Spaces/VacantSuites/Loans keep `BLDGID`.
   Datex also has `Occupancy` (monthly), `Loans`,
   `Breakpoints`, `SalesHistory`, `Spaces.MarketRentalRate`, `VacantSuites`, `LeaseApp*`
   (live leasing pipeline), `CommercialFinancials`/`FinancialGroups` (budget vs actual).
@@ -823,8 +828,8 @@ home "This week" card (the app has NO email, so the Monday digest lives there).
   brands (24h cache, must NAME the brand — `headlineNamesBrand`); AI only on a "Summarize" click.
 - Sales: NEVER `TenantsMetrics.Rolling12Sales` (wrong when LastSalesPeriod < Period) — the
   snapshot sends raw `SalesHistory` and `reduceSalesHistory` sums the last 12 REPORTED months.
-- Datex gaps (tell Eric, don't paper over): Loans and TenantOptions return 0 rows via the
-  connector; PTC isn't in Datex; FinancialGroups NOI is negative (server flips); the server
+- Datex gaps (tell Eric, don't paper over): Loans returns 0 rows via the connector; TenantOptions
+  has renewal options only (since 10/21/26 — no ROFR/termination rights, no exercised flag); PTC isn't in Datex; FinancialGroups NOI is negative (server flips); the server
   can't call Datex, so "daily cache" = a Claude-generated snapshot import (docs/datex-refresh.md v2).
 - No pending-sale info anywhere in these records.
 

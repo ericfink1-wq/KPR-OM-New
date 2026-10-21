@@ -56,7 +56,7 @@ never as "the market."
 | Question | Source |
 |---|---|
 | "What does our Ulta at Northgate pay?" | **Datex** — a fact about a KPR property |
-| "When is their option notice due?" | **The executed lease** — Datex's tenant-options data is empty in practice (team finding 10/16/26), so ask for the lease; never read Datex silence as "no options" |
+| "When is their option notice due?" | **Datex `TenantOptions`** for renewal options and notice dates (populated since 10/21/26 — no exercised/lapsed flag, so past-dated rows are history); **the executed lease** for the option terms, ROFRs, purchase and termination rights, which Datex doesn't carry |
 | "How did that center perform against budget?" | **Datex** |
 | "What's in our leasing pipeline?" | **Datex** |
 | "Is that rent normal for Ulta?" | **The library** — a market question, and it has the sample |
@@ -216,8 +216,9 @@ More, from the team's own use (Eric, 10/16/26). Datex sits on KPR's **Yardi** da
    confirm by address; watch for duplicate names, condo associations and inactive sibling
    entities. Some properties span several building IDs — combine them.
 8. **Some entities are exposed but empty** — confirm rows exist before relying on one.
-9. **Never take GLA or occupancy from `Buildings`** (often zero). Compute from `Occupancy` /
-   `TenantsMetrics`. `TenantsMetrics` also carries **superseded lease versions** (TenantIds
+9. **GLA and occupancy come from `Occupancy`** (`TotalGLA`, `TotalGLAOccupied`,
+   `VacancyPercentage` as a decimal; it also carries `OwnershipType`). `Buildings` no longer
+   has GLA fields at all (removed 10/21/26). `TenantsMetrics` also carries **superseded lease versions** (TenantIds
    with suffixes like ".0.00011", zero dollars) — exclude them or GLA double-counts. Total GLA
    should tie to the sum of live `SuiteSQFT`.
 10. **`Rolling12Sales` is wrong when `LastSalesPeriod` is older than the row's `Period`** —
@@ -229,8 +230,8 @@ More, from the team's own use (Eric, 10/16/26). Datex sits on KPR's **Yardi** da
     `TenantFlags`.
 12. **Zero-GLA tenants are usually ground-lease / pad tenants paying CAM only** — still tenants.
 
-**Datex is silent ≠ "no".** Tenant options (renewals, ROFRs, purchase options) are empty;
-loans are incomplete; TI and leasing commissions are blank; the co-tenancy flag is blank, not
+**Datex is silent ≠ "no".** `TenantOptions` holds renewal options only — ROFRs, purchase
+and termination rights are not in it, and it has no exercised/lapsed flag; loans are incomplete; TI and leasing commissions are blank; the co-tenancy flag is blank, not
 "No"; occupancy category fields (anchor/shop/pad GLA) are not populated. Say Datex doesn't
 cover it and ask for the document that would (the lease, loan docs, commission agreement).
 Neither connector holds executed documents — name the specific missing document in one line

@@ -6,7 +6,7 @@
     "confirmedBy": "EF 2026-09-15",
     "cardinality": "One deal may map to multiple buildings. Always treat bldgIds as an array.",
     "queryNote": "Datex stores fixed-width character fields, so BLDGID values carry trailing spaces. Filter with the 'contains' operator, never 'eq'.",
-    "glaNote": "Buildings.BLDGGLA and Buildings.OCCGLA are 0 on roughly two-thirds of active buildings. Do not source GLA or occupancy from the Buildings entity. Compute from Occupancy / TenantsMetrics, filtering out superseded TenantsMetrics rows (TenantId values carrying a generation suffix such as .0.00011).",
+    "glaNote": "Buildings no longer carries GLA (Datex removed BLDGGLA/OCCGLA on 2026-10-21; its fields are now BuildingId, BuildingName, Address1, City, State, ZipCode, EntityId, SquareFootageType, Inactive). Source GLA and occupancy from the Occupancy entity (latest Period: TotalGLA, TotalGLAOccupied, VacancyPercentage), filtering superseded TenantsMetrics rows (a dot in TenantId) when tying to suite SF.",
     "writeNote": "Datex values populate a live block alongside the frozen acquisition-era snapshot. Never overwrite the OM-stated fields. Null in Datex means unknown, never zero.",
     "mappedCount": 38,
     "unmappedCount": 1
