@@ -989,17 +989,38 @@ export async function buildRosterAnalysisSnapshot(dealData: Record<string, unkno
 // call (runRosterAnalysis) and the Batch API path so the two can never drift. Prompt
 // caching: the static ROSTER_ANALYSIS_PROMPT is identical every refresh, so cache it;
 // only the per-deal snapshot JSON varies.
-export function rosterAnalysisParams(snapshot: Record<string, unknown>): Record<string, unknown> {
+// `cacheTtl: "1h"` is used by the Batch path: batch requests run over minutes-to-an-hour, so the
+// default 5-minute cache would expire before most of them read it (Anthropic's guidance).
+export function rosterAnalysisParams(snapshot: Record<string, unknown>, cacheTtl: "5m" | "1h" = "5m"): Record<string, unknown> {
+  const cache = cacheTtl === "1h" ? { type: "ephemeral", ttl: "1h" } : { type: "ephemeral" };
   return {
     model: "claude-haiku-4-5-20251001",
     // 8000, not 4000 (10/17/26): long write-ups on big centers were being cut off mid-JSON
     // and failed to parse. Unused headroom costs nothing.
     max_tokens: 8000,
     messages: [{ role: "user", content: [
-      { type: "text", text: ROSTER_ANALYSIS_PROMPT, cache_control: { type: "ephemeral" } },
+      { type: "text", text: ROSTER_ANALYSIS_PROMPT, cache_control: cache },
       { type: "text", text: JSON.stringify(snapshot, null, 1) },
     ] }],
   };
+}
+
+// Write the shared ROSTER_ANALYSIS_PROMPT to the 1-hour cache with one tiny live call
+// BEFORE a batch is submitted, so the batch's requests read it at ~10% of the input price
+// instead of each re-billing the full prompt (batches can't warm their own cache reliably —
+// their requests run concurrently). Costs about a cent; best-effort, never blocks the batch.
+export async function primeRosterAnalysisCache(): Promise<void> {
+  try {
+    const resp = await callAnthropicOnce({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 1,
+      messages: [{ role: "user", content: [
+        { type: "text", text: ROSTER_ANALYSIS_PROMPT, cache_control: { type: "ephemeral", ttl: "1h" } },
+        { type: "text", text: "{}" },
+      ] }],
+    });
+    await resp.json().catch(() => ({}));
+  } catch { /* best-effort */ }
 }
 
 // Parse a roster-analysis MESSAGE (the Anthropic message object, { content, stop_reason })

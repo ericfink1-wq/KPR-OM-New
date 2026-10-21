@@ -79,6 +79,9 @@ async function runSearch(system: string, prompt: string, maxUses: number, site: 
       model: LOCAL_INTEL_MODEL, max_tokens: 16000, system,
       output_config: { effort: "medium" },
       tools: [tool], messages,
+      // Automatic caching: a pause_turn continuation re-sends everything gathered so far,
+      // so let it re-read that from cache instead of paying Opus full price again.
+      cache_control: { type: "ephemeral" },
       // A policy decline is re-run on the fallback model the API picks (opt-in, Claude API).
       fallbacks: "default",
     }, 0, { "anthropic-beta": "server-side-fallback-2026-07-01" });

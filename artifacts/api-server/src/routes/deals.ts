@@ -6,7 +6,7 @@ import { isTombstoned, clearTombstone, tombstoneDeal, GONE_BODY } from "../lib/d
 import { dealsTable, dealImagesTable, dealSourcesTable, tenantAliasesTable, tenantIndexTable, compsIndexTable, leaseAbstractsTable } from "@workspace/db";
 import { eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { runOmExtraction, runRosterAnalysis, loadLeaseRiskSummary, autoUpdateHouseViewOnReview,
-  buildRosterAnalysisSnapshot, rosterAnalysisParams, parseRosterAnalysisMessage } from "../lib/extract";
+  buildRosterAnalysisSnapshot, rosterAnalysisParams, parseRosterAnalysisMessage, primeRosterAnalysisCache } from "../lib/extract";
 import { createMessageBatch, retrieveMessageBatch, fetchBatchResults, isValidBatchCustomId, type BatchRequest } from "../lib/analysisBatch";
 import { rebuildTenantIndex } from "../lib/tenantIndex";
 import { augmentScoringWithBenchmarks, getTotalDealCount, rescoreDeal } from "../lib/tenantBenchmarks";
@@ -1444,8 +1444,9 @@ export async function submitStaleAnalysisBatch(log: Logger, filter: (id: string,
   for (const r of targets) {
     const data = r.data as Record<string, unknown>;
     const snapshot = await buildRosterAnalysisSnapshot(data, await loadLeaseRiskSummary(r.id, data), library, r.id);
-    requests.push({ custom_id: r.id, params: rosterAnalysisParams(snapshot) });
+    requests.push({ custom_id: r.id, params: rosterAnalysisParams(snapshot, "1h") });
   }
+  await primeRosterAnalysisCache();
   const batch = await createMessageBatch(requests);
   log.info({ batchId: batch.id, count: requests.length }, "Submitted stale-analysis batch");
   return { batchId: (batch.id as string) ?? null, ids: targets.map(r => r.id), status: (batch.processing_status as string) ?? null };

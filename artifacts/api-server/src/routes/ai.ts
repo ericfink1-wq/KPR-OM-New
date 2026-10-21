@@ -65,6 +65,11 @@ router.post("/ai/messages", requireAuth, aiLimit, async (req, res) => {
         : system;
     }
     if (tools) body.tools = tools;
+    // Automatic caching for multi-turn Analyst chats: the API moves this breakpoint to the
+    // end of the conversation as it grows, so each follow-up re-reads the earlier turns at
+    // ~10% of the input price instead of paying full price for the whole history again.
+    // Prompts too short to cache are simply sent uncached (no error, no premium).
+    if (messages.length > 1) body.cache_control = { type: "ephemeral" };
 
     const upstream = await callAnthropicOnce(body);
     const data = await upstream.json() as Record<string, unknown>;
