@@ -20,7 +20,9 @@ import {
   type LocalIntelRecord, type IntelFinding, type Dismissal,
 } from "./localIntel";
 
-export const LOCAL_INTEL_MODEL = "claude-opus-5-5";
+// Sonnet, not Opus (Eric, 10/21/26): these scans run unattended on every new OM and monthly on
+// every owned center, so the cheaper model is the right trade for local-news research.
+export const LOCAL_INTEL_MODEL = "claude-sonnet-5-5";
 /** Auto (unattended) scans per UTC day across the library — a runaway guard, not a budget. */
 export const AUTO_SCANS_PER_DAY = 25;
 const recId = (dealId: string) => `${LOCAL_INTEL_KIND}:${dealId}`;
