@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-21-unsaved-uploads",
+    date: "2026-10-21",
+    category: "fixed",
+    title: "No more stray copies when an upload's tab is closed early",
+    detail: "If you closed the tab after a file finished reading but before it was filed, it used to show up as its own deal (The Waterfront appeared three times). Those copies are now hidden, and after 30 minutes one that matches a saved deal moves to Trash with a note saying why. One with no match is kept as a deal. Files from the same broker package (a Financial Narrative after its OM) are now added to their deal without asking.",
+    where: "Deal Library; Upload OMs",
+  },
+  {
     id: "2026-10-20-somerset-square-sold",
     date: "2026-10-20",
     category: "data",

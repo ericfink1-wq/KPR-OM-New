@@ -126,10 +126,10 @@ export function capRows<T>(
 type DealData = Record<string, unknown>;
 interface DealRecord { id: string; data: DealData; updatedAt: Date }
 
-// Active = not trashed, not mid-ingest. The same filter the site's own audit uses,
-// so MCP callers see exactly the library the app shows.
+// Active = not trashed, not mid-ingest, and not a finished upload its tab never filed
+// (`_ingestBy` — lib/unsavedUploads.ts), so MCP callers see the library the app shows.
 function isActive(d: DealData): boolean {
-  return !d.trashedAt && !d._processing && !d._processingError;
+  return !d.trashedAt && !d._processing && !d._processingError && !d._ingestBy;
 }
 
 async function loadActiveDeals(): Promise<DealRecord[]> {

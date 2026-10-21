@@ -19,6 +19,7 @@ import { startSelfImproveScheduler } from "./lib/selfImprove";
 import { applyRecordedSales, addMissingProperties, applySingleTenantProperties, applyAnsweredRecourse } from "./lib/recordedSales";
 import { purgePendingSaleData } from "./lib/pendingSale";
 import { runFailedUploadCleanup } from "./lib/failedUploadCleanup";
+import { sweepUnsavedUploads } from "./lib/unsavedUploads";
 import { retireSupersededOms } from "./lib/supersededOms";
 import { sweepOmDates, sweepPropertyHistory } from "./lib/omDateSweep";
 import { runCompsCleanupIfNeeded, runCompDedupe } from "./routes/comps";
@@ -72,6 +73,7 @@ const server = app.listen(port, (err) => {
     { name: "swap terms-pending heal", run: () => healSwapTermsPending().then(log("Re-derived swap terms-pending flags")) },
     // One-time / idempotent data jobs.
     { name: "failed-upload cleanup", run: () => runFailedUploadCleanup().then(plan => log("Failed-upload cleanup done")(plan.filter(a => a.kind !== "keep").length || null)) },
+    { name: "unsaved uploads", run: () => sweepUnsavedUploads(true).then(plan => log("Filed unsaved uploads")(plan.length ? { trashed: plan.filter(a => a.kind === "trash").length, claimed: plan.filter(a => a.kind === "claim").length } : null)) },
     { name: "write-up guardrails", run: () => sweepAnalysisGuardrails().then(log("Applied write-up guardrails to stored analyses")) },
     { name: "comp clean-up", run: () => runCompsCleanupIfNeeded().then(r => log("Comp clean-up applied")(r.applied ? r : null)) },
     { name: "comp duplicate merge", run: () => runCompDedupe(true).then(r => log("Merged duplicate comps")(r.applied ? { groups: r.groups, removed: r.removed, examples: r.examples } : null)) },

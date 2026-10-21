@@ -17,6 +17,7 @@ import { auditExtraction, AUDIT_ID_PREFIX, auditCheckKey, AUDIT_CHECK_LABELS } f
 import { autoMaintainDealData } from "../lib/dealMaintenance";
 import { recordHistory, isNewDocument } from "../lib/propertyHistory";
 import { fillOmDate } from "../lib/omDateSweep";
+import { hiddenUnsavedIds, type UploadRow } from "../lib/unsavedUploads";
 import { applyAnalysisGuardrails } from "../lib/analysisGuardrails";
 import { normalizeDate } from "../lib/importFixes";
 import { summarizePortfolioIssues } from "../lib/portfolioIssues";
@@ -298,9 +299,12 @@ router.get("/deals", requireAuth, async (req, res) => {
     ]);
     const coverSet = new Set(coverIdRows.map(c => c.id));
     const thumbSet = new Set(thumbIdRows.map(c => c.id));
+    // A finished upload its tab hasn't filed yet (still `_ingestBy`) stays out of the live
+    // list for 30 min, and for good while a saved deal matches it (lib/unsavedUploads.ts).
+    const hiddenUnsaved = wantTrash || req.query.all === "1" ? new Set<string>() : hiddenUnsavedIds(rows as UploadRow[]);
     const deals = rows
       // An upload still reading, or one whose read failed, is never a library deal.
-      .filter(r => !r.data._processing && !r.data._processingError)
+      .filter(r => !r.data._processing && !r.data._processingError && !hiddenUnsaved.has(r.id))
       .filter(r => req.query.all === "1" || (wantTrash ? !!r.data.trashedAt : !r.data.trashedAt))
       .map(r => {
         const out = presentDeal(r as { id: string; data: Record<string, unknown>; updatedAt: Date | null }, aliasMap, coverSet.has(r.id), thumbSet.has(r.id));
@@ -1534,6 +1538,8 @@ router.post("/analysis-refresh/tick", requireAuth, async (req, res) => {
     // The open app pings this every couple of minutes — also keep the swap curve current
     // (throttled to every 10 minutes inside; time-boxed).
     await import("../lib/rateCurves").then(m => m.refreshSwapCurves(10_000)).catch(() => null);
+    // …and file away finished uploads whose tab closed before saving them (every 5 min inside).
+    await import("../lib/unsavedUploads").then(m => m.sweepUnsavedUploads()).catch(() => null);
     res.json({ tick, status: await analysisRefreshStatus() });
   } catch (err) { res.status(500).json({ error: err instanceof Error ? err.message : "tick failed" }); }
 });

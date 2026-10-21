@@ -1,4 +1,5 @@
 import type { Deal } from "./idb";
+import { PACKAGE_WINDOW_DAYS, type PackageSources } from "./packageMerge";
 import { apiAiMessages } from "./api";
 import { robustParseJSON } from "./utils";
 
@@ -402,6 +403,24 @@ export function nameFromFileName(fileName: string | null | undefined): string | 
     .filter(seg => norm(seg).length >= 4);
   const out = kept.join(" - ").trim();
   return norm(out).length >= 4 ? out : null;
+}
+
+/** "The Waterfront" ≡ "Waterfront": a leading "The" and punctuation ignored. */
+const propKey = (s: string | null | undefined): string => norm((s || "").trim().replace(/^the\s+/i, ""));
+
+/**
+ * Is this file another piece of a broker package the deal was started from recently?
+ * True when the deal's package began (`packageSources.startedAt`) within PACKAGE_WINDOW_DAYS
+ * and the property in the FILE name ("NMRK - The Waterfront - Financial Narrative" →
+ * "The Waterfront") is the deal's name, ignoring a leading "The". The upload queue then
+ * attaches the file without asking (Eric, 10/21/26 — The Waterfront ×3).
+ */
+export function samePackageDeal(fileName: string | null | undefined, deal: Pick<Deal, "propertyName" | "trashedAt"> & { packageSources?: PackageSources | null }, now = Date.now()): boolean {
+  if (!deal || deal.trashedAt) return false;
+  const started = Date.parse(deal.packageSources?.startedAt || "");
+  if (!Number.isFinite(started) || now - started > PACKAGE_WINDOW_DAYS * 86_400_000 || started - now > 86_400_000) return false;
+  const fromFile = propKey(nameFromFileName(fileName));
+  return fromFile.length >= 4 && fromFile === propKey(deal.propertyName);
 }
 
 // Every name a deal answers to: its propertyName plus any "also known as" aliases

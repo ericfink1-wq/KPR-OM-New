@@ -13,9 +13,11 @@
 // merge reads it (those load the full record). Library-wide views DO read cashFlowProjection
 // (recoveries fallback), leaseRisk (co-tenancy cascade), comparableSales and incomeBreakdown
 // (data confidence), so those stay. Adding a key: grep the web app for it first.
+// `packageSources` (4 small fields) STAYS too: the upload queue's samePackageDeal reads its
+// `startedAt` on library deals to attach a package's later files without asking (10/21/26).
 export const LIST_OMIT_KEYS = [
   "fieldCitations", "extraFields", "roofData", "underwritingAssumptions", "otherIncome",
-  "packageSources", "propertyHistory", "taxParcels", "customAmortSchedule", "prefSchedule",
+  "propertyHistory", "taxParcels", "customAmortSchedule", "prefSchedule",
 ] as const;
 
 // The roster stays in the list (58 library-wide readers), but each row carries ~20 null

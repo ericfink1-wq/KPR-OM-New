@@ -5,7 +5,7 @@ import { extractPdfImages, extractFlyerImages } from "../lib/pdfExtract";
 import { uid, buildCorrectionsNote, tenantKey } from "../lib/utils";
 import { extractAnyFile, isSpreadsheet, isSupportedUpload } from "../lib/fileExtract";
 import { playUploadSuccess, playUploadError } from "../lib/sounds";
-import { classifyDocument, matchDeal, hasPossibleMatch, hasOmSaleSignals, detectUnsupportedDoc, nameFromFileName, DOCUMENT_ONLY_TYPES, DOC_TYPE_LABEL, type DocType } from "../lib/docClassify";
+import { classifyDocument, matchDeal, hasPossibleMatch, hasOmSaleSignals, detectUnsupportedDoc, nameFromFileName, samePackageDeal, DOCUMENT_ONLY_TYPES, DOC_TYPE_LABEL, type DocType } from "../lib/docClassify";
 import { looksLikeOm, uploadResultFor, NOT_ADDED_MSG } from "../lib/uploadGate";
 import { detectPackageRole, groupOf, initialPackageSources, planPackageMerge, type PackagePlan } from "../lib/packageMerge";
 import { extractRentRoll, extractLeaseOptions, buildRosterPatch, buildOptionsPatch } from "../lib/rentRollExtract";
@@ -1367,7 +1367,16 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
           { propertyName: cls.propertyName, address: cls.address, fileName: file.name },
           existingDeals.filter(d => !madeHere.has(d.id)),
         );
-        if (prior.deal && prior.confidence !== "none") {
+        // Another file of a broker package this deal was started from in the last few
+        // weeks (its Financial Narrative after its OM) → add it without asking.
+        const preRole = detectPackageRole(fileName, text);
+        const pkgDeal = preRole === "om" ? null
+          : [prior.deal, ...existingDeals].find(d => !!d && !madeHere.has(d.id) && samePackageDeal(file.name, d)) ?? null;
+        if (pkgDeal) {
+          const name = pkgDeal.propertyName || pkgDeal.fileName || "this property";
+          choice = { kind: "attach", deal: pkgDeal };
+          updateItem(itemId, { status: "extracting", msg: `Adding to “${name}” (same broker package)…` });
+        } else if (prior.deal && prior.confidence !== "none") {
           const name = prior.deal.propertyName || prior.deal.fileName || "This property";
           const by = await apiDealUploadedBy(prior.deal.id).catch(() => null);
           if (isCancelled(itemId)) return;
@@ -1488,7 +1497,12 @@ export default function UploadQueue({ pendingFiles, onFilesConsumed, onDealsAdde
         const madeHere = new Set(createdDealsRef.current.map(d => d.id));
         const library = existingDeals.filter(d => !madeHere.has(d.id));
         const libDup = findDuplicate(fileName, extracted, library) || findRosterStubMatch(extracted, library);
-        if (libDup && !sameDropDup()) {
+        // A supporting file of a package this deal was started from recently → attach, no prompt.
+        const pkgDeal = role === "om" || sameDropDup() ? null
+          : [libDup, ...library].find(d => !!d && samePackageDeal(fileName, d)) ?? null;
+        if (pkgDeal) {
+          choice = { kind: "attach", deal: pkgDeal };
+        } else if (libDup && !sameDropDup()) {
           const name = libDup.propertyName || libDup.fileName || "an existing deal";
           updateItem(itemId, {
             status: "awaiting_confirm", confirmMode: "post", confirmDealName: name, dupCandidate: libDup,

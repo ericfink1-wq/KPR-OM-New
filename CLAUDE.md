@@ -2,6 +2,23 @@
 
 Persistent context for this repo. Read this fully at the start of every session.
 
+## FINISHED-BUT-UNSAVED UPLOADS (10/21/26 — The Waterfront ×3)
+An OM upload is a temp row stamped `_ingestBy` until the uploading tab files it (merge or save drops the marker). Tab
+closed in between → the finished read sat in the library as a stray deal (two "Waterfront" Financial Narrative rows
+1792528752996-wdj1p0q / 1792529345857-g71ef7y next to the saved "The Waterfront", PA). `api lib/unsavedUploads.ts` (pure
+parts tested in `unsavedUploads.test.ts` on those real rows): unsaved upload = `_ingestBy` + finished reading + not
+trashed; finished = its `uploadedAt` (stamped when extraction completes). GET /deals (live list + `?full=1`; not Trash /
+`?all=1` backups) hides it for `UNSAVED_GRACE_MS` (30 min) and ALWAYS while a saved deal matches it — by name, alias or
+the property in the FILE name (`fileNameProperty.ts` = server copy of web `nameFromFileName`; a web test runs both on the
+same names, change both or neither), leading "The" ignored, never across two different stated states. Sweep
+`sweepUnsavedUploads` (startup step + analysis-refresh tick, throttled 5 min): past 30 min, matched → Trash with
+`trashedReason` naming the deal; no match → claimed (`_ingestBy` dropped); WHERE `data ? '_ingestBy'` so a tab that saved
+meanwhile wins; tenant index rebuilt. MCP `isActive` skips `_ingestBy` rows. Verified against a real Postgres. Client:
+`samePackageDeal(fileName, deal)` (docClassify) = deal's `packageSources.startedAt` within PACKAGE_WINDOW_DAYS AND the
+file name's property = the deal's name (leading "The" ignored); UploadQueue attaches a NON-OM file (detectPackageRole ≠
+om) to such a deal with no prompt, at the pre-read "already uploaded" check and at the post-read library match.
+`packageSources` is no longer in LIST_OMIT_KEYS (the list copy must carry `startedAt`). Test: `samePackageDeal.test.ts`.
+
 ## EMAIL = ONE SHARED MAILER, GMAIL SMTP FIRST (10/20/26)
 Emails weren't reaching anyone: no `RESEND_FROM`, so Resend sent from `onboarding@resend.dev`, which only delivers to
 the Resend account owner (verifying kprcenters.com needs IT DNS). `api lib/mailer.ts` is now the ONLY sender
