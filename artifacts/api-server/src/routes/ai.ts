@@ -13,8 +13,8 @@ const aiLimit = rateLimit({ bucket: "ai", perMinute: 20, perHour: 240 });
 // proxy could be pointed at an arbitrary (pricier) model on our API key. Built from
 // every "claude-" model the client sends today, plus the server default.
 const MODEL_ALLOWLIST = new Set([
-  "claude-sonnet-4-5",           // default
-  "claude-sonnet-4-6",
+  "claude-sonnet-4-5",           // still accepted (an old open tab may send it) — upgraded below
+  "claude-sonnet-4-6",           // default
   "claude-haiku-4-5-20251001",
 ]);
 
@@ -52,7 +52,9 @@ router.post("/ai/messages", requireAuth, aiLimit, async (req, res) => {
   }
 
   try {
-    const resolvedModel = model || "claude-sonnet-4-5";
+    // Default = current Sonnet (Eric, 10/21/26). 4.5 is deprecated and costs the same, so a
+    // request that omits the model, or still names 4.5, runs on 4.6.
+    const resolvedModel = !model || model === "claude-sonnet-4-5" ? "claude-sonnet-4-6" : model;
     const body: Record<string, unknown> = { model: resolvedModel, max_tokens: cappedTokens, messages };
     if (system) {
       // Prompt-cache a LARGE, stable system prompt (e.g. the Analyst's whole-library
