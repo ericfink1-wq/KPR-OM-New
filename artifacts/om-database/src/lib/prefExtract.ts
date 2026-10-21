@@ -1,6 +1,7 @@
 import type { Deal } from "./idb";
 import { apiAiMessages, lessonGuidanceClient } from "./api";
 import { robustParseJSON } from "./utils";
+import { MODEL_SONNET } from "./models";
 
 // Fields the preferred-equity section holds.
 const PREF_NUMERIC = new Set(["prefAmount", "prefRateCurrent", "prefRateAllIn", "prefTermYears"]);
@@ -33,7 +34,7 @@ ${text.slice(0, 60000)}
 Return ONLY the JSON object.`;
 
   const res = await apiAiMessages({
-    model: "claude-sonnet-4-6",
+    model: MODEL_SONNET,
     max_tokens: 2000,
     messages: [{ role: "user", content: prompt }],
   });

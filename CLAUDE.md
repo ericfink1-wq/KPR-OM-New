@@ -2,6 +2,17 @@
 
 Persistent context for this repo. Read this fully at the start of every session.
 
+## CLAUDE MODELS = ONE LIST (Eric, 10/21/26)
+Every AI call takes its model from `lib/models.ts` (`MODEL_SONNET` high-stakes reads + Analyst chat, `MODEL_HAIKU` quick
+jobs, `MODEL_RESEARCH` local-intel web scans) — two byte-identical copies, api-server and om-database (packages can't
+import each other). `models.test.ts` (web) fails if the copies drift OR a `"claude-…"` string appears anywhere else in
+either src tree. The AI proxy allowlist (routes/ai.ts) = `ALL_MODELS` + `LEGACY_MODEL_UPGRADES` keys; a retired name an
+old tab still sends is upgraded via that map. A retired/upgraded model = edit BOTH copies, nothing else. A monthly
+scheduled task (1st Wednesday, midday ET) checks these against Anthropic's deprecations page: it swaps + pushes a model
+being RETIRED, and only REPORTS a newer same-price model (a new model can change how OMs read — Eric decides).
+Cost work same day: prompt caching on the batch re-grade (1h TTL + one priming call), Analyst chat + local-intel
+continuations (top-level automatic caching); local intel moved Opus → Sonnet. Nothing on Opus now.
+
 ## FINISHED-BUT-UNSAVED UPLOADS (10/21/26 — The Waterfront ×3)
 An OM upload is a temp row stamped `_ingestBy` until the uploading tab files it (merge or save drops the marker). Tab
 closed in between → the finished read sat in the library as a stray deal (two "Waterfront" Financial Narrative rows
@@ -48,7 +59,7 @@ access / municipal / property; prompt; `normalizeFindings` — a source must be 
 (model-named URLs that weren't returned are dropped, no source = dropped), last 24 months + forward-looking only, dedupe by
 shared URL or near-identical headline (`similar`), `mergeScan` keeps firstSeenAt/id, marks isNew, `newHighIds` = new
 high-severity negatives; dismissals stick by id OR any URL OR similar headline) + `lib/localIntelScan.ts` (ONE raw-HTTP
-Claude call via `callAnthropicOnce` (now takes extra headers) — model `claude-opus-5-5`, effort medium, `web_search_20260209`
+Claude call via `callAnthropicOnce` (now takes extra headers) — model `MODEL_RESEARCH` (Sonnet since 10/21/26), effort medium, `web_search_20260209`
 max_uses = query count, user_location, `fallbacks:"default"` + beta `server-side-fallback-2026-07-01`, pause_turn followed;
 page text is untrusted data per the system prompt; Census-geocoded distance when a finding has a street address, else
 the model's "~"). Storage: am_records kind `local_intel` (`local_intel:<dealId>`), queue kind `local_intel_queue`, daily

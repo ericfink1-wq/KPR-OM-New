@@ -2,6 +2,7 @@ import { Router } from "express";
 import { callAnthropicOnce, robustParseJSON, runOmExtraction } from "../lib/extract";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rateLimit";
+import { ALL_MODELS, LEGACY_MODEL_UPGRADES, MODEL_SONNET } from "../lib/models";
 
 const router = Router();
 
@@ -12,11 +13,7 @@ const aiLimit = rateLimit({ bucket: "ai", perMinute: 20, perHour: 240 });
 // Only allow the models the app actually uses. Without this, the authenticated
 // proxy could be pointed at an arbitrary (pricier) model on our API key. Built from
 // every "claude-" model the client sends today, plus the server default.
-const MODEL_ALLOWLIST = new Set([
-  "claude-sonnet-4-5",           // still accepted (an old open tab may send it) — upgraded below
-  "claude-sonnet-4-6",           // default
-  "claude-haiku-4-5-20251001",
-]);
+const MODEL_ALLOWLIST = new Set<string>([...ALL_MODELS, ...Object.keys(LEGACY_MODEL_UPGRADES)]);
 
 // A high SAFETY NET on answer length, not a real cap: legitimate callers request up
 // to 16000 (sales/abstract/amort extraction), so this only blocks a pathological
@@ -52,9 +49,8 @@ router.post("/ai/messages", requireAuth, aiLimit, async (req, res) => {
   }
 
   try {
-    // Default = current Sonnet (Eric, 10/21/26). 4.5 is deprecated and costs the same, so a
-    // request that omits the model, or still names 4.5, runs on 4.6.
-    const resolvedModel = !model || model === "claude-sonnet-4-5" ? "claude-sonnet-4-6" : model;
+    // Default = current Sonnet; a retired name an old tab still sends is upgraded (lib/models.ts).
+    const resolvedModel = !model ? MODEL_SONNET : (LEGACY_MODEL_UPGRADES[model] ?? model);
     const body: Record<string, unknown> = { model: resolvedModel, max_tokens: cappedTokens, messages };
     if (system) {
       // Prompt-cache a LARGE, stable system prompt (e.g. the Analyst's whole-library

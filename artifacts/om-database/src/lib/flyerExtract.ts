@@ -1,6 +1,7 @@
 import type { Deal } from "./idb";
 import { apiAiMessages, lessonGuidanceClient } from "./api";
 import { robustParseJSON, isVacant } from "./utils";
+import { MODEL_HAIKU } from "./models";
 
 // A leasing flyer is a marketing one-pager for a center's available space. It is
 // NOT a sale OM and NOT a rent roll: it carries property facts, demographics,
@@ -57,7 +58,7 @@ LEASING FLYER TEXT:
 ${text.slice(0, 30000)}`;
 
   const res = await apiAiMessages({
-    model: "claude-haiku-4-5-20251001",
+    model: MODEL_HAIKU,
     max_tokens: 3000,
     messages: [{ role: "user", content: prompt }],
   });

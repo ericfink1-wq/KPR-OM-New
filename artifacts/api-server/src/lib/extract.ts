@@ -17,6 +17,7 @@ import { Agent, fetch as undiciFetch } from "undici";
 import { ensurePropertyName } from "./dealMaintenance";
 import { applyAnalysisGuardrails } from "./analysisGuardrails";
 import { historyForAnalysis } from "./propertyHistory";
+import { MODEL_HAIKU, MODEL_SONNET } from "./models";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -372,7 +373,7 @@ ${valueList}
 
 OM TEXT:
 ${truncated}`;
-    const upstream = await callAnthropicOnce({ model: "claude-haiku-4-5-20251001", max_tokens: 1200, messages: [{ role: "user", content: prompt }] });
+    const upstream = await callAnthropicOnce({ model: MODEL_HAIKU, max_tokens: 1200, messages: [{ role: "user", content: prompt }] });
     const data = await upstream.json() as Record<string, unknown>;
     if (!upstream.ok) return [];
     const raw = (data.content as Array<{ type: string; text?: string }>)?.find(b => b.type === "text")?.text ?? "";
@@ -417,8 +418,8 @@ export async function runOmExtraction(text: string, extraGuidance = ""): Promise
   type Block = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
   // First pass + the anchor-finding gap-fill use Sonnet (accuracy); the overflow
   // "continuation" passes on very long rosters use the faster Haiku model.
-  const FAST_MODEL = "claude-haiku-4-5-20251001";
-  const callExtract = async (content: string | Block[], model = "claude-sonnet-4-6") => {
+  const FAST_MODEL = MODEL_HAIKU;
+  const callExtract = async (content: string | Block[], model = MODEL_SONNET) => {
     const upstream = await callAnthropicOnce({
       model,
       max_tokens: 32000,
@@ -825,7 +826,7 @@ export async function rebuildHouseView(updatedBy: string | null): Promise<{ cont
     return { content: "", sourceCount: 0 };
   }
   const upstream = await callAnthropicOnce({
-    model: "claude-haiku-4-5-20251001",
+    model: MODEL_HAIKU,
     max_tokens: 1500,
     messages: [{ role: "user", content: [
       { type: "text", text: HOUSE_VIEW_DISTILL_PROMPT, cache_control: { type: "ephemeral" } },
@@ -994,7 +995,7 @@ export async function buildRosterAnalysisSnapshot(dealData: Record<string, unkno
 export function rosterAnalysisParams(snapshot: Record<string, unknown>, cacheTtl: "5m" | "1h" = "5m"): Record<string, unknown> {
   const cache = cacheTtl === "1h" ? { type: "ephemeral", ttl: "1h" } : { type: "ephemeral" };
   return {
-    model: "claude-haiku-4-5-20251001",
+    model: MODEL_HAIKU,
     // 8000, not 4000 (10/17/26): long write-ups on big centers were being cut off mid-JSON
     // and failed to parse. Unused headroom costs nothing.
     max_tokens: 8000,
@@ -1012,7 +1013,7 @@ export function rosterAnalysisParams(snapshot: Record<string, unknown>, cacheTtl
 export async function primeRosterAnalysisCache(): Promise<void> {
   try {
     const resp = await callAnthropicOnce({
-      model: "claude-haiku-4-5-20251001",
+      model: MODEL_HAIKU,
       max_tokens: 1,
       messages: [{ role: "user", content: [
         { type: "text", text: ROSTER_ANALYSIS_PROMPT, cache_control: { type: "ephemeral", ttl: "1h" } },

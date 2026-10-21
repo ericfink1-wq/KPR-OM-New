@@ -1,6 +1,7 @@
 import type { Deal, TenantSalesYear, OccBreakdown, ReviewQuestion } from "./idb";
 import { apiAiMessages, lessonGuidanceClient } from "./api";
 import { robustParseJSON, tenantKey, stripSuiteCode, estimateRecoveries, computeOccupancyCost, parseAiReviewQuestions } from "./utils";
+import { MODEL_SONNET } from "./models";
 
 export interface SalesExtractResult {
   year: number;
@@ -85,7 +86,7 @@ ${text.slice(0, 120000)}`;
   // misses are usually transient, so the user shouldn't have to re-trigger by hand.
   const callOnce = async (): Promise<string> => {
     const res = await apiAiMessages({
-      model: "claude-sonnet-4-6",
+      model: MODEL_SONNET,
       max_tokens: 16000,
       messages: [{ role: "user", content: prompt }],
     });

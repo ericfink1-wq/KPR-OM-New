@@ -1,6 +1,7 @@
 import type { LeaseAbstract } from "./idb";
 import { apiAiMessages } from "./api";
 import { robustParseJSON } from "./utils";
+import { MODEL_SONNET } from "./models";
 
 // Read a BROKER-PROVIDED lease abstract / lease-summary document (the "Summary of
 // Lease Provisions" / abstract workbook that brokers hand out) and turn it into the
@@ -100,7 +101,7 @@ export async function extractLeaseAbstracts(text: string): Promise<AbstractExtra
   const prompt = PROMPT + text.slice(0, 140000);
   const callOnce = async (): Promise<string> => {
     const res = await apiAiMessages({
-      model: "claude-sonnet-4-6",
+      model: MODEL_SONNET,
       max_tokens: 16000,
       messages: [{ role: "user", content: prompt }],
     });

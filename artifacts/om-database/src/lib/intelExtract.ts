@@ -15,6 +15,7 @@ import { fmtMoney } from "./money";
 import type { Deal, TenantSalesYear, DealIntelEntry } from "./idb";
 import { apiAiMessages, lessonGuidanceClient } from "./api";
 import { robustParseJSON, tenantKey, stripSuiteCode, recomputeRosterMetrics } from "./utils";
+import { MODEL_SONNET } from "./models";
 
 export interface IntelSalesItem {
   id: string;
@@ -116,7 +117,7 @@ ${text.slice(0, 8000)}`;
 
   const callOnce = async (): Promise<string> => {
     const res = await apiAiMessages({
-      model: "claude-sonnet-4-6",
+      model: MODEL_SONNET,
       max_tokens: 4000,
       messages: [{ role: "user", content: prompt }],
     });

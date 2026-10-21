@@ -1,6 +1,7 @@
 import type { Deal, InterestRateSwap } from "./idb";
 import { apiAiMessages, lessonGuidanceClient } from "./api";
 import { robustParseJSON } from "./utils";
+import { MODEL_HAIKU } from "./models";
 
 // Recognize a free-text floating-rate index against the common CRE benchmarks, so the
 // swap editor can confirm (green check) that what was typed IS a known index, and name
@@ -73,7 +74,7 @@ SWAP CONFIRMATION TEXT:
 ${text.slice(0, 30000)}`;
 
   const res = await apiAiMessages({
-    model: "claude-haiku-4-5-20251001",
+    model: MODEL_HAIKU,
     max_tokens: 1500,
     messages: [{ role: "user", content: prompt }],
   });

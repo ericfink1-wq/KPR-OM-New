@@ -18,6 +18,7 @@ import { sql } from "drizzle-orm";
 import type { Logger } from "pino";
 import { callAnthropicOnce, robustParseJSON } from "./extract";
 import { backfillTenantIndexFields } from "./tenantIndex";
+import { MODEL_HAIKU } from "./models";
 
 // Sales/SF is sparse and noisy, so we only QUOTE a brand sales average once enough
 // other locations have disclosed sales — below this we suppress the comparison
@@ -574,7 +575,7 @@ export async function augmentScoringWithBenchmarks(
 
     // Call Claude (haiku — small fast call)
     const upstream = await callAnthropicOnce({
-      model: "claude-haiku-4-5-20251001",
+      model: MODEL_HAIKU,
       max_tokens: 4096,
       messages: [{ role: "user", content: prompt }],
     });

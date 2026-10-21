@@ -1,6 +1,7 @@
 import { apiAiMessages, lessonGuidanceClient } from "./api";
 import { robustParseJSON, toStepString, tenantKey, stripSuiteCode, isVacant } from "./utils";
 import type { Deal, ReviewQuestion } from "./idb";
+import { MODEL_SONNET } from "./models";
 
 export interface RentRollResult {
   asOf: string | null;
@@ -61,7 +62,7 @@ reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with conf
     const res = await apiAiMessages({
       // Sonnet (not Haiku) — rent rolls are dense and accuracy-critical (suites,
       // rent steps vs options, tricky multi-line layouts). Worth the extra cost.
-      model: "claude-sonnet-4-6",
+      model: MODEL_SONNET,
       max_tokens: maxTokens,
       messages: [{ role: "user", content: baseContent + suffix }],
     });
@@ -157,7 +158,7 @@ LEASE OPTIONS TEXT:
 ${text.slice(0, 60000)}`;
   const taught = await lessonGuidanceClient("lease-options");
   const res = await apiAiMessages({
-    model: "claude-sonnet-4-6",
+    model: MODEL_SONNET,
     max_tokens: 8000,
     messages: [{ role: "user", content: prompt + taught }],
   });

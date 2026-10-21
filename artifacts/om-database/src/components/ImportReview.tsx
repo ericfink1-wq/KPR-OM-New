@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import type { Deal, ReviewQuestion, Tenant } from "../lib/idb";
 import { buildReviewQuestions, tenantKey, robustParseJSON } from "../lib/utils";
 import { apiAiMessages, apiAddExtractionLesson } from "../lib/api";
+import { MODEL_HAIKU } from "../lib/models";
 
 // A field/check-aware DRAFT rule, so teaching the analyst is one click. The operator
 // can edit it before saving; it's stored as a high-priority extraction lesson that
@@ -368,7 +369,7 @@ USER CORRECTION: ${instruction}`;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         res = await apiAiMessages({
-          model: "claude-haiku-4-5-20251001",
+          model: MODEL_HAIKU,
           max_tokens: 1200,
           messages: [{ role: "user", content: prompt }],
         });

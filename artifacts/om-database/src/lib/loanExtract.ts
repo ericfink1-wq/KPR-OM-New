@@ -1,6 +1,7 @@
 import type { Deal, PrepayTerms, ReviewQuestion } from "./idb";
 import { apiAiMessages, lessonGuidanceClient } from "./api";
 import { robustParseJSON, parseAiReviewQuestions } from "./utils";
+import { MODEL_SONNET } from "./models";
 
 // Financing + acquisition fields a loan agreement / credit agreement / term sheet
 // / closing statement can disclose. Mirrors the deal page's TermSheetImport so the
@@ -54,7 +55,7 @@ ${text.slice(0, 60000)}
 Return ONLY the JSON object, no prose.`;
 
   const res = await apiAiMessages({
-    model: "claude-sonnet-4-6",
+    model: MODEL_SONNET,
     max_tokens: 3000,
     messages: [{ role: "user", content: prompt }],
   });

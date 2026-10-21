@@ -22,11 +22,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { callAnthropicOnce, robustParseJSON } from "./extract";
+import { MODEL_SONNET } from "./models";
 
 // Models: Sonnet for both passes (accuracy over speed — KPR's standing
 // preference). Kept as constants so a future tuning pass is one edit.
-const RECONCILE_MODEL = "claude-sonnet-4-6";
-const DIGEST_MODEL = "claude-sonnet-4-6";
+const RECONCILE_MODEL = MODEL_SONNET;
+const DIGEST_MODEL = MODEL_SONNET;
 
 // A single source document fed to the engine (full extracted text + light meta).
 export interface LeaseDocInput {

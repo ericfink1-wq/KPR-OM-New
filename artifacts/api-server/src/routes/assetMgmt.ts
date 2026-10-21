@@ -12,6 +12,7 @@ import { callAnthropicOnce } from "../lib/extract";
 import { proposeCovenants } from "../lib/covenants";
 import { listIngestTokens, createIngestToken, revokeIngestToken, listIngestLogs, getAutoRefreshSetting, setAutoRefreshEnabled, listIngestAudit } from "../lib/datexAutoRefresh";
 import { keepHiddenOnSave } from "../lib/docPrivacy";
+import { MODEL_HAIKU, MODEL_SONNET } from "../lib/models";
 
 // ASSET MANAGEMENT — owned properties only. Reads for any signed-in member; every write is
 // admin-only (Eric: "admin-only edit controls"). Records carry a per-row source note.
@@ -134,7 +135,7 @@ Rules:
 
 FACTS (JSON):
 ${facts}`;
-    const r = await callAnthropicOnce({ model: "claude-sonnet-4-6", max_tokens: 600, messages: [{ role: "user", content: prompt }] });
+    const r = await callAnthropicOnce({ model: MODEL_SONNET, max_tokens: 600, messages: [{ role: "user", content: prompt }] });
     const j = await r.json() as { content?: Array<{ type: string; text?: string }>; error?: { message?: string } };
     if (!r.ok) { res.status(502).json({ error: j.error?.message ?? "AI call failed" }); return; }
     res.json({ draft: (j.content ?? []).find(x => x.type === "text")?.text?.trim() ?? "" });
@@ -185,7 +186,7 @@ router.post("/am/credit-news/summarize", requireAuth, async (req, res) => {
     if (!recent.length) { res.status(400).json({ error: "No stored headlines for that brand yet." }); return; }
     if (!process.env.ANTHROPIC_API_KEY) { res.status(503).json({ error: "AI is not configured" }); return; }
     const prompt = `You are a retail credit analyst for a shopping-center landlord. In 2-3 plain sentences, say what these recent headlines mean for "${brand}" as a tenant (bankruptcy, store closures, downgrades, or nothing material). Only use what the headlines say; if they are routine, say so.\n\n${recent.map(a => `- ${a.title} (${a.source || "?"}, ${a.at?.slice(0, 10) ?? "undated"})`).join("\n")}`;
-    const r = await callAnthropicOnce({ model: "claude-haiku-4-5-20251001", max_tokens: 300, messages: [{ role: "user", content: prompt }] });
+    const r = await callAnthropicOnce({ model: MODEL_HAIKU, max_tokens: 300, messages: [{ role: "user", content: prompt }] });
     const j = await r.json() as { content?: Array<{ type: string; text?: string }>; error?: { message?: string } };
     if (!r.ok) { res.status(502).json({ error: j.error?.message ?? "AI call failed" }); return; }
     res.json({ summary: (j.content ?? []).find(b => b.type === "text")?.text?.trim() ?? "", headlines: recent.length });

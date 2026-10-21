@@ -1,6 +1,7 @@
 import type { AmortRow } from "./idb";
 import { apiAiMessages, lessonGuidanceClient } from "./api";
 import { robustParseJSON } from "./utils";
+import { MODEL_HAIKU } from "./models";
 
 // Extract a lender amortization schedule (PDF or spreadsheet text) into rows.
 // We mainly need each payment's DATE and ending BALANCE; payment/interest/
@@ -21,7 +22,7 @@ AMORTIZATION SCHEDULE TEXT:
 ${text.slice(0, 60000)}`;
 
   const res = await apiAiMessages({
-    model: "claude-haiku-4-5-20251001",
+    model: MODEL_HAIKU,
     max_tokens: 16000,
     messages: [{ role: "user", content: prompt }],
   });

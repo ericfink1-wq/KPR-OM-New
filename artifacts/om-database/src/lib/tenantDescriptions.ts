@@ -1,5 +1,6 @@
 import { apiAiMessages } from "./api";
 import { tenantKey } from "./utils";
+import { MODEL_HAIKU } from "./models";
 
 // ── Tenant / parent-company descriptions ─────────────────────────────────────
 // Curated 2-3 sentence blurbs for the major retail brands & parents the app
@@ -113,7 +114,7 @@ async function aiDescription(name: string, kind: "tenant" | "parent"): Promise<s
 
   try {
     const res = await apiAiMessages({
-      model: "claude-haiku-4-5-20251001",
+      model: MODEL_HAIKU,
       max_tokens: 220,
       messages: [{ role: "user", content: prompt }],
     });

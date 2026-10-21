@@ -1,5 +1,6 @@
 import { apiAiMessages } from "./api";
 import { robustParseJSON } from "./utils";
+import { MODEL_HAIKU } from "./models";
 
 // Extract comparable-sale records from an Excel/CSV-derived text dump or a PDF
 // comps sheet, mapping arbitrary columns/layout into the shape /comps/manual/bulk
@@ -47,7 +48,7 @@ DATA:
 ${text.slice(0, 60000)}`;
 
   const res = await apiAiMessages({
-    model: "claude-haiku-4-5-20251001",
+    model: MODEL_HAIKU,
     max_tokens: 8000,
     messages: [{ role: "user", content: prompt }],
   });

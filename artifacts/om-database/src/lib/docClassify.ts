@@ -2,6 +2,7 @@ import type { Deal } from "./idb";
 import { PACKAGE_WINDOW_DAYS, type PackageSources } from "./packageMerge";
 import { apiAiMessages } from "./api";
 import { robustParseJSON } from "./utils";
+import { MODEL_HAIKU } from "./models";
 
 export type DocType = "om" | "rent-roll" | "lease-options" | "sales" | "flyer" | "swap" | "loan" | "amort"
   | "tax-bill" | "utility-bill" | "contract" | "estoppel" | "lease" | "rea" | "unknown";
@@ -322,7 +323,7 @@ ${slice}`;
 
   try {
     const res = await apiAiMessages({
-      model: "claude-haiku-4-5-20251001",
+      model: MODEL_HAIKU,
       max_tokens: 300,
       messages: [{ role: "user", content: prompt }],
     });
