@@ -2,7 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
 import { runStartupSequence } from "./lib/startup";
-import { ensureRateCurvesTable, refreshSwapCurves } from "./lib/rateCurves";
+import { ensureRateCurvesTable, refreshSwapCurves, backfillDailyCurves } from "./lib/rateCurves";
 import { ensureUserPrefsTable } from "./lib/userPrefs";
 import { ensureAssetMgmtTables, healSwapTermsPending } from "./lib/assetMgmt";
 import { ensureUsersTable } from "./routes/auth";
@@ -91,7 +91,7 @@ const server = app.listen(port, (err) => {
   ], logger).then(() => {
     // Every 15 minutes (only effective where the host keeps running between requests — on
     // autoscale the rates request and the app's refresh step top it up instead).
-    setInterval(() => { void refreshSwapCurves(30_000); }, 15 * 60_000).unref?.();
+    setInterval(() => { void refreshSwapCurves(30_000).then(() => backfillDailyCurves(20_000)); }, 15 * 60_000).unref?.();
     // Recurring work starts only once the one-time jobs are finished.
     startSelfImproveScheduler();
     startAnalysisAutoRefresh();

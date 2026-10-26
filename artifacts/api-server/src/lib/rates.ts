@@ -6,6 +6,7 @@
 //     API for them. If the scrape fails, SOFR falls back to the free NY Fed
 //     30-day average and swaps are omitted (better empty than wrong).
 import { fetchWithTimeout } from "./http";
+import { saveCurveSnapshot } from "./swapHistory";
 import { refreshSwapCurves, getSwapCurves, fetchSofrOvernight, type CurveView, type SwapCurvesPayload, type TermCurveView } from "./rateCurves";
 
 export interface RateRow {
@@ -346,6 +347,8 @@ export async function fetchTodaysRates(force = false): Promise<RatesPayload> {
     swapsAsOf = curve.asOf;
   }
   if (sofrOvernight) sofrRows = [...sofrRows, { label: "SOFR (overnight)", value: sofrOvernight.rate, asOf: sofrOvernight.date }];
+  // The day's snapshot of every swap tenor shown (history for the tap-to-chart rows).
+  void saveCurveSnapshot(curvesV?.ois ?? null, curvesV?.term ?? null);
 
   return {
     treasuries: { rows: treasuries.rows, asOf: treasuries.asOf, source: "U.S. Treasury (par yield curve)" },

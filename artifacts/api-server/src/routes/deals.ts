@@ -1537,7 +1537,7 @@ router.post("/analysis-refresh/tick", requireAuth, async (req, res) => {
     const tick = await runAnalysisRefreshSlice(req.log, 45_000);
     // The open app pings this every couple of minutes — also keep the swap curve current
     // (throttled to every 10 minutes inside; time-boxed).
-    await import("../lib/rateCurves").then(m => m.refreshSwapCurves(10_000)).catch(() => null);
+    await import("../lib/rateCurves").then(m => m.refreshSwapCurves(10_000).then(() => m.backfillDailyCurves(8_000))).catch(() => null);
     // …and file away finished uploads whose tab closed before saving them (every 5 min inside).
     await import("../lib/unsavedUploads").then(m => m.sweepUnsavedUploads()).catch(() => null);
     res.json({ tick, status: await analysisRefreshStatus() });

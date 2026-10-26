@@ -4,13 +4,15 @@ import { Star, Info } from "lucide-react";
 import { createPortal } from "react-dom";
 import { apiGetRates, apiLoadComps, apiSaveSwapCurve, apiGetLoanSizerPrefs, apiSaveLoanSizerPrefs, apiPreviewChathamMark, apiSaveChathamMark, type ChathamMarkParse, type RatesPayload, type RateRow, type SwapCurveView } from "../lib/api";
 import { baseRateOptions, sizeLoan, BASE_GROUPS, DEFAULT_BASE_ID } from "../lib/loanSizing";
+import { seriesKeyForRow } from "../lib/rateSeries";
+import { RatesUiCtx, useRatesUi, SeriesDetail, CompareChart, CurveView } from "./RatesInteractive";
 
 // "Today's Rates" panel. SOFR swaps are read off DTCC's public swap-trade data (every
 // reported trade — median per tenor, with the trade count and range), or a curve someone
 // pasted from Chatham when that's newer. Treasuries are Treasury.gov's official par curve;
 // SOFR overnight is the NY Fed's. Every section shows its own source and as-of time.
 
-const TREASURY_TENORS_SHOWN = ["1-Yr", "2-Yr", "3-Yr", "5-Yr", "7-Yr", "10-Yr"];
+const TREASURY_TENORS_SHOWN = ["1-Yr", "2-Yr", "3-Yr", "5-Yr", "7-Yr", "10-Yr", "30-Yr"];
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 const usd = (n: number) => fmtMoney(n, { below: "full" });
 const ET = "America/New_York";
@@ -237,8 +239,9 @@ function CapSpread({ data }: { data: RatesPayload }) {
 }
 
 // ── Rate tables ────────────────────────────────────────────────────────────────
-function Section({ title, rows, asOf, source, info, badge }: { title: string; rows: RateRow[]; asOf: string | null; source: string; info?: string; badge?: string }) {
+function Section({ title, rows, asOf, source, info, badge, kind }: { title: string; rows: RateRow[]; asOf: string | null; source: string; info?: string; badge?: string; kind?: "sofr" | "term" | "ois" | "treasury" }) {
   const [showInfo, setShowInfo] = useState(false);
+  const ui = useRatesUi();
   return (
     <div style={{ marginBottom: 18 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
@@ -256,12 +259,37 @@ function Section({ title, rows, asOf, source, info, badge }: { title: string; ro
       </div>
       {info && showInfo && <div style={{ fontSize: 11.5, color: "#4a4d46", background: "#fff", border: "1px solid #ebeae5", borderRadius: 8, padding: "8px 10px", marginBottom: 8, lineHeight: 1.45 }}>{info}</div>}
       <div style={{ border: "1px solid #ebeae5", borderRadius: 10, overflow: "hidden" }}>
-        {rows.map((r, i) => (
-          <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: i % 2 ? "#faf9f5" : "#fff", borderTop: i ? "1px solid #f3eee3" : "none" }}>
-            <span style={{ fontSize: 12.5, color: "#383a37" }}>{r.label}{r.note && <span style={{ fontSize: 10, color: "#8a7f6d", marginLeft: 6 }}>({r.note})</span>}</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#232422", fontVariantNumeric: "tabular-nums" }}>{r.value == null ? "—" : `${r.value.toFixed((String(r.value).split(".")[1]?.length ?? 0) > 2 ? 3 : 2)}%`}</span>
-          </div>
-        ))}
+        {rows.map((r, i) => {
+          // Tap a row → its history chart, change stats and source (Eric, 10/26/26); in Compare
+          // mode the tap ticks it for the overlay instead.
+          const key = kind && ui ? seriesKeyForRow(kind, r.label) : null;
+          const isOpen = !!key && ui?.open === key && !ui.compare;
+          const picked = !!key && !!ui?.picked.some(p => p.key === key);
+          const body = (
+            <>
+              <span style={{ fontSize: 12.5, color: "#383a37", display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0, flexWrap: "wrap" }}>
+                {key && ui?.compare && <span aria-hidden style={{ width: 15, height: 15, flex: "none", borderRadius: 4, border: `1.5px solid ${picked ? "#3e8a2f" : "#b9b7b0"}`, background: picked ? "#3e8a2f" : "#fff", color: "#fff", fontSize: 11, lineHeight: "13px", textAlign: "center" }}>{picked ? "✓" : ""}</span>}
+                <span>{r.label}{r.note && <span style={{ fontSize: 10, color: "#8a7f6d", marginLeft: 6 }}>({r.note})</span>}</span>
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flex: "none" }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#232422", fontVariantNumeric: "tabular-nums" }}>{r.value == null ? "—" : `${r.value.toFixed((String(r.value).split(".")[1]?.length ?? 0) > 2 ? 3 : 2)}%`}</span>
+                {key && !ui?.compare && <span aria-hidden style={{ fontSize: 11, color: "#8a7f6d", transform: isOpen ? "rotate(90deg)" : "none", transition: "transform .15s" }}>›</span>}
+              </span>
+            </>
+          );
+          const rowStyle: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "8px 12px", background: isOpen ? "#f4f8ef" : i % 2 ? "#faf9f5" : "#fff", borderTop: i ? "1px solid #f3eee3" : "none" };
+          return (
+            <div key={r.label}>
+              {key ? (
+                <button type="button" aria-expanded={ui!.compare ? undefined : isOpen} aria-pressed={ui!.compare ? picked : undefined}
+                  title={ui!.compare ? "Tick to overlay in Compare" : "Tap for history, changes and source"}
+                  onClick={() => ui!.compare ? ui!.toggle(key, r.label) : ui!.setOpen(isOpen ? null : key)}
+                  style={{ ...rowStyle, width: "100%", border: "none", borderTop: rowStyle.borderTop, textAlign: "left", cursor: "pointer", fontFamily: "inherit", minHeight: 40 }}>{body}</button>
+              ) : <div style={rowStyle}>{body}</div>}
+              {isOpen && <SeriesDetail seriesKey={key!} />}
+            </div>
+          );
+        })}
         {!rows.length && <div style={{ padding: "10px 12px", fontSize: 12, color: "#9b9992", background: "#fff" }}>Nothing available right now.</div>}
       </div>
       <div style={{ fontSize: 9.5, color: "#8a7f6d", marginTop: 5, lineHeight: 1.45 }}>Source: {source}</div>
@@ -285,7 +313,7 @@ function SwapCurveSection({ data, onSaved }: { data: RatesPayload; onSaved: () =
   };
   return (
     <div style={{ marginBottom: 18 }}>
-      <Section title={c?.kind === "manual" ? "SOFR OIS (annual/annual) — pasted" : "SOFR OIS (annual/annual)"} badge={c?.kind === "chatham" ? "Chatham mark" : undefined} rows={data.swaps.rows} asOf={data.swaps.asOf} source={data.swaps.source} />
+      <Section kind="ois" title={c?.kind === "manual" ? "SOFR OIS (annual/annual) — pasted" : "SOFR OIS (annual/annual)"} badge={c?.kind === "chatham" ? "Chatham mark" : undefined} rows={data.swaps.rows} asOf={data.swaps.asOf} source={data.swaps.source} />
       {hist.length >= 2 && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: "-8px 0 10px", padding: "8px 12px", border: "1px solid #ebeae5", borderRadius: 10, background: "#fff", flexWrap: "wrap" }}>
           <div>
@@ -399,6 +427,12 @@ export default function RatesPanel({ onClose, deal, isAdmin = false }: { onClose
   const [data, setData] = useState<RatesPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Tap-to-chart state: one open row; Compare mode ticks up to 5 rows for an overlay.
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [compare, setCompare] = useState(false);
+  const [picked, setPicked] = useState<Array<{ key: string; label: string }>>([]);
+  const ui = useMemo(() => ({ open: openKey, setOpen: setOpenKey, compare, picked,
+    toggle: (key: string, label: string) => setPicked(p => p.some(x => x.key === key) ? p.filter(x => x.key !== key) : p.length >= 5 ? p : [...p, { key, label }]) }), [openKey, compare, picked]);
 
   const load = useCallback(async (refresh = false) => {
     setLoading(true); setError(null);
@@ -425,10 +459,13 @@ export default function RatesPanel({ onClose, deal, isAdmin = false }: { onClose
   return createPortal(
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9400, background: "rgba(38,40,31,0.42)", backdropFilter: "blur(2px)" }} />
-      <div role="dialog" aria-label="Today's Rates" style={{ position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 9401, width: "min(460px, 100vw)", background: "#faf9f5", borderLeft: "1px solid #d8d2c1", boxShadow: "-8px 0 40px rgba(38,40,31,0.18)", display: "flex", flexDirection: "column", animation: "slideInRight 0.2s ease both" }}>
+      <RatesUiCtx.Provider value={ui}>
+      <div role="dialog" aria-label="Today's Rates" style={{ position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 9401, width: "min(480px, 100%)", background: "#faf9f5", borderLeft: "1px solid #d8d2c1", boxShadow: "-8px 0 40px rgba(38,40,31,0.18)", display: "flex", flexDirection: "column", animation: "slideInRight 0.2s ease both" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid #ebeae5", background: "#fff", flexShrink: 0 }}>
           <span style={{ fontFamily: "'Lora',Georgia,serif", fontSize: 18, fontWeight: 600, color: "#232422" }}>Today's Rates</span>
           <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => { setCompare(c => !c); setOpenKey(null); }} aria-pressed={compare} title="Tick several rates to overlay them on one chart"
+              style={{ background: compare ? "#383A37" : "transparent", border: `1px solid ${compare ? "#383A37" : "#dfddd6"}`, color: compare ? "#fff" : "#6b6a65", padding: "5px 10px", minHeight: 32, borderRadius: 7, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}>{compare ? "Done comparing" : "Compare"}</button>
             <button onClick={() => load(true)} disabled={loading} title="Refresh"
               style={{ background: "transparent", border: "1px solid #dfddd6", color: "#6b6a65", padding: "5px 10px", minHeight: 32, borderRadius: 7, cursor: loading ? "default" : "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Roboto',sans-serif" }}>{loading ? "Refreshing…" : "Refresh"}</button>
             <button onClick={onClose} aria-label="Close" style={{ background: "transparent", border: "1px solid #dfddd6", color: "#6b6a65", width: 32, height: 32, borderRadius: 7, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
@@ -441,12 +478,18 @@ export default function RatesPanel({ onClose, deal, isAdmin = false }: { onClose
             <>
               <LoanSizing data={data} deal={deal} />
               <CapSpread data={data} />
-              <Section title="SOFR" rows={data.sofr.rows} asOf={data.sofr.asOf} source={`${data.sofr.source}${data.sofrOvernight ? " · overnight SOFR: NY Fed" : ""}`} />
-              {termRows.length > 0 && <Section title="SOFR Swap – 1M Term (monthly)" rows={termRows} asOf={term!.asOf} source={term!.source} badge={term!.fromKind === "chatham" ? "Chatham mark" : undefined}
+              <CompareChart />
+              {!compare && <div style={{ fontSize: 11, color: "#8a7f6d", margin: "-4px 0 10px" }}>Tap any rate below for its history chart, changes and source.</div>}
+              <Section kind="sofr" title="SOFR" rows={data.sofr.rows} asOf={data.sofr.asOf} source={`${data.sofr.source}${data.sofrOvernight ? " · overnight SOFR: NY Fed" : ""}`} />
+              {termRows.length > 0 && <Section kind="term" title="SOFR Swap – 1M Term (monthly)" rows={termRows} asOf={term!.asOf} source={term!.source} badge={term!.fromKind === "chatham" ? "Chatham mark" : undefined}
                 info="KPR's swapped loans hedge 1M CME Term SOFR. Overland (ONB) uses Daily Simple SOFR — use the OIS curve for that type of loan." />}
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ ...cap, marginBottom: 8 }}>Swap curve — today vs past</div>
+                <CurveView />
+              </div>
               <ChathamMarkBox data={data} isAdmin={isAdmin} onSaved={() => load(true)} />
               <SwapCurveSection data={data} onSaved={() => load(true)} />
-              <Section title="Treasury yields" rows={treasuryRows} asOf={data.treasuries.asOf} source={data.treasuries.source} />
+              <Section kind="treasury" title="Treasury yields" rows={treasuryRows} asOf={data.treasuries.asOf} source={`${data.treasuries.source} · history charts: FRED constant-maturity yields (DGS1–DGS30)`} info="Lenders price fixed-rate loans off these. Today's figures are the U.S. Treasury's official par curve; tap a tenor for its daily history (FRED's constant-maturity series of the same Treasury data)." />
               <div style={{ fontSize: 10.5, color: "#8a7f6d", lineHeight: 1.5, marginTop: 4 }}>
                 SOFR swap rates are read off every swap trade reported to DTCC's public price-dissemination feed: plain, spot-starting USD SOFR swaps, the median at each tenor of the trades done 3:00–5:00pm ET (or the latest 2 hours, or the whole day, when the close is thin), leaving out prints more than 10 bp from the day's pack and duplicate reports. Since 10/17/26 only trades executed on the curve date count (the DTCC file for a day also carries the prior day's late reports), and the close is 3:00–5:00pm ET — within 0.8 bp of Chatham at 2Y–10Y on 10/15 and 10/16. The 1M Term SOFR swap curve is derived from it: each OIS rate converted from annual to monthly compounding, plus a Term-vs-OIS basis by tenor (Chatham-measured: 1Y −1.2 bp to 30Y −0.2 bp; recalibrated from the latest pasted Chatham mark; DTCC's own Term prints only count when at least 5 clean ones exist at a tenor in the last 20 business days, capped at ±5 bp). A pasted Chatham mark is shown as the primary curve until DTCC has a newer close. It's market data for internal reference, not a dealer quote. Treasuries are the U.S. Treasury's official par curve; SOFR overnight is the NY Fed's.
               </div>
@@ -454,6 +497,7 @@ export default function RatesPanel({ onClose, deal, isAdmin = false }: { onClose
           )}
         </div>
       </div>
+      </RatesUiCtx.Provider>
     </>,
     document.body
   );

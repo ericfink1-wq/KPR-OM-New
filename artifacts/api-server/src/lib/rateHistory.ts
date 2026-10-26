@@ -10,10 +10,14 @@ import { fetchWithTimeout } from "./http";
 // points = [[YYYY-MM-DD, rate | null], …]) — NO new table. A missing print stays null so the
 // chart shows a gap instead of a drawn-in line.
 
-export type HistorySeries = "SOFR" | "DGS10";
-export const HISTORY_SERIES: Record<HistorySeries, { label: string; fredId: string; from: string; source: string }> = {
-  SOFR: { label: "SOFR (overnight, NY Fed)", fredId: "SOFR", from: "2018-04-02", source: "FRED (SOFR) + NY Fed" },
-  DGS10: { label: "10-Year Treasury (constant maturity)", fredId: "DGS10", from: "2018-01-01", source: "FRED (DGS10)" },
+// Today's Rates panel (10/26/26) added the 30-Day Average SOFR and the Treasury tenors.
+export type HistorySeries = "SOFR" | "SOFR30" | "DGS1" | "DGS2" | "DGS3" | "DGS5" | "DGS7" | "DGS10" | "DGS30";
+interface SeriesMeta { label: string; fredId: string; from: string; source: string; nyFed?: { path: string; field: string; type: string } }
+const tsy = (y: number): SeriesMeta => ({ label: `${y}-Year Treasury (constant maturity)`, fredId: `DGS${y}`, from: "2018-01-01", source: `FRED (DGS${y}, U.S. Treasury constant maturity)` });
+export const HISTORY_SERIES: Record<HistorySeries, SeriesMeta> = {
+  SOFR: { label: "SOFR (overnight, NY Fed)", fredId: "SOFR", from: "2018-04-02", source: "NY Fed SOFR (FRED as backup)", nyFed: { path: "sofr", field: "percentRate", type: "SOFR" } },
+  SOFR30: { label: "30-Day Average SOFR (NY Fed)", fredId: "SOFR30DAYAVG", from: "2018-05-02", source: "NY Fed SOFR Averages (FRED as backup)", nyFed: { path: "sofrai", field: "average30day", type: "SOFRAI" } },
+  DGS1: tsy(1), DGS2: tsy(2), DGS3: tsy(3), DGS5: tsy(5), DGS7: tsy(7), DGS10: tsy(10), DGS30: tsy(30),
 };
 export type HistoryPoint = [string, number | null];
 export interface HistoryView { series: HistorySeries; label: string; source: string; asOf: string | null; fetchedAt: string | null; points: HistoryPoint[] }
@@ -33,11 +37,11 @@ export function parseFredCsv(text: string): HistoryPoint[] {
   return out.sort((a, b) => (a[0] < b[0] ? -1 : 1));
 }
 
-/** NY Fed refRates JSON → points (SOFR only). */
-export function parseNyFed(json: unknown): HistoryPoint[] {
-  const rows = (json as { refRates?: Array<{ effectiveDate?: string; percentRate?: number; type?: string }> })?.refRates ?? [];
-  return rows.filter(r => (!r.type || r.type === "SOFR") && ISO.test(r.effectiveDate ?? "") && typeof r.percentRate === "number" && sane(r.percentRate))
-    .map(r => [r.effectiveDate!, r.percentRate!] as HistoryPoint).sort((a, b) => (a[0] < b[0] ? -1 : 1));
+/** NY Fed refRates JSON → points (SOFR's percentRate by default; the averages endpoint's average30day). */
+export function parseNyFed(json: unknown, field = "percentRate", type = "SOFR"): HistoryPoint[] {
+  const rows = (json as { refRates?: Array<Record<string, unknown>> })?.refRates ?? [];
+  return rows.filter(r => (!r.type || r.type === type) && ISO.test(String(r.effectiveDate ?? "")) && typeof r[field] === "number" && sane(r[field] as number))
+    .map(r => [String(r.effectiveDate), r[field] as number] as HistoryPoint).sort((a, b) => (a[0] < b[0] ? -1 : 1));
 }
 
 /** Later sources win per date; a real value never gets overwritten by a null. */
@@ -66,16 +70,16 @@ async function getText(url: string, tries = 3): Promise<string | null> {
   }
   return null;
 }
-/** SOFR: the NY Fed's own API (the official source; its search returns the whole history in one
- *  call), FRED as the backup. DGS10: FRED. `complete` = the long history came back. */
+/** SOFR + 30-day average: the NY Fed's own API (the official source; its search returns the whole
+ *  history in one call), FRED as the backup. Treasuries: FRED. `complete` = the long history came back. */
 async function fetchSeries(series: HistorySeries, stored: HistoryPoint[]): Promise<{ points: HistoryPoint[]; complete: boolean }> {
   const meta = HISTORY_SERIES[series];
   let fed: HistoryPoint[] = [], fred: HistoryPoint[] = [];
-  if (series === "SOFR") {
-    const t = await getText(`https://markets.newyorkfed.org/api/rates/secured/sofr/search.json?startDate=${meta.from}&endDate=${new Date().toISOString().slice(0, 10)}`, 2);
-    try { fed = t ? parseNyFed(JSON.parse(t)) : []; } catch { fed = []; }
+  if (meta.nyFed) {
+    const t = await getText(`https://markets.newyorkfed.org/api/rates/secured/${meta.nyFed.path}/search.json?startDate=${meta.from}&endDate=${new Date().toISOString().slice(0, 10)}`, 2);
+    try { fed = t ? parseNyFed(JSON.parse(t), meta.nyFed.field, meta.nyFed.type) : []; } catch { fed = []; }
   }
-  if (series !== "SOFR" || fed.length < 1000) {
+  if (!meta.nyFed || fed.length < 1000) {
     const t = await getText(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${meta.fredId}&cosd=${meta.from}`);
     fred = t ? parseFredCsv(t) : [];
   }

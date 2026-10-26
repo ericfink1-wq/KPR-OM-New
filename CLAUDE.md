@@ -44,6 +44,20 @@ it; `POST /auth/test-email` sends to the signed-in admin and returns the exact r
 resend-verification keep their generic responses; a failed send logs "… EMAIL NOT DELIVERED" at error level naming the
 Members button. Tests: `mailer.test.ts` (incl. a real SMTP conversation against a local fake server).
 
+## TODAY'S RATES IS INTERACTIVE (Eric, 10/26/26) — tap any rate row
+Rows in RatesPanel (SOFR / 30-day avg / 1M Term SOFR, each 1M Term + OIS swap tenor, Treasuries 1–30Y) map via
+`seriesKeyForRow` (om-database lib/rateSeries.ts) to a series key → `GET /rates/series?key=SOFR|SOFR30|DGS1…DGS30|ois:N|
+term:N|termsofr1m` → `SeriesDetail` (components/RatesInteractive.tsx: recharts + Brush, 1W…Max, crosshair, hollow marker on
+thin-close days, `changeStats` 1D/1W/1M/YTD/1Y bp + 52w hi/lo — a comparison print must be ≤7 days before the target or it's
+"—"). Compare mode (header button) overlays ≤5 series, each Line with its OWN data (no cross-series nulls); `CurveView` =
+`GET /rates/curve-overlay` (today vs 1W/1M/1Y via `pickCurveDate`: latest stored day ≤ target, ≤7 days back, else null).
+Server: index series = `rateHistory.ts` (NY Fed SOFR + sofrai average30day, FRED DGSx). Swap history = `lib/swapHistory.ts`:
+per date Chatham mark > DTCC end-of-day `ois` > `panel-snapshot` (`<date>|snapshot`, saved by GET /rates via
+`saveCurveSnapshot`, one point per series+tenor with trades + thin flag); Term derived per day like the live panel
+(`termForDay`). `backfillDailyCurves` (rateCurves.ts) ingests every full trading day DTCC still publishes (~1 year) — on
+the analysis tick / timer / NOT on GET /rates (it would make the panel wait). 1M Term SOFR spot history = Chatham pastes
+only. Still NO new table (rate_curves kinds). Tests: swapHistory.test.ts (api), rateSeries.test.ts (web).
+
 ## RATE DETAIL PANEL (Eric, 10/26/26) — click a Rate / All-in / swap rate cell
 `om-database lib/rateDetail.ts` (PURE, tested — rateDetail.test.ts): `termsFromDebtRow` / `termsFromSwap` →
 `rateOn(terms, date, index)` (unhedged = max(index, floor) + spread; paid = flat swap all-in while a swap is live,

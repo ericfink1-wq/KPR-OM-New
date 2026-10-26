@@ -144,6 +144,35 @@ export function filesToBackfill(cum: IndexEntry[], have: Set<string>, months = 1
   return want;
 }
 
+/** Every full trading day DTCC still publishes (about a year), newest first, not yet stored —
+ *  the Today's Rates history backfill (10/26/26). Same files, same method as the daily close. */
+export function dailyFilesToBackfill(cum: IndexEntry[], have: Set<string>, days = 370, now = Date.now()): IndexEntry[] {
+  const cutoff = new Date(now - days * 86_400_000).toISOString().slice(0, 10);
+  return cum.map(e => ({ e, d: fileDate(e.fileName) }))
+    .filter((x): x is { e: IndexEntry; d: string } => !!x.d && x.d >= cutoff && (x.e.rowCount == null || x.e.rowCount >= FULL_DAY_ROWS) && !have.has(`${x.d}|ois`))
+    .sort((a, b) => (a.d < b.d ? 1 : -1)).map(x => x.e);
+}
+let backfilling: Promise<number> | null = null;
+/** Fill in past trading days a few at a time, inside a time budget. NOT on the GET /rates path
+ *  (that would make the panel wait) — the app's background tick, the timer and startup call it. */
+export function backfillDailyCurves(budgetMs = 8_000): Promise<number> {
+  if (backfilling) return backfilling;
+  backfilling = (async () => {
+    const deadline = Date.now() + budgetMs;
+    let n = 0;
+    try {
+      await ensureRateCurvesTable();
+      const { cum } = await loadIndex();
+      for (const e of dailyFilesToBackfill(cum, await storedIds())) {
+        if (Date.now() > deadline - 4000) break;
+        try { await ingestEod(e); n++; } catch (err) { logger.warn({ err, file: e.fileName }, "DTCC backfill ingest failed"); }
+      }
+    } catch (err) { logger.warn({ err }, "DTCC daily backfill failed"); }
+    return n;
+  })().finally(() => { backfilling = null; });
+  return backfilling;
+}
+
 let running: Promise<RefreshResult> | null = null;
 let lastRun = 0;
 export interface RefreshResult { eodIngested: number; intradaySlices: number; skipped?: string; error?: string }

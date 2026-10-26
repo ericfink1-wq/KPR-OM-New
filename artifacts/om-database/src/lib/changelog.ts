@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-26-rates-interactive",
+    date: "2026-10-26",
+    category: "new",
+    title: "Today's Rates: tap any rate for its history",
+    detail: "Every rate in Today's Rates now opens a chart when tapped. That covers SOFR, the 30-day average, each 1M Term and OIS swap tenor, and the Treasuries, now including the 30-year. Zoom with 1W to Max, or drag the bar under the chart. Each chart shows the 1-day, 1-week, 1-month, YTD and 1-year changes in bp, the 52-week high and low, and its source. Compare overlays up to 5 rates on one chart, for example SOFR against the 5-year swap and the 10-year Treasury. The swap curve view shows today's curve against 1 week, 1 month or 1 year ago. Swap history is rebuilt from DTCC's daily files about a year back. Days with only a few trades show a hollow dot. 1M Term SOFR history comes only from Chatham marks you paste.",
+    where: "Today's Rates (top bar or avatar menu)",
+  },
+  {
     id: "2026-10-26-rate-detail",
     date: "2026-10-26",
     category: "new",

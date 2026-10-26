@@ -1092,6 +1092,28 @@ export interface RatesPayload {
   sofrOvernight?: { rate: number; date: string } | null;
   fetchedAt: string;
 }
+/** One Today's Rates series' daily history (tap-to-chart). points = [date, value|null, thin 0/1, trades|null]. */
+export interface RateSeriesView { key: string; label: string; source: string; asOf: string | null; fetchedAt?: string | null; collected: boolean; collectedSince?: string | null; points: Array<[string, number | null, 0 | 1, number | null]> }
+const seriesCache = new Map<string, Promise<RateSeriesView>>();
+export function apiRateSeries(key: string): Promise<RateSeriesView> {
+  let p = seriesCache.get(key);
+  if (!p) {
+    p = apiFetch(`/rates/series?key=${encodeURIComponent(key)}`).then(async resp => {
+      const body = await resp.json().catch(() => ({})) as RateSeriesView & { error?: string };
+      if (!resp.ok) throw new Error(body.error || "Couldn't load that history");
+      return body;
+    }).catch(err => { seriesCache.delete(key); throw err; });
+    seriesCache.set(key, p);
+  }
+  return p;
+}
+export interface CurveOverlayView { latest: string | null; firstDate?: string; curves: Array<{ key: "Today" | "1W" | "1M" | "1Y"; target: string; date: string | null; curve: { ois: Array<{ tenor: number; rate: number; thin: boolean }>; term: Array<{ tenor: number; rate: number }> } | null }> }
+export async function apiCurveOverlay(): Promise<CurveOverlayView> {
+  const resp = await apiFetch("/rates/curve-overlay");
+  const body = await resp.json().catch(() => ({})) as CurveOverlayView & { error?: string };
+  if (!resp.ok) throw new Error(body.error || "Couldn't load past curves");
+  return body;
+}
 /** Daily index history (FRED + NY Fed, cached server-side) for the rate detail panel. One fetch per page load. */
 export interface IndexHistoryView { series: "SOFR" | "DGS10"; label: string; source: string; asOf: string | null; fetchedAt: string | null; points: Array<[string, number | null]> }
 let historyCache: Promise<IndexHistoryView[]> | null = null;
