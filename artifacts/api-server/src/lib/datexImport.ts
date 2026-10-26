@@ -70,6 +70,9 @@ export interface DatexDealPayload {
   salesCheckedThrough?: string | null;
   /** Datex Loans rows for these buildings (Inactive = false). */
   loans?: Array<Record<string, unknown>> | null;
+  /** GeneralLedgerSummaries interest by entity + month (auto-refresh only) — see InterestGlRow in datexIngest.ts. */
+  interestGl?: Array<Record<string, unknown>> | null;
+  interestCheckedThrough?: string | null;
 }
 
 export interface DatexPayload {
@@ -412,7 +415,9 @@ export function planDatexImport(payload: DatexPayload, deals: DealRef[], map: Da
     if ("problem" in built) { out.rejected.push({ dealId, propertyName: name, problem: built.problem }); continue; }
 
     const prev = (deal.data[DATEX_BLOCK_KEY] as Record<string, unknown> | undefined) ?? null;
-    out.applied.push({ dealId, propertyName: name ?? entry.propertyName ?? dealId, block: built.block, changedFrom: prev });
+    // The interest ledger only arrives through the auto-refresh; a file import must not erase it.
+    const block = prev?.interestGl || prev?.interestCheckedThrough ? { ...built.block, interestGl: prev.interestGl, interestCheckedThrough: prev.interestCheckedThrough } : built.block;
+    out.applied.push({ dealId, propertyName: name ?? entry.propertyName ?? dealId, block, changedFrom: prev });
   }
   return out;
 }

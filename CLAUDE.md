@@ -44,6 +44,26 @@ it; `POST /auth/test-email` sends to the signed-in admin and returns the exact r
 resend-verification keep their generic responses; a failed send logs "… EMAIL NOT DELIVERED" at error level naming the
 Members button. Tests: `mailer.test.ts` (incl. a real SMTP conversation against a local fake server).
 
+## RATE DETAIL PANEL (Eric, 10/26/26) — click a Rate / All-in / swap rate cell
+`om-database lib/rateDetail.ts` (PURE, tested — rateDetail.test.ts): `termsFromDebtRow` / `termsFromSwap` →
+`rateOn(terms, date, index)` (unhedged = max(index, floor) + spread; paid = flat swap all-in while a swap is live,
+BLENDED on a partial swap, min(index, live cap strike) + spread while a cap is live, else floating; null outside the
+loan's life; `pending` (swap termsPending / no spread / no fixed rate) → NO effective line), `rateBuild` (each figure's
+hover = the record's `sources` matched by usedFor → sourceNote; missing = "not documented"), `afterHedge` (swap/cap
+ends before maturity → gap + forward cost), `historySeries` (real print dates only; null print + >5-day hole = gap
+row; Term-SOFR loans: today's 1M Term SOFR spot as the flagged last point, `TERM_PROXY_NOTE`), `rateMarkers`,
+`forwardView` (forward over [a,b] from the SAME par curve as MTM via marketSwapRate, balance flat, INDICATIVE),
+`compareInterest` (posting month P vs accrual P−1, balance × daily effective / 360; flag |gap| > max($2,500, 10%);
+starts at closing, else swap effective; `catchUpNotes` = "underbilled N months, then a catch-up… nets to ~$0").
+UI `components/RateDetailPanel.tsx` (lazy, recharts, Brush zoom/pan + 1M/6M/1Y/Since closing/All) — opened from
+`RateCellButton` (AssetMgmt Debt Rate/All-in + Swaps rate cells, Loan/Swap drawer "Rate detail", owned Financing tab).
+History: `api lib/rateHistory.ts` + `GET /rates/history?series=SOFR,DGS10` — NY Fed SOFR search (whole history, primary)
++ FRED fredgraph.csv (backup + DGS10; FRED 503s a bare "node" user agent → we send one), stored in `rate_curves`
+(kind `index-history`, id `history|SERIES`; NO new table), refreshed ≤ every 12 h (15 min after an incomplete pull).
+NEVER fetch Term SOFR history (CME-licensed). Actual interest: Datex `GeneralLedgerSummaries` 81100000 + 81101000,
+Basis A, BalanceForward N → ingest block `interest` (`interestGl` on datexLive; job kit 2026-10-26.1). Real Cooks
+Corner ledger (brunswic) is the test fixture: Sep-25…Apr-26 underbilled, May-26 $366K catch-up, nets ~0.
+
 ## LOCAL INTEL (10/19/26) — web-research scan per deal (Eric: "didn't know a Trader Joe's is opening ~1 mi from our Fred Meyer in Bend")
 `api lib/localIntel.ts` (PURE, tested: `siteFacts` → `buildQueries`. QUERY PLAN FIX (10/19/26 — the first live Bend scan ran 9
 searches and MISSED the Trader Joe's because competing supply was ONE long OR query): `anchorCategory` (grocery / off_price /

@@ -883,6 +883,15 @@ const isoIn = (t: string): string[] => {
   while ((m = re.exec(t))) out.push(m[1] ?? `${m[4].length === 2 ? 2000 + Number(m[4]) : m[4]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`);
   return out;
 };
+/** Extension-notice WINDOW written in the loan's text ("notice between 11/19/26 and 1/3/27"),
+ *  else the single deadline field (end null). Null when neither is on the record. */
+export function loanExtensionNotice(d: Record<string, unknown>): { start: string; end: string | null } | null {
+  const txt = [s(d.extensionOptions), s(d.notes), s(d.covenants), s(d.extensionNotice)].filter(Boolean).join("\n");
+  const seg = txt.split(/\n|(?<=\.)\s+/).find(x => /notice/i.test(x) && /exten/i.test(x + " " + (s(d.extensionOptions) ?? "")) && isoIn(x).length >= 2);
+  if (seg) { const w = isoIn(seg).slice(0, 2).sort(); return { start: w[0], end: w[1] }; }
+  const f = s(d.extensionNoticeDate);
+  return f ? { start: f.slice(0, 10), end: null } : null;
+}
 /** Debt deadlines pinned above the 90-day list regardless of window: rate-cap expirations,
  *  extension-notice windows, and maturities inside 12 months — derived from the loan records. */
 export function keyDebtDeadlines(deals: Deal[], records: AmRecord[], today: Date): DebtDeadline[] {
@@ -896,10 +905,8 @@ export function keyDebtDeadlines(deals: Deal[], records: AmRecord[], today: Date
       const k = `${c.strikePct}|${c.notional ?? ""}|${c.expiry}`;
       const e = caps.get(k) ?? { cap: c, ids: new Set<string>() }; e.ids.add(r.dealId!); caps.set(k, e);
     }
-    // Extension-notice WINDOW written in the text ("notice between 11/19/26 and 1/3/27"), else the deadline field.
-    const txt = [s(d.extensionOptions), s(d.notes), s(d.covenants), s(d.extensionNotice)].filter(Boolean).join("\n");
-    const seg = txt.split(/\n|(?<=\.)\s+/).find(x => /notice/i.test(x) && /exten/i.test(x + " " + (s(d.extensionOptions) ?? "")) && isoIn(x).length >= 2);
-    const win = seg ? isoIn(seg).slice(0, 2).sort() : null;
+    const en = loanExtensionNotice(d);
+    const win = en?.end ? [en.start, en.end] : null;
     if (win) out.push({ date: win[0], endDate: win[1], days: daysUntil(win[1], today)!, kind: "Extension notice window", title: `${name} — extension notice window`, detail: `${fmtD(win[0])} – ${fmtD(win[1])}${s(d.extensionOptions) && isoIn(s(d.extensionOptions)!).length < 2 ? ` · ${s(d.extensionOptions)}` : s(d.extensionOptions) ? ` · ${s(d.extensionOptions)!.replace(/[;,.]?\s*notice[^;.]*/i, "").trim()}` : ""}`.replace(/ · $/, ""), dealIds: [r.dealId!], properties: [name] });
     else if (s(d.extensionNoticeDate)) out.push({ date: String(d.extensionNoticeDate), days: daysUntil(String(d.extensionNoticeDate), today)!, kind: "Extension notice", title: `${name} — extension notice due`, detail: s(d.extensionOptions) ?? `${s(d.lender) ?? "Loan"} extension`, dealIds: [r.dealId!], properties: [name] });
     const mat = s(d.maturityDate), md = daysUntil(mat, today);

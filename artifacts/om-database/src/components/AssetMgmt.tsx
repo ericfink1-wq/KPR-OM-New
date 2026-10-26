@@ -1,7 +1,8 @@
 import { fmtMoney } from "../lib/money";
 import { useTableSort, type SortCol } from "../lib/tableSort";
 import { SortTh, SortSelect } from "./SortControls";
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, Suspense, lazy, useEffect, useMemo, useState, type ReactNode } from "react";
+import type { RateDetailTarget } from "./RateDetailPanel";
 import type { Deal, LeaseAbstract } from "../lib/idb";
 import { getOwnedProperties } from "../lib/ownedPortfolio";
 import {
@@ -18,6 +19,14 @@ import {
 } from "../lib/assetMgmt";
 import { useWatchlist } from "../lib/useWatchlist";
 import { useIsMobile } from "../hooks/use-mobile";
+
+const RateDetailPanel = lazy(() => import("./RateDetailPanel"));
+/** A rate cell that opens the rate detail panel (Eric, 10/26/26) — its own button, so the row's
+ *  drawer doesn't open too. */
+export function RateCellButton({ onOpen, children, label }: { onOpen: () => void; children: ReactNode; label: string }) {
+  return <button type="button" onClick={e => { e.stopPropagation(); onOpen(); }} onKeyDown={e => e.stopPropagation()} aria-label={label} title={`${label} — rate build, history, forward view`}
+    style={{ background: "none", border: "none", padding: "4px 0", minHeight: 28, font: "inherit", color: "inherit", cursor: "pointer", textDecoration: "underline dotted #9b998f", textUnderlineOffset: 3, textAlign: "inherit" }}>{children}</button>;
+}
 
 // ASSET MGMT (Eric, 10/18/26) — owned properties only. Debt · Dates · Properties · Credit Watch.
 // Every number says where it came from and as of when; edit controls are admin-only.
@@ -214,13 +223,14 @@ function Clamp2({ text }: { text: string | null | undefined }) {
   if (!text) return <>—</>;
   return <div className="am-clamp2" title={text}>{text}</div>;
 }
-function LoanDrawer({ r, isAdmin, onClose, onEdit, onDelete, onOpenDeal }: { r: DebtRow; isAdmin: boolean; onClose: () => void; onEdit: () => void; onDelete: () => void; onOpenDeal: (id: string) => void }) {
+function LoanDrawer({ r, isAdmin, onClose, onEdit, onDelete, onOpenDeal, onRate }: { r: DebtRow; isAdmin: boolean; onClose: () => void; onEdit: () => void; onDelete: () => void; onOpenDeal: (id: string) => void; onRate: () => void }) {
   const d = r.record.data;
   const known = new Set(["lender", "loanName", "loanLabel", "originalBalance", "currentBalance", "balanceAsOf", "rateType", "index", "spreadBps", "fixedRatePct", "allInRatePct", "originationDate", "maturityDate", "extensionOptions", "extensionNoticeDate", "amortization", "amortYears", "ioUntil", "ioEndDate", "amortizationText", "dscrCovenant", "debtYieldCovenantPct", "recourse", "guarantor", "covenants", "prepayment", "notes", "openQuestions", "confidence", "datexLoanId"]);
   const extras = Object.entries(d).filter(([k, v]) => !known.has(k) && v != null && typeof v !== "object" && String(v).trim() !== "");
   return (
     <SideDrawer title={`${r.property}${r.loanLabel ? ` · ${r.loanLabel}` : ""}`} onClose={onClose}>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+        <button style={btn(true)} onClick={onRate}>Rate detail</button>
         <button style={btn()} onClick={() => onOpenDeal(r.dealId)}>Open deal</button>
         {isAdmin && <><button style={btn()} onClick={onEdit}>Edit</button><button style={btn()} onClick={onDelete}>Delete</button></>}
       </div>
@@ -327,11 +337,12 @@ export function SourcesSection({ rec }: { rec: AmRecord }) {
     </div>
   );
 }
-function SwapDrawer({ w, isAdmin, onClose, onEdit, onDelete, onOpenDeal }: { w: SwapRow; isAdmin: boolean; onClose: () => void; onEdit: () => void; onDelete: () => void; onOpenDeal: (id: string) => void }) {
+function SwapDrawer({ w, isAdmin, onClose, onEdit, onDelete, onOpenDeal, onRate }: { w: SwapRow; isAdmin: boolean; onClose: () => void; onEdit: () => void; onDelete: () => void; onOpenDeal: (id: string) => void; onRate: () => void }) {
   const d = w.record.data;
   return (
     <SideDrawer title={`${w.property}${w.loanLabel ? ` · ${w.loanLabel}` : ""} — swap`} onClose={onClose}>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+        <button style={btn(true)} onClick={onRate}>Rate detail</button>
         <button style={btn()} onClick={() => onOpenDeal(w.dealId)}>Open deal</button>
         {isAdmin && <><button style={btn()} onClick={onEdit}>Edit</button><button style={btn()} onClick={onDelete}>Delete</button></>}
       </div>
@@ -469,6 +480,7 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
   const [drawer, setDrawer] = useState<string | null>(null);
   const [prefDrawer, setPrefDrawer] = useState<string | null>(null);
   const [swapDrawer, setSwapDrawer] = useState<string | null>(null);
+  const [rateTarget, setRateTarget] = useState<RateDetailTarget | null>(null);
   const isMobile = useIsMobile();
   const loanSort = useTableSort("am_loans", LOAN_COLS, DEF_MATURITY), swapSort = useTableSort("am_swaps", SWAP_COLS, DEF_MATURITY), prefSort = useTableSort("am_prefs", PREF_COLS, DEF_PROPERTY);
   const loanRows = useMemo(() => loanSort.sort(rows), [loanSort, rows]);
@@ -486,6 +498,7 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
           <button style={btn()} onClick={() => setEdit({ kind: "swap", rec: null })}>Add swap</button>
         </div>
       )}
+{rateTarget && <Suspense fallback={null}><RateDetailPanel target={rateTarget} allRows={rows} deal={deals.find(d => d.id === (rateTarget.kind === "loan" ? rateTarget.row.dealId : rateTarget.swap.dealId))} rates={rates} onClose={() => setRateTarget(null)} /></Suspense>}
       {!rows.length ? (
         <div style={{ ...card, padding: 18, marginTop: 14, fontSize: 14, color: K.gray }}>No loans loaded yet. {isAdmin ? "Use “Import loans & swaps” to paste the seed JSON (or CSV)." : "An admin loads them from the loan summaries."} Datex's Loans table returns no rows through the connector today, so it can't seed this on its own.</div>
       ) : (
@@ -531,8 +544,8 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
                     <td style={{ ...wrapTd, minWidth: 190 }}><div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "2px 0" }}><span><span style={{ fontWeight: 600 }}>{r.property}</span>{r.loanLabel && <span style={{ color: K.gray }}> · {r.loanLabel}</span>}{r.superseded && <span style={{ color: K.gray }}> · Datex row (superseded)</span>}</span><span style={{ flex: "none" }}><DocBadge rec={r.record} /></span></div></td>
                     <td style={{ ...wrapTd, minWidth: 130 }}>{r.lender ?? "—"}</td>
                     <td style={{ ...num, verticalAlign: "middle" }}>{fmtM(r.balance)}{r.balanceIsOriginal ? "*" : ""}</td>
-                    <td style={{ ...wrapTd, minWidth: 140 }}>{r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType ?? "—"}{r.spreadBps != null && r.rateClass !== "fixed" ? <span style={{ color: K.gray }}> +{r.spreadBps}</span> : null}{r.partlySwapped ? <span style={{ color: K.amber }}> · {partlyTxt(r)}</span> : null}</td>
-                    <td style={{ ...num, verticalAlign: "middle" }} title={allInTip(r)}>{fmtPct(r.allInPct, 2)}{r.estimated ? <span style={{ color: K.amber }} aria-label={r.allInBasis === "blended" ? "blended estimate (partly swapped)" : "estimated from today's curve"}>~</span> : null}</td>
+                    <td style={{ ...wrapTd, minWidth: 140 }}><RateCellButton label={`Rate detail for ${r.property}`} onOpen={() => setRateTarget({ kind: "loan", row: r })}>{r.rateClass ? RATE_CLASS_LABEL[r.rateClass] : r.rateType ?? "—"}{r.spreadBps != null && r.rateClass !== "fixed" ? <span style={{ color: K.gray }}> +{r.spreadBps}</span> : null}{r.partlySwapped ? <span style={{ color: K.amber }}> · {partlyTxt(r)}</span> : null}</RateCellButton></td>
+                    <td style={{ ...num, verticalAlign: "middle" }} title={allInTip(r)}><RateCellButton label={`Rate detail for ${r.property}`} onOpen={() => setRateTarget({ kind: "loan", row: r })}>{fmtPct(r.allInPct, 2)}{r.estimated ? <span style={{ color: K.amber }} aria-label={r.allInBasis === "blended" ? "blended estimate (partly swapped)" : "estimated from today's curve"}>~</span> : null}</RateCellButton></td>
                     <td style={{ ...wrapTd, minWidth: 140 }}><Clamp2 text={r.ioAmort} /></td>
                     <td className="am-nowrap" style={{ ...wrapTd, whiteSpace: "nowrap" }}>{fmtDate(r.maturity)} {daysPill(r.daysToMaturity, r.flag)}</td>
                     <td style={{ ...wrapTd, minWidth: 230 }}><Clamp2 text={s(d.extensionOptions)} /></td>
@@ -543,8 +556,8 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
             </table>
           </div>
           )}
-          <Src>One line per loan — tap a row for every field (covenants, prepayment, caps, notes, source). <span style={{ color: K.amber }}>~</span> = all-in estimated from today's 1M Term SOFR (max of the curve and the loan's index floor, plus spread; a live rate cap limits it) — for a partly swapped loan, the swapped part at the swap rate and the rest at that estimate. A linked live swap always beats the stored rate type. Hover the All-in for its source. * = original balance (no current balance on file).</Src>
-          {(() => { const r = rows.find(x => x.record.id === drawer); return r ? <LoanDrawer r={r} isAdmin={isAdmin} onClose={() => setDrawer(null)} onEdit={() => { setDrawer(null); setEdit({ kind: "loan", rec: r.record }); }} onDelete={() => { setDrawer(null); void del(r.record.id); }} onOpenDeal={onOpenDeal} /> : null; })()}
+          <Src>Click a Rate or All-in figure for the rate detail (how it's built, its history, the forward view and Datex actual vs expected interest). One line per loan — tap a row for every field (covenants, prepayment, caps, notes, source). <span style={{ color: K.amber }}>~</span> = all-in estimated from today's 1M Term SOFR (max of the curve and the loan's index floor, plus spread; a live rate cap limits it) — for a partly swapped loan, the swapped part at the swap rate and the rest at that estimate. A linked live swap always beats the stored rate type. Hover the All-in for its source. * = original balance (no current balance on file).</Src>
+          {(() => { const r = rows.find(x => x.record.id === drawer); return r ? <LoanDrawer r={r} isAdmin={isAdmin} onClose={() => setDrawer(null)} onEdit={() => { setDrawer(null); setEdit({ kind: "loan", rec: r.record }); }} onDelete={() => { setDrawer(null); void del(r.record.id); }} onOpenDeal={onOpenDeal} onRate={() => { setDrawer(null); setRateTarget({ kind: "loan", row: r }); }} /> : null; })()}
         </>
       )}
       {swaps.length > 0 && (
@@ -559,8 +572,8 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
                   <td style={td}><button onClick={() => onOpenDeal(w.dealId)} style={linkBtn}>{w.property}</button>{w.loanLabel && <span style={{ color: K.charcoal, fontWeight: 600 }}> · {w.loanLabel}</span>}{w.termsPending && <div style={{ marginTop: 3 }}><Pill flag="amber">terms pending</Pill></div>}</td>
                   <td style={td}>{w.counterparty ?? "—"}</td>
                   <td style={num}>{fmtM(w.notional)}</td>
-                  <td style={num}>{fmtPct(w.fixedSwapRatePct, 4)}</td>
-                  <td style={num}>{fmtPct(w.allInFixedPct, 4)}</td>
+                  <td style={num}><RateCellButton label={`Rate detail for the ${w.property} swap`} onOpen={() => setRateTarget({ kind: "swap", swap: w })}>{fmtPct(w.fixedSwapRatePct, 4)}</RateCellButton></td>
+                  <td style={num}><RateCellButton label={`Rate detail for the ${w.property} swap`} onOpen={() => setRateTarget({ kind: "swap", swap: w })}>{fmtPct(w.allInFixedPct, 4)}</RateCellButton></td>
                   <td style={td}>{fmtDate(w.effective)}</td>
                   <td style={td}>{fmtDate(w.maturity)} {daysPill(w.daysToMaturity, w.flag)}</td>
                   <td style={num}>{fmtPct(w.marketRatePct, 3)}<Src>{w.termsPending ? "not priced" : `${w.curve ?? "no curve"}${w.remainingYears != null ? ` · ${w.remainingYears}y left` : ""}`}</Src></td>
@@ -571,7 +584,7 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
               ];
             })}</tbody>
           </Table>
-          {(() => { const w = swaps.find(x => x.record.id === swapDrawer); return w ? <SwapDrawer w={w} isAdmin={isAdmin} onClose={() => setSwapDrawer(null)} onEdit={() => { setSwapDrawer(null); setEdit({ kind: "swap", rec: w.record }); }} onDelete={() => { setSwapDrawer(null); void del(w.record.id); }} onOpenDeal={onOpenDeal} /> : null; })()}
+          {(() => { const w = swaps.find(x => x.record.id === swapDrawer); return w ? <SwapDrawer w={w} isAdmin={isAdmin} onClose={() => setSwapDrawer(null)} onEdit={() => { setSwapDrawer(null); setEdit({ kind: "swap", rec: w.record }); }} onDelete={() => { setSwapDrawer(null); void del(w.record.id); }} onOpenDeal={onOpenDeal} onRate={() => { setSwapDrawer(null); setRateTarget({ kind: "swap", swap: w }); }} /> : null; })()}
           <Src>Mark-to-market is indicative: the fixed swap rate vs today's 1M Term SOFR swap rate for the remaining term (SOFR annual/annual for a Daily Simple SOFR swap), on the notional — the same engine as the deal page's breakage estimate. The bank's mark governs. "Terms pending" = the hedge exists but its notional, rate or maturity isn't documented yet, so it is shown but left out of the mark-to-market. Red = maturity under 12 months, amber = under 18.</Src>
         </>
       )}

@@ -135,6 +135,55 @@ class PlanTest(unittest.TestCase):
         self.assertTrue(any(c["args"]["entity"] == "SalesHistory" for c in p["calls"]))
 
 
+
+class InterestLedgerTest(unittest.TestCase):
+    """Rate detail panel (10/26/26): 1st Mortgage Interest + Swap Credits from GeneralLedgerSummaries.
+    Values are Cooks Corner's real ledger (entity brunswic, Basis A, period activity)."""
+
+    def gl_call(self, rows, basis="A", bf="N", period=None):
+        f = [{"field": "Basis", "operator": "eq", "value": basis}, {"field": "BalanceForward", "operator": "eq", "value": bf},
+             {"field": "AccountNumber", "operator": "startsWith", "value": "8110"}]
+        if period:
+            f.append({"field": "Period", "operator": "eq", "value": period})
+        return {"entity": "GeneralLedgerSummaries", "tool": "aggregate", "function": "sum", "field": "Activity", "filters": f,
+                "rows": [{"EntityId": e + " " * 40, "Period": p, "AccountNumber": a + "   ", "value": v} for e, p, a, v in rows]}
+
+    def test_build_keeps_interest_and_swap_credits_closed_months_only(self):
+        state, calls = load()
+        rows = [("brunswic", "202604", "81100000", 55397.36), ("brunswic", "202604", "81101000", 2905.16),
+                ("brunswic", "202605", "81100000", 366153.9), ("brunswic", "202605", "81103000", 0),          # prepayment penalty: ignored
+                ("brunswic", "202610", "81100000", 0),                                                       # open month: dropped
+                ("academy", "202605", "81100000", 107357.28)]                                                # not this deal
+        p, _ = K.build(state, calls + [self.gl_call(rows)], AS_OF)
+        d = {x["dealId"]: x for x in p["deals"]}
+        self.assertEqual(d["d-cooks"]["interestGl"], [
+            {"entityId": "brunswic", "period": "202604", "mortgageInterest": 55397.36, "swapCredits": 2905.16},
+            {"entityId": "brunswic", "period": "202605", "mortgageInterest": 366153.9, "swapCredits": None}])
+        self.assertEqual(d["d-cooks"]["interestCheckedThrough"], "202609")
+        self.assertEqual(d["d-rock"]["interestGl"], [])                      # covered, no rows — still checked
+
+    def test_wrong_book_or_balance_forward_is_ignored_and_no_double_count(self):
+        state, calls = load()
+        r = [("brunswic", "202605", "81100000", 366153.9)]
+        p, _ = K.build(state, calls + [self.gl_call(r, basis="C"), self.gl_call(r, bf="B"), self.gl_call(r), self.gl_call(r, period="202605")], AS_OF)
+        g = next(x for x in p["deals"] if x["dealId"] == "d-cooks")["interestGl"]
+        self.assertEqual([x["mortgageInterest"] for x in g], [366153.9])
+
+    def test_plan_first_pull_by_year_then_last_three_months(self):
+        state, calls = load()
+        occ = [c for c in calls if c["entity"] == "Occupancy"]
+        gl = lambda p: [c for c in p["calls"] if c["args"]["entity"] == "GeneralLedgerSummaries"]
+        first = gl(K.plan(state, occ, AS_OF))
+        self.assertEqual([c["args"]["filters"][3]["value"] for c in first], ["2024", "2025", "2026"])
+        self.assertEqual(first[0]["args"]["groupBy"], ["EntityId", "Period", "AccountNumber"])
+        for d in state["deals"]:
+            d["interest"] = {"checkedThrough": "202608"}
+        self.assertEqual([c["args"]["filters"][3]["value"] for c in gl(K.plan(state, occ, AS_OF))], ["202607", "202608", "202609"])
+        for d in state["deals"]:
+            d["interest"] = {"checkedThrough": "202609"}
+        self.assertEqual(gl(K.plan(state, occ, AS_OF)), [])
+
+
 class SalesAndFinancialsFixesTest(unittest.TestCase):
     """Fixes from the first live run (10/18/26)."""
 

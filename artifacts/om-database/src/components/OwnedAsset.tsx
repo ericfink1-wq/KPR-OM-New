@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState, type ReactNode } from "react";
+import type { RateDetailTarget } from "./RateDetailPanel";
 import type { Deal } from "../lib/idb";
 import {
   buildDebtRows, buildCriticalDates, buildCovenantRows, planVsActual, sinceAcquisition, actualNoi, annualDebtService, liveTenants, driveLinks,
@@ -6,7 +7,7 @@ import {
 } from "../lib/assetMgmt";
 import { apiAmDetectCovenants, apiAmQuarterlyComment, apiAmDeleteRecord, apiAmSaveRecord, type CovenantProposal } from "../lib/api";
 import {
-  useAmData, OwnedDealPanel, RecordEditor, Modal, Kpi, Src, Pill, daysPill,
+  useAmData, OwnedDealPanel, RecordEditor, Modal, Kpi, Src, Pill, daysPill, RateCellButton,
   K, card, th, td, num, btn, miniBtn, fmtM, fmtPct, fmtDate,
 } from "./AssetMgmt";
 
@@ -14,6 +15,7 @@ import {
 // acquisition card all read Asset Mgmt's records — ONE source of truth for loans, swaps,
 // covenants and the acquisition — and Datex for what the property is doing today.
 
+const RateDetailPanel = lazy(() => import("./RateDetailPanel"));
 const mine = (records: AmRecord[] | null, dealId: string) => (records ?? []).filter(r => r.dealId === dealId);
 const head = (t: string) => <div style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: K.charcoal }}>{t}</div>;
 const statusPill = (st: CovenantRow["status"]) => st === "breach" ? <Pill flag="red">below covenant</Pill> : st === "watch" ? <Pill flag="amber">under 10% headroom</Pill> : st === "ok" ? <Pill flag="green">passing</Pill> : <Pill flag="gray">monitor</Pill>;
@@ -206,12 +208,14 @@ function QuarterlyComment({ deal, recs, debt, plan, timeline }: { deal: Deal; re
 
 // ── Financing tab for an owned deal (Asset Mgmt records are the single source) ──
 export function OwnedFinancing({ deal }: { deal: Deal }) {
-  const { loaded, debt, covenants, acq, today } = useDealAm(deal);
+  const { loaded, debt, covenants, acq, today, rates } = useDealAm(deal);
+  const [rateTarget, setRateTarget] = useState<RateDetailTarget | null>(null);
   const noi = actualNoi(deal, acq?.data ?? null);
   if (!loaded) return <div className="kpr-skel" style={{ height: 220, borderRadius: 12, marginBottom: 14 }} aria-busy="true" />;
   if (!debt.length) return <div style={{ ...card, padding: 16, fontSize: 13.5, color: K.gray, marginBottom: 14 }}>No loan on file for this property in Asset Mgmt → Debt. Loans and swaps are entered (or imported) there; this tab reads them.</div>;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 14 }} id="section-senior-loan">
+      {rateTarget && <Suspense fallback={null}><RateDetailPanel target={rateTarget} allRows={debt} deal={deal} rates={rates} onClose={() => setRateTarget(null)} /></Suspense>}
       {debt.map(r => {
         const d = r.record.data;
         const ds = annualDebtService(r.balance, r.allInPct, d, today);
@@ -232,7 +236,7 @@ export function OwnedFinancing({ deal }: { deal: Deal }) {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: "0 22px", marginTop: 6 }}>
               <div>
                 <Line l="Balance" v={fmtM(r.balance)} sub={r.balanceIsOriginal ? "original balance" : d.balanceAsOf ? `as of ${fmtDate(String(d.balanceAsOf))}` : undefined} />
-                <Line l="Rate" v={`${fmtPct(r.allInPct, 3)}${r.estimated ? "~" : ""} ${r.rateType ?? ""}${r.partlySwapped ? " (partly)" : ""}`} sub={`${r.allInSource}${r.index ? ` · ${r.index}` : ""}${r.spreadBps != null ? ` + ${r.spreadBps} bps` : ""}`} />
+                <Line l="Rate" v={<RateCellButton label="Rate detail" onOpen={() => setRateTarget({ kind: "loan", row: r })}>{`${fmtPct(r.allInPct, 3)}${r.estimated ? "~" : ""} ${r.rateType ?? ""}${r.partlySwapped ? " (partly)" : ""}`} ›</RateCellButton>} sub={`${r.allInSource}${r.index ? ` · ${r.index}` : ""}${r.spreadBps != null ? ` + ${r.spreadBps} bps` : ""}`} />
                 <Line l="Annual debt service" v={fmtM(ds.amount)} sub={ds.basis} />
                 <Line l="DSCR (actual)" v={dscr != null ? `${dscr.toFixed(2)}x` : "—"} sub={noi.source} />
                 <Line l="Debt yield" v={r.balance && noi.value != null ? fmtPct((noi.value / r.balance) * 100, 1) : "—"} />
@@ -247,7 +251,7 @@ export function OwnedFinancing({ deal }: { deal: Deal }) {
             </div>
             {r.swaps.map(w => (
               <div key={w.record.id} style={{ marginTop: 10, background: K.page, borderRadius: 10, padding: "10px 12px" }}>
-                <b style={{ fontSize: 13 }}>Swap{w.counterparty ? ` · ${w.counterparty}` : ""}</b>
+                <b style={{ fontSize: 13 }}>Swap{w.counterparty ? ` · ${w.counterparty}` : ""}</b> <RateCellButton label="Rate detail" onOpen={() => setRateTarget({ kind: "swap", swap: w })}><span style={{ fontSize: 12 }}>Rate detail ›</span></RateCellButton>
                 {w.termsPending ? <div style={{ fontSize: 13, color: K.gray }}>Terms pending — notional, rate or maturity not documented, so it isn't priced.</div> : (
                   <div style={{ fontSize: 13, marginTop: 2 }}>{fmtM(w.notional)} fixed at {fmtPct(w.fixedSwapRatePct, 4)} to {fmtDate(w.maturity)} · market {fmtPct(w.marketRatePct, 3)} ({w.curve}) · <b style={{ color: w.mtm == null ? K.gray : w.mtm >= 0 ? "#3e8a2f" : K.red }}>MTM {w.mtm == null ? "—" : `${w.mtm >= 0 ? "+" : "−"}${fmtM(Math.abs(w.mtm))}`}</b> <span style={{ color: K.gray }}>({w.mtmLabel})</span></div>
                 )}

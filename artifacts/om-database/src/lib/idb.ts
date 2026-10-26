@@ -1224,6 +1224,9 @@ export interface DatexLiveBlock {
   totalUnits?: number | null;
   occupiedUnits?: number | null;
   vacantUnits?: number | null;
+  /** Datex GL interest by accounting entity + month (auto-refresh; rate detail panel): account 81100000 1st Mortgage Interest + 81101000 Swap Credits, Basis A, period activity. Posted in the month PAID (= the prior month's interest). */
+  interestGl?: Array<{ entityId: string; period: string; mortgageInterest: number | null; swapCredits: number | null }> | null;
+  interestCheckedThrough?: string | null;
   /** Shop / major / pad / ground-lease split as Datex reports it. A segment at zero
    *  occupancy is a real finding that a headline occupancy figure hides. */
   segments?: Record<string, { gla?: number | null; occupiedGLA?: number | null; units?: number | null; occupiedUnits?: number | null }> | null;

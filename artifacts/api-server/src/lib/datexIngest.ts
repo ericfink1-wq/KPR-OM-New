@@ -12,7 +12,7 @@ export { pendingSaleProblem };
 // with what is already stored. PURE: no database; the route does the reads and writes.
 
 /** The blocks a payload can carry, each stamped with its own as-of date. */
-export const INGEST_BLOCKS = ["occupancy", "tenants", "vacantSuites", "sales", "arAging", "financials", "leasing", "assetManager", "notes"] as const;
+export const INGEST_BLOCKS = ["occupancy", "tenants", "vacantSuites", "sales", "arAging", "financials", "leasing", "assetManager", "notes", "interest"] as const;
 export type IngestBlock = typeof INGEST_BLOCKS[number];
 
 const OCC_KEYS = ["period", "totalGLA", "occupiedGLA", "vacantGLA", "occupancyPct", "totalUnits", "occupiedUnits", "vacantUnits", "segments"] as const;
@@ -38,6 +38,7 @@ export function blocksSent(p: DatexDealPayload): IngestBlock[] {
   if (Array.isArray(p.leasing)) out.push("leasing");
   if (typeof p.assetManager === "string") out.push("assetManager");
   if (typeof p.notes === "string") out.push("notes");
+  if (Array.isArray(p.interestGl)) out.push("interest");
   return out;
 }
 
@@ -60,6 +61,37 @@ export function mergeSalesRows(stored: SalesRow[], incoming: unknown[]): { rows:
   const max = all.reduce((a, r) => (r.period > a ? r.period : a), "");
   const rows = max ? all.filter(r => monthsBetween(r.period, max) < SALES_MONTHS_KEPT) : all;
   rows.sort((a, b) => a.tenantId.localeCompare(b.tenantId) || a.period.localeCompare(b.period));
+  return { rows, added, updated, dropped };
+}
+
+// ── Interest GL (rate detail panel, 10/26/26) ─────────────────────────────────────────
+/** One ledger month for one accounting entity: GeneralLedgerSummaries, Basis A, BalanceForward
+ *  N — account 81100000 "1st Mortgage Interest" and 81101000 "Swap Credits" (signed as Datex
+ *  books them: + = paid, − = received; the panel nets the two). Datex posts a payment in the
+ *  month it is PAID, i.e. the prior month's interest. null = that account had no row. */
+export interface InterestGlRow { entityId: string; period: string; mortgageInterest: number | null; swapCredits: number | null }
+export const INTEREST_MONTHS_KEPT = 36;
+/** Upsert by entity + period — a re-sent month REPLACES the stored one (the GL can be restated).
+ *  Rows for an entity not mapped to this deal are dropped. */
+export function mergeInterestGl(stored: InterestGlRow[], incoming: unknown[], bldgIds: string[]): { rows: InterestGlRow[]; added: number; updated: number; dropped: number } {
+  const ok = new Set(bldgIds.map(b => b.trim().toLowerCase()));
+  const key = (r: InterestGlRow) => `${r.entityId}|${r.period}`;
+  const m = new Map(stored.map(r => [key(r), r]));
+  let added = 0, updated = 0, dropped = 0;
+  for (const x of incoming) {
+    const r = (x ?? {}) as Record<string, unknown>;
+    const entityId = String(r.entityId ?? "").trim().toLowerCase(), period = yyyymm(r.period);
+    const mi = num(r.mortgageInterest), sc = num(r.swapCredits);
+    if (!entityId || !ok.has(entityId) || !period || (mi == null && sc == null)) { dropped++; continue; }
+    const row: InterestGlRow = { entityId, period, mortgageInterest: mi, swapCredits: sc };
+    const cur = m.get(key(row));
+    if (!cur) added++; else if (cur.mortgageInterest !== mi || cur.swapCredits !== sc) updated++; else continue;
+    m.set(key(row), row);
+  }
+  const all = [...m.values()];
+  const max = all.reduce((a, r) => (r.period > a ? r.period : a), "");
+  const rows = (max ? all.filter(r => monthsBetween(r.period, max) < INTEREST_MONTHS_KEPT) : all)
+    .sort((a, b) => a.entityId.localeCompare(b.entityId) || a.period.localeCompare(b.period));
   return { rows, added, updated, dropped };
 }
 
@@ -174,6 +206,16 @@ export function mergeDatexDeal(
     stamp(k);
   }
 
+  if (sent.includes("interest")) {
+    const r = mergeInterestGl(Array.isArray(prev?.interestGl) ? (prev!.interestGl as InterestGlRow[]) : [], p.interestGl as unknown[], mapEntry.bldgIds);
+    if (r.added || r.updated) changed.push(`interest ledger +${r.added} months${r.updated ? `, ${r.updated} restated` : ""}`);
+    if (r.rows.length) next.interestGl = r.rows;
+    const ct = yyyymm(p.interestCheckedThrough), cap = asOf.slice(0, 4) + asOf.slice(5, 7);
+    if (ct && ct <= cap && ct > String(prev?.interestCheckedThrough ?? "")) next.interestCheckedThrough = ct;
+    if (r.dropped) warnings.push(`${r.dropped} interest ledger row(s) dropped (entity not mapped to this deal, bad period, or no amount)`);
+    stamp("interest");
+  }
+
   // Sales: append to the stored history, then recompute each tenant's trailing 12 months.
   let salesRows = storedSales;
   if (sent.includes("sales")) {
@@ -243,5 +285,8 @@ export function dealState(dealId: string, propertyName: string, bldgIds: string[
     leasing: { count: leasing.length, latestSubmitted },
     financials: fin ? { period: fin.period ?? null, basis: fin.basis ?? null } : null,
     arAging: block.arAging ? { asOf: blockAsOf?.arAging ?? block.asOf ?? null } : null,
+    interest: (() => { const g = Array.isArray(block.interestGl) ? (block.interestGl as InterestGlRow[]) : [];
+      const ct = (block.interestCheckedThrough as string | undefined) ?? null;
+      return g.length || ct ? { months: g.length, maxPeriod: g.reduce((a, r) => (r.period > a ? r.period : a), "") || null, checkedThrough: ct } : null; })(),
   };
 }

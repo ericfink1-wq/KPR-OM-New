@@ -1092,6 +1092,17 @@ export interface RatesPayload {
   sofrOvernight?: { rate: number; date: string } | null;
   fetchedAt: string;
 }
+/** Daily index history (FRED + NY Fed, cached server-side) for the rate detail panel. One fetch per page load. */
+export interface IndexHistoryView { series: "SOFR" | "DGS10"; label: string; source: string; asOf: string | null; fetchedAt: string | null; points: Array<[string, number | null]> }
+let historyCache: Promise<IndexHistoryView[]> | null = null;
+export function apiRateHistory(): Promise<IndexHistoryView[]> {
+  historyCache ??= apiFetch("/rates/history?series=SOFR,DGS10").then(async resp => {
+    const body = await resp.json().catch(() => ({})) as { series?: IndexHistoryView[]; error?: string };
+    if (!resp.ok) throw new Error(body.error || "Couldn't load rate history");
+    return body.series ?? [];
+  }).catch(err => { historyCache = null; throw err; });
+  return historyCache;
+}
 /** Paste today's swap curve (e.g. from Chatham); it shows until DTCC has newer trades. */
 export async function apiSaveSwapCurve(text: string, source: string): Promise<{ points: Array<{ tenor: number; rate: number }> }> {
   const resp = await apiFetch("/rates/swap-curve", { method: "POST", body: JSON.stringify({ text, source }) });

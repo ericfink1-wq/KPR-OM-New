@@ -42,7 +42,7 @@ import sys
 import urllib.error
 import urllib.request
 
-KIT_VERSION = "2026-10-19.1"
+KIT_VERSION = "2026-10-26.1"
 TRANSCRIPT_ROOT = os.environ.get("KPR_TRANSCRIPT_ROOT", "/root/.claude/projects")
 DEFAULT_BASE = os.environ.get("KPR_BASE_URL", "https://kpr-oms.replit.app")
 
@@ -51,6 +51,7 @@ BLDG_FIELD = {
     "Occupancy": "BuildingId", "TenantsMetrics": "BuildingId", "Tenants": "BuildingId",
     "SalesHistory": "BuildingId", "TenantLedger": "BuildingId", "FinancialGroups": "EntityID",
     "LeaseAppDealHistoryBySuite": "BldgId", "VacantSuites": "BLDGID", "Spaces": "BLDGID",
+    "GeneralLedgerSummaries": "EntityId",
 }
 BASIS = {"C": "Cash", "A": "Accrual"}
 
@@ -502,6 +503,36 @@ def build_financials(calls, bl, period):
     return out, (f"financials: {', '.join(absent)} not in Datex (left out)" if absent else None)
 
 
+GL_INTEREST, GL_SWAP = "81100000", "81101000"      # 1st Mortgage Interest, Swap Credits (same on every entity)
+
+
+def _flt(call, field):
+    return next((str(f.get("value")).strip().upper() for f in call.get("filters") or [] if f.get("field") == field and str(f.get("operator")).lower() == "eq"), None)
+
+
+def build_interest(calls, bl, through):
+    """Monthly interest from GeneralLedgerSummaries for the deal's entities: account 81100000
+    (1st Mortgage Interest) and 81101000 (Swap Credits), as Datex signs them. ONLY aggregate
+    calls filtered to Basis A + BalanceForward N count (an unfiltered sum would mix the cash
+    and accrual books and the balance-forward rows). Months after `through` (the last closed
+    month) are dropped — an open month reads 0 until it posts. A month seen in two calls is
+    taken once (the later call), never added twice."""
+    per = {}
+    for c in calls:
+        if c.get("entity") != "GeneralLedgerSummaries" or c.get("tool") != "aggregate":
+            continue
+        if _flt(c, "Basis") != "A" or _flt(c, "BalanceForward") != "N":
+            continue
+        for r in c.get("rows") or []:
+            e, p, acct = nid(r.get("EntityId")), yyyymm(r.get("Period")), s(r.get("AccountNumber"))
+            v = num(r.get("value"))
+            if e not in bl or not p or p > through or acct not in (GL_INTEREST, GL_SWAP) or v is None:
+                continue
+            row = per.setdefault((e, p), {"entityId": e, "period": p, "mortgageInterest": None, "swapCredits": None})
+            row["mortgageInterest" if acct == GL_INTEREST else "swapCredits"] = round(v, 2)
+    return [per[k] for k in sorted(per)]
+
+
 def build_leasing(calls, bl):
     out = []
     for r in rows_for(calls, "LeaseAppDealHistoryBySuite", bl):
@@ -582,6 +613,12 @@ def build(state, calls, as_of, fin_period=None, force=False):
                     p["financials"] = fin
                 if why:
                     notes.append(why)
+        if covered(calls, "GeneralLedgerSummaries", bl):
+            gl = build_interest(calls, set(bl), fin_period)
+            p["interestGl"] = gl                       # an empty list still counts as checked
+            p["interestCheckedThrough"] = fin_period
+            if not gl:
+                notes.append("interest ledger: no 1st-mortgage-interest rows for these entities")
         if covered(calls, "LeaseAppDealHistoryBySuite", bl):
             lease = build_leasing(calls, set(bl))
             if lease:
@@ -677,6 +714,23 @@ def plan(state, calls, as_of, mode="weekly", sales_mode="auto"):
             select=["EntityID", "Period", "Basis", "AccountGroupId", "Actual", "YtdActual", "YtdBudget", "CurrentYearBudget", "TwelveMoActual"], first=100)
     else:
         notes.append(f"financials already at {fp} everywhere — skipped")
+
+    # Interest ledger (rate detail panel): GeneralLedgerSummaries, accrual book, period activity,
+    # accounts 8110xxxx — one aggregate per year the first time, then the last 3 closed months
+    # (a lender catch-up or a restatement lands in a recent month). build() keeps 81100000 + 81101000.
+    gl_max = [((d.get("interest") or {}).get("checkedThrough")) for d in deals]
+    gl = lambda why, pf: add("aggregate_records", why, entity="GeneralLedgerSummaries", function="sum", field="Activity",
+                             groupBy=["EntityId", "Period", "AccountNumber"],
+                             filters=[F("Basis", "eq", "A"), F("BalanceForward", "eq", "N"), F("AccountNumber", "startsWith", "8110"), pf], first=100)
+    if mode == "all" or not all(gl_max):
+        start_p = add_months(fp, -23)
+        for y in range(int(start_p[:4]), int(fp[:4]) + 1):
+            gl(f"interest ledger {y}, every entity (first pull) — page with after", F("Period", "startsWith", str(y)))
+    elif mode == "monthly" or any(x < fp for x in gl_max):
+        for k in range(2, -1, -1):
+            gl(f"interest ledger {add_months(fp, -k)}, every entity", F("Period", "eq", add_months(fp, -k)))
+    else:
+        notes.append(f"interest ledger already at {fp} everywhere — skipped")
 
     subs = [(d.get("leasing") or {}).get("latestSubmitted") for d in deals]
     year_ago = (dt.date.fromisoformat(as_of) - dt.timedelta(days=365)).isoformat()

@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-26-rate-detail",
+    date: "2026-10-26",
+    category: "new",
+    title: "Rate detail: tap any loan or swap rate to see how it's built",
+    detail: "Click a Rate, All-in or swap rate figure and a panel opens with four parts: how the rate is built (index, spread, floor, caps, swap and how much of the loan it covers, with the source document on hover), a zoomable history of the index, the unhedged cost and the rate actually paid, a forward view to maturity with projected interest by year, and, for owned properties in Datex, each month's actual interest vs what the loan terms say it should be, with big gaps flagged. Anything not on the loan record says \"not documented\". Term SOFR history isn't public, so Daily SOFR is charted in its place and labelled.",
+    where: "Asset Mgmt → Debt (Rate / All-in and the swap rate columns), or an owned deal's Financing tab → Rate",
+  },
+  {
     id: "2026-10-21-datex-options",
     date: "2026-10-21",
     category: "improved",

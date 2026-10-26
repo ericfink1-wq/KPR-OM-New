@@ -3,6 +3,7 @@ import { fetchTodaysRates, debugIronhound, type RatesPayload } from "../lib/rate
 import { saveManualCurve, saveChathamMark } from "../lib/rateCurves";
 import { parseManualCurve, parseChathamMark } from "../lib/dtccSwaps";
 import { requireAuth, requireAdmin } from "../middleware/auth";
+import { getIndexHistory, HISTORY_SERIES, type HistorySeries } from "../lib/rateHistory";
 
 const router = Router();
 
@@ -32,6 +33,20 @@ router.get("/rates", async (req, res) => {
     // Serve stale cache if we have it, rather than failing outright.
     if (cache) { res.json(cache.data); return; }
     res.status(502).json({ error: "Couldn't fetch rates right now — try again shortly." });
+  }
+});
+
+// GET /api/rates/history?series=SOFR,DGS10 — daily index history for the rate detail panel
+// (FRED + NY Fed, cached server-side, refreshed at most every 12 h). Never Term SOFR (CME-licensed).
+router.get("/rates/history", requireAuth, async (req, res) => {
+  const want = String(req.query.series ?? "SOFR").split(",").map(x => x.trim().toUpperCase()).filter((x): x is HistorySeries => x in HISTORY_SERIES);
+  if (!want.length) { res.status(400).json({ error: "series must be SOFR and/or DGS10" }); return; }
+  try {
+    const out = await Promise.all(want.map(s => getIndexHistory(s, req.query.refresh === "1" && !!req.session.isAdmin)));
+    res.json({ series: out });
+  } catch (err) {
+    req.log.warn({ err }, "rate history failed");
+    res.status(502).json({ error: "Couldn't load rate history right now." });
   }
 });
 

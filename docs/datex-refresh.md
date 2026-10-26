@@ -100,6 +100,18 @@ property was never checked; monthly on the 12th (`--mode monthly`) = every rent 
 closed sales month; `--mode all` = monthly plus the full 24-month sales pull. The last run is shown on Asset Mgmt →
 Properties ("Last auto-refresh").
 
+### Interest ledger block (10/26/26 — rate detail panel)
+`interestGl: [{entityId, period, mortgageInterest, swapCredits}]` + `interestCheckedThrough` (YYYYMM).
+Source: `GeneralLedgerSummaries`, `aggregate_records` sum of `Activity`, filters `Basis eq A`,
+`BalanceForward eq N`, `AccountNumber startsWith 8110`, groupBy `EntityId, Period, AccountNumber`.
+Keep ONLY 81100000 (1st Mortgage Interest) and 81101000 (Swap Credits), signed as booked
+(81103000 Prepayment Penalty is ignored). Entity ids equal the deal's BLDGIDs. Drop any month after
+the last CLOSED month (an open month reads 0). First pull = one call per year for 24 months; after
+that the last 3 closed months each run (lender catch-ups / restatements land there). The server
+upserts by entity + month (a re-sent month replaces), keeps 36 months, and a file import keeps it.
+Datex posts each payment in the month PAID, i.e. the prior month's interest — the panel compares
+posting month P with the interest accrued in P−1. The job kit (`plan` / `build`) does all of this.
+
 ## The file, in one paragraph (10/18/26)
 
 One JSON file: `{ "source": "datex", "asOf": "YYYY-MM-DD", "generatedBy": "...", "deals": [ ... ] }`
