@@ -1,10 +1,13 @@
 import { Router } from "express";
 import { fetchTodaysRates, debugIronhound, type RatesPayload } from "../lib/rates";
-import { saveManualCurve, saveChathamMark } from "../lib/rateCurves";
+import { saveManualCurve, saveChathamMark, refreshSwapCurves, backfillDailyCurves, curveCoverage, getSwapCurves } from "../lib/rateCurves";
+import { saveCurveSnapshot } from "../lib/swapHistory";
 import { parseManualCurve, parseChathamMark } from "../lib/dtccSwaps";
 import { requireAuth, requireAdmin } from "../middleware/auth";
 import { getIndexHistory, HISTORY_SERIES, type HistorySeries } from "../lib/rateHistory";
-import { loadCurveRows, swapSeries, termSofrSeries, pickCurveDate, overlayTargets, curveOn, oisByDate } from "../lib/swapHistory";
+import { loadCurveRows, swapSeries, termSofrSeries, pickCurveDate, overlayTargets, curveOn, oisByDate, businessDayTest } from "../lib/swapHistory";
+/** US business days from the NY Fed SOFR history (cached 12 h); weekdays if it can't be read. */
+const businessDays = async () => businessDayTest(await getIndexHistory("SOFR").then(h => h.points.filter(p => p[1] != null).map(p => p[0])).catch(() => null));
 
 const router = Router();
 
@@ -37,6 +40,35 @@ router.get("/rates", async (req, res) => {
   }
 });
 
+// POST /api/rates/daily-close — the SCHEDULED daily close (Eric, 10/26/26). Called by the GitHub
+// Actions job .github/workflows/rates-daily-close.yml every business evening after DTCC publishes
+// the day's end-of-day file (and a morning retry), whether or not anyone has the site open. Each
+// call: top up today's curves, ingest up to ~45 s of missing daily DTCC files (the year backfill
+// runs in batches — the job calls again while `remaining` > 0), save the day's snapshot. Public
+// market data only — no KPR data in or out, so no login; single-flight and bounded.
+let closeRun: Promise<unknown> | null = null;
+router.post("/rates/daily-close", async (req, res) => {
+  if (closeRun) { res.status(429).json({ error: "already running — try again in a minute" }); return; }
+  const budget = Math.min(55_000, Math.max(5_000, Number(req.query.budgetMs) || 45_000));
+  closeRun = (async () => {
+    const t0 = Date.now();
+    const refresh = await refreshSwapCurves(15_000, true).catch(e => ({ error: String(e) }));
+    const isBd = await businessDays();
+    const ingested = await backfillDailyCurves(Math.max(5_000, budget - (Date.now() - t0)), isBd);
+    const curves = await getSwapCurves();
+    const saved = await saveCurveSnapshot(curves.ois, curves.term, true);
+    const coverage = await curveCoverage(isBd);
+    return { ok: true, refresh, ingested, snapshotSaved: saved, snapshotDate: curves.ois?.curveDate ?? null, remaining: coverage.daysMissing, coverage, ms: Date.now() - t0 };
+  })();
+  try { res.json(await closeRun); }
+  catch (err) { req.log.warn({ err }, "daily close failed"); res.status(500).json({ error: err instanceof Error ? err.message : "daily close failed" }); }
+  finally { closeRun = null; }
+});
+// GET /api/rates/coverage — how much daily swap history is stored (no login; public data).
+router.get("/rates/coverage", async (_req, res) => {
+  try { res.json(await curveCoverage(await businessDays())); } catch (err) { res.status(502).json({ error: err instanceof Error ? err.message : "coverage failed" }); }
+});
+
 // GET /api/rates/history?series=SOFR,DGS10 — daily index history for the rate detail panel
 // (FRED + NY Fed, cached server-side, refreshed at most every 12 h). Never Term SOFR (CME-licensed).
 router.get("/rates/history", requireAuth, async (req, res) => {
@@ -66,7 +98,7 @@ router.get("/rates/series", requireAuth, async (req, res) => {
     const m = /^(ois|term):(\d{1,2})$/.exec(key);
     if (!m && key !== "termsofr1m") { res.status(400).json({ error: "unknown series" }); return; }
     const rows = await loadCurveRows();
-    const pts = m ? swapSeries(rows, m[1] as "ois" | "term", Number(m[2])) : termSofrSeries(rows);
+    const pts = m ? swapSeries(rows, m[1] as "ois" | "term", Number(m[2]), await businessDays()) : termSofrSeries(rows);
     const label = m ? `${m[1] === "ois" ? "SOFR OIS (annual/annual)" : "SOFR Swap – 1M Term"} – ${m[2]} Year` : "1M Term SOFR (Chatham marks)";
     const source = m
       ? (m[1] === "ois" ? "DTCC public swap trades — the panel's close method, backfilled from DTCC's end-of-day files (about a year back); a pasted Chatham mark wins on its date" : "Derived each day from that day's SOFR OIS close, exactly as the panel derives today's curve (Term-vs-OIS basis; a Chatham mark's own Term column wins on its date)")
@@ -83,7 +115,8 @@ router.get("/rates/series", requireAuth, async (req, res) => {
 router.get("/rates/curve-overlay", requireAuth, async (req, res) => {
   try {
     const rows = await loadCurveRows();
-    const dates = [...oisByDate(rows).keys()].sort();
+    const isBd = await businessDays();
+    const dates = [...oisByDate(rows, isBd).keys()].sort();
     const latest = dates[dates.length - 1] ?? null;
     if (!latest) { res.json({ latest: null, curves: [] }); return; }
     const curves = [{ key: "Today", target: latest, date: latest }, ...overlayTargets(latest).map(t => ({ key: t.key, target: t.target, date: pickCurveDate(dates, t.target) }))]

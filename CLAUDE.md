@@ -57,6 +57,18 @@ per date Chatham mark > DTCC end-of-day `ois` > `panel-snapshot` (`<date>|snapsh
 (`termForDay`). `backfillDailyCurves` (rateCurves.ts) ingests every full trading day DTCC still publishes (~1 year) — on
 the analysis tick / timer / NOT on GET /rates (it would make the panel wait). 1M Term SOFR spot history = Chatham pastes
 only. Still NO new table (rate_curves kinds). Tests: swapHistory.test.ts (api), rateSeries.test.ts (web).
+FIX (same day, Eric's screenshot): the live site had only month-end points — the backfill rode the analysis tick, which
+STOPS when no re-analysis is pending, and autoscale never fires the 15-min timer. Now the SCHEDULE is the GitHub Actions
+job `.github/workflows/rates-daily-close.yml` (01:30 + 11:30 UTC Tue–Sat = 9:30pm ET after each Mon–Fri close, DTCC posts
+day D's file ~8:15pm ET, + a 7:30am ET retry) → public `POST /api/rates/daily-close` (public market data only; single-flight;
+≤55 s; loops while `remaining` > 0) → refresh + `backfillDailyCurves` + forced snapshot; `GET /rates/coverage`. US business
+day = a NY Fed SOFR print date (`businessDayTest`) — holiday files (1/19/26 MLK: one 5Y trade at 1.68%) are never stored in
+the series or counted; an empty business-day file writes an `ois-none` marker so it isn't re-downloaded. Outliers:
+`screenOutliers` — thin close AND >15 bp off BOTH the ±3-day same-tenor median and the adjacent-tenor estimate, or >25 bp
+off both however many trades → point[4] = reason; hollow red, excluded from changeStats + hi/lo. Change stats use the
+nearest GOOD print within 3 BUSINESS days (`valueOn`; YTD looks back only). Cross-check: BlueGamma's public 5Y SOFR page
+(the only free daily reference found — FRED's swap series were LIBOR and are discontinued): 248 days, median |diff| 0.3 bp,
+p90 1.5 bp; 10/19/26 ours 4.068 vs 4.65 (flagged), 9/30/26 4.812 vs 4.8134 (real).
 
 ## RATE DETAIL PANEL (Eric, 10/26/26) — click a Rate / All-in / swap rate cell
 `om-database lib/rateDetail.ts` (PURE, tested — rateDetail.test.ts): `termsFromDebtRow` / `termsFromSwap` →

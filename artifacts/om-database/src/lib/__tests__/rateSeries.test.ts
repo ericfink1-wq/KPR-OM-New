@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { changeStats, valueOn, toChartRows, inRange, seriesKeyForRow, rangeStart, compareStart, fmtBp, type SeriesTuple } from "../rateSeries";
+import { changeStats, valueOn, toChartRows, inRange, seriesKeyForRow, rangeStart, compareStart, fmtBp, businessDaysApart, type SeriesTuple } from "../rateSeries";
 
 // Prints with a published holiday "no print" (null) and two long holes.
 const S: SeriesTuple[] = [
@@ -19,9 +19,9 @@ describe("change stats (bp)", () => {
     expect(c.lo52).toEqual({ date: "2026-09-21", v: 3.60 });
     expect(c.partialYear).toBe(false);
   });
-  it("no comparable print within 7 days → null, never a guess", () => {
-    expect(valueOn(S, "2026-09-19")).toBeNull();                 // last print before is 1/2/26
-    expect(valueOn(S, "2026-10-12")).toBeNull();                 // 10/12 is a no-print day; 9/25 is 17 days back
+  it("no good print within 3 business days → null, never a guess", () => {
+    expect(valueOn(S, "2026-09-10")).toBeNull();                 // nearest are 1/2/26 and 9/21/26 — both too far
+    expect(valueOn(S, "2026-10-12")).toEqual({ date: "2026-10-13", v: 3.85 });   // 10/12 is a no-print day → nearest good one
     const short: SeriesTuple[] = S.slice(-3);
     const s = changeStats(short);
     expect([s.m1, s.y1, s.ytd]).toEqual([null, null, null]);
@@ -55,5 +55,34 @@ describe("which history a panel row charts", () => {
       seriesKeyForRow("term", "SOFR Swap – 1M Term – 5 Year"), seriesKeyForRow("ois", "SOFR Swap – 10 Year"), seriesKeyForRow("ois", "SOFR Swap – 3 Year (est.)"),
       seriesKeyForRow("treasury", "30-Yr"), seriesKeyForRow("treasury", "1-Mo"),
     ]).toEqual(["SOFR", "SOFR30", "termsofr1m", "term:5", "ois:10", null, "DGS30", null]);
+  });
+});
+
+describe("nearest good point within 3 business days (Eric, 10/26/26)", () => {
+  it("counts business days (weekends don't count)", () => {
+    expect([businessDaysApart("2026-10-16", "2026-10-19"), businessDaysApart("2026-10-19", "2026-10-16"), businessDaysApart("2026-10-16", "2026-10-16"), businessDaysApart("2026-10-14", "2026-10-21")]).toEqual([1, 1, 0, 5]);
+  });
+  it("a simply-missing day uses the nearest print either side; ties go to the earlier one", () => {
+    const P: SeriesTuple[] = [["2026-10-14", 4.0, 0, null], ["2026-10-16", 4.2, 0, null], ["2026-10-23", 4.5, 0, null]];
+    expect(valueOn(P, "2026-10-15")).toEqual({ date: "2026-10-14", v: 4.0 });   // 1 bday each side → earlier
+    expect(valueOn(P, "2026-10-21")).toEqual({ date: "2026-10-23", v: 4.5 });   // 2 bdays after beats 3 before
+    expect(valueOn(P, "2026-10-28")).toEqual({ date: "2026-10-23", v: 4.5 });   // 3 bdays back
+    expect(valueOn(P, "2026-10-29")).toBeNull();                                 // 4 bdays — too far
+    expect(valueOn(P, "2026-10-21", "onOrBefore")).toEqual({ date: "2026-10-16", v: 4.2 });   // year-end mode looks back only (10/23 is nearer)
+    expect(valueOn(P, "2026-10-13", "onOrBefore")).toBeNull();
+  });
+  it("the 10/19/26 bad print can't drive the 1-week change, the high/low or the 1-day change", () => {
+    const P: SeriesTuple[] = [
+      ["2026-10-14", 4.718, 0, 19, null], ["2026-10-15", 4.63, 0, 14, null], ["2026-10-16", 4.603, 0, 11, null],
+      ["2026-10-19", 4.068, 1, 58, "Thin close (58 trades) — 57 bp below the neighbouring days"],
+      ["2026-10-20", 4.652, 0, 10, null], ["2026-10-21", 4.671, 0, 13, null], ["2026-10-22", 4.492, 0, 15, null], ["2026-10-23", 4.525, 0, 8, null],
+      ["2026-10-26", 4.531, 0, 5, null],
+    ];
+    const c = changeStats(P);
+    expect(c.w1).toBe(-7.2);                        // 4.531 vs 10/16 (4.603): 10/19 is bad, so the nearest good print (tie with 10/20 → the earlier)
+    expect(c.d1).toBe(0.6);                         // vs 10/23 — never vs a flagged print
+    expect(c.lo52).toEqual({ date: "2026-10-22", v: 4.492 });
+    expect(c.excluded).toBe(1);
+    expect(toChartRows(P).find(r => r.date === "2026-10-19")!.flag).toMatch(/Thin close/);
   });
 });

@@ -1,0 +1,31 @@
+# Today's Rates — scheduled daily close (Eric, 10/26/26).
+# The live site runs on autoscale hosting (CPU only while a request is being answered), so a
+# server-side timer can't be relied on. This job is the schedule: every business day it asks
+# the site to ingest that day's DTCC end-of-day SOFR swap file and save the day's snapshot,
+# whether or not anyone has Today's Rates open. DTCC publishes day D's file at about 8:15pm ET,
+# so the evening run is 9:30pm ET (EDT; 8:30pm EST); the morning run (7:30am ET) is a retry.
+# Each call does one bounded batch; the loop keeps calling while daily files are still missing
+# (the first runs backfill the full year DTCC keeps, ~250 trading days, in batches).
+name: Rates daily close
+on:
+  schedule:
+    - cron: "30 1 * * 2-6"    # 01:30 UTC Tue–Sat = after each Mon–Fri close
+    - cron: "30 11 * * 2-6"   # 11:30 UTC Tue–Sat = morning retry
+  workflow_dispatch: {}
+jobs:
+  daily-close:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Ingest the close and backfill missing days
+        run: |
+          set -u
+          for i in $(seq 1 25); do
+            out=$(curl -sS -m 90 -X POST "https://kpr-oms.replit.app/api/rates/daily-close?budgetMs=45000" || true)
+            echo "run $i: $(echo "$out" | head -c 600)"
+            remaining=$(echo "$out" | sed -n 's/.*"remaining":\([0-9]*\).*/\1/p')
+            if [ -z "$remaining" ]; then sleep 30; continue; fi
+            if [ "$remaining" -eq 0 ]; then echo "All available DTCC days stored."; break; fi
+            sleep 5
+          done
+          curl -sS -m 60 "https://kpr-oms.replit.app/api/rates/coverage" | head -c 1500; echo

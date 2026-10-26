@@ -3,8 +3,10 @@
 // day. Nothing here interpolates: a missing day stays missing, and a hole longer than
 // GAP_DAYS gets an explicit break row so the line is not drawn across it.
 
-export type SeriesTuple = [string, number | null, 0 | 1, number | null];
-export interface ChartRow { t: number; date: string; v: number | null; thin?: boolean; n?: number | null }
+/** [date, value|null, thin 0/1, trades|null, outlier reason|null]. A flagged point is drawn
+ *  (hollow, with its reason) but never used for a change, high or low. */
+export type SeriesTuple = [string, number | null, 0 | 1, number | null, (string | null)?];
+export interface ChartRow { t: number; date: string; v: number | null; thin?: boolean; n?: number | null; flag?: string }
 const DAY = 86_400_000;
 export const GAP_DAYS = 5;
 const ms = (iso: string) => Date.parse(iso + "T00:00:00Z");
@@ -19,9 +21,9 @@ export const addMonths = (d: string, k: number): string => {
 export function toChartRows(points: SeriesTuple[]): ChartRow[] {
   const out: ChartRow[] = [];
   let prev: string | null = null;
-  for (const [d, v, thin, n] of points) {
+  for (const [d, v, thin, n, flag] of points) {
     if (prev && ms(d) - ms(prev) > GAP_DAYS * DAY) out.push({ t: ms(prev) + DAY, date: iso(ms(prev) + DAY), v: null });
-    out.push({ t: ms(d), date: d, v, ...(thin ? { thin: true } : {}), ...(n != null ? { n } : {}) });
+    out.push({ t: ms(d), date: d, v, ...(thin ? { thin: true } : {}), ...(n != null ? { n } : {}), ...(flag ? { flag } : {}) });
     prev = d;
   }
   return out;
@@ -55,34 +57,53 @@ export interface ChangeStats {
   hi52: { date: string; v: number } | null; lo52: { date: string; v: number } | null;
   /** History doesn't reach a full year back — the 52-week figures cover only what exists. */
   partialYear: boolean; firstDate: string | null;
+  /** Points left out as outliers. */
+  excluded: number;
 }
-const LOOKBACK_TOL_DAYS = 7;
-/** The value in force on a date: the latest real print on or before it, if within 7 days.
- *  Further back than that there is no comparable figure — null, never a guess. */
-export function valueOn(points: SeriesTuple[], target: string): { date: string; v: number } | null {
-  let best: { date: string; v: number } | null = null;
-  for (const [d, v] of points) if (v != null && d <= target && (!best || d > best.date)) best = { date: d, v };
-  return best && (ms(target) - ms(best.date)) / DAY <= LOOKBACK_TOL_DAYS ? best : null;
+/** A comparison point may be up to this many BUSINESS days from its target (Eric, 10/26/26: a
+ *  day that is simply missing must not turn the change into "—"). */
+export const LOOKBACK_BDAYS = 3;
+/** Weekdays strictly between two dates, plus one — 0 for the same day, 1 for Fri→Mon. */
+export function businessDaysApart(a: string, b: string): number {
+  let lo = ms(a < b ? a : b), hi = ms(a < b ? b : a), n = 0;
+  for (let t = lo + DAY; t <= hi; t += DAY) { const w = new Date(t).getUTCDay(); if (w !== 0 && w !== 6) n++; }
+  return n;
+}
+const good = (p: SeriesTuple): p is [string, number, 0 | 1, number | null, (string | null)?] => p[1] != null && !p[4];
+/** The good print nearest the target within 3 business days (either side; the earlier one on a
+ *  tie). `onOrBefore` looks back only — used for the prior year-end close. Flagged points are skipped. */
+export function valueOn(points: SeriesTuple[], target: string, mode: "nearest" | "onOrBefore" = "nearest"): { date: string; v: number } | null {
+  let best: { date: string; v: number; gap: number } | null = null;
+  for (const p of points) {
+    if (!good(p) || (mode === "onOrBefore" && p[0] > target)) continue;
+    const gap = businessDaysApart(p[0], target);
+    if (gap > LOOKBACK_BDAYS) continue;
+    if (!best || gap < best.gap || (gap === best.gap && p[0] < best.date)) best = { date: p[0], v: p[1], gap };
+  }
+  return best ? { date: best.date, v: best.v } : null;
 }
 const bp = (now: number, then: { v: number } | null) => (then ? Math.round((now - then.v) * 1000) / 10 : null);
 export function changeStats(points: SeriesTuple[]): ChangeStats {
-  const real = points.filter((p): p is [string, number, 0 | 1, number | null] => p[1] != null);
+  const real = points.filter(good);
   const firstDate = real[0]?.[0] ?? null;
-  if (!real.length) return { latest: null, d1: null, w1: null, m1: null, ytd: null, y1: null, hi52: null, lo52: null, partialYear: true, firstDate };
+  if (!real.length) return { latest: null, d1: null, w1: null, m1: null, ytd: null, y1: null, hi52: null, lo52: null, partialYear: true, firstDate, excluded: points.filter(p => p[4]).length };
   const [d0, v0] = real[real.length - 1];
   const prev = real.length > 1 ? { v: real[real.length - 2][1] } : null;
   const yearAgo = addMonths(d0, -12);
+  // A comparison can't come from the latest print itself (a nearest-point search near today).
+  const before = real.slice(0, -1);
   const win = real.filter(p => p[0] > yearAgo);
   const hi = win.reduce((a, p) => (p[1] > a[1] ? p : a)), lo = win.reduce((a, p) => (p[1] < a[1] ? p : a));
   return {
     latest: { date: d0, v: v0 },
     d1: bp(v0, prev),
-    w1: bp(v0, valueOn(real, iso(ms(d0) - 7 * DAY))),
-    m1: bp(v0, valueOn(real, addMonths(d0, -1))),
-    ytd: bp(v0, valueOn(real, `${Number(d0.slice(0, 4)) - 1}-12-31`)),
-    y1: bp(v0, valueOn(real, yearAgo)),
+    w1: bp(v0, valueOn(before, iso(ms(d0) - 7 * DAY))),
+    m1: bp(v0, valueOn(before, addMonths(d0, -1))),
+    ytd: bp(v0, valueOn(before, `${Number(d0.slice(0, 4)) - 1}-12-31`, "onOrBefore")),
+    y1: bp(v0, valueOn(before, yearAgo)),
     hi52: { date: hi[0], v: hi[1] }, lo52: { date: lo[0], v: lo[1] },
     partialYear: !firstDate || firstDate > yearAgo, firstDate,
+    excluded: points.filter(p => p[4]).length,
   };
 }
 export const fmtBp = (x: number | null) => (x == null ? "—" : `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x).toFixed(Math.abs(x) >= 10 ? 0 : 1)} bp`);

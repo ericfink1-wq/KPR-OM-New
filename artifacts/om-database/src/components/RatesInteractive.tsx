@@ -34,10 +34,10 @@ function useSeries(key: string | null): { data: RateSeriesView | null; err: stri
   return { data, err };
 }
 
-/** Hollow marker on a thin-close day; a dot on every point when the view is sparse. */
+/** Hollow red marker on a point the outlier screen flagged; a dot on every point when the view is sparse. */
 const dotFor = (color: string, sparse: boolean) => (p: { cx?: number; cy?: number; payload?: ChartRow; index?: number }) => {
   if (p.cx == null || p.cy == null || p.payload?.v == null) return <g key={`d${p.index}`} />;
-  if (p.payload.thin) return <circle key={`d${p.index}`} cx={p.cx} cy={p.cy} r={3.4} fill="#fff" stroke={color} strokeWidth={1.6} />;
+  if (p.payload.flag) return <circle key={`d${p.index}`} cx={p.cx} cy={p.cy} r={4} fill="#fff" stroke="#b3403f" strokeWidth={1.8} />;
   return sparse ? <circle key={`d${p.index}`} cx={p.cx} cy={p.cy} r={2.2} fill={color} /> : <g key={`d${p.index}`} />;
 };
 function Tip({ active, payload }: { active?: boolean; payload?: Array<{ payload: ChartRow; color?: string; name?: string; value?: number }> }) {
@@ -47,7 +47,8 @@ function Tip({ active, payload }: { active?: boolean; payload?: Array<{ payload:
     <div style={{ background: "#fff", border: `1px solid ${C.line}`, borderRadius: 8, padding: "6px 9px", fontSize: 12, boxShadow: "0 4px 14px rgba(0,0,0,.08)", maxWidth: 230 }}>
       <div style={{ fontWeight: 700, color: C.ink }}>{fmtD(r.date)}</div>
       {payload.map((p, i) => <div key={i} style={{ color: p.color ?? C.green }}>{payload.length > 1 ? `${p.name}: ` : ""}{typeof p.value === "number" ? `${p.value.toFixed(3)}%` : "no print"}</div>)}
-      {r.thin && <div style={{ color: C.amber, marginTop: 2 }}>Thin close{r.n != null ? ` — ${r.n} trade${r.n === 1 ? "" : "s"}` : ""}: too few trades in the 3:00–5:00pm ET close, so the rate is read from later or all-day trades.</div>}
+      {r.flag ? <div style={{ color: "#b3403f", marginTop: 2 }}>⚠ Flagged: {r.flag}</div>
+        : r.thin && <div style={{ color: C.amber, marginTop: 2 }}>Thin close{r.n != null ? ` — ${r.n} trade${r.n === 1 ? "" : "s"}` : ""}: too few trades in the 3:00–5:00pm ET close, so the rate is read from later or all-day trades. In line with the days around it and the other tenors, so it is kept.</div>}
     </div>
   );
 }
@@ -67,7 +68,7 @@ export function SeriesDetail({ seriesKey }: { seriesKey: string }) {
   if (!data) return <div className="kpr-skel" style={{ height: 180, margin: "6px 12px 10px", borderRadius: 8 }} aria-busy="true" />;
   const real = rows.filter(r => r.v != null);
   const span = rows.length ? (rows[rows.length - 1].t - rows[0].t) / DAY : 0;
-  const thinCount = real.filter(r => r.thin).length;
+  const flagged = real.filter(r => r.flag).length;
   return (
     <div style={{ padding: "8px 12px 12px", background: "#fff", borderTop: "1px solid #f3eee3" }}>
       <Ranges value={range} onChange={setRange} />
@@ -102,8 +103,8 @@ export function SeriesDetail({ seriesKey }: { seriesKey: string }) {
       )}
       <div style={{ fontSize: 10.5, color: "#8a7f6d", marginTop: 7, lineHeight: 1.45 }}>
         {data.collected && data.collectedSince ? <div><b>History collected since {fmtD(data.collectedSince)}.</b></div> : null}
-        {thinCount > 0 && <div>Hollow markers = thin-close days ({thinCount} in view) — tap one for the trade count.</div>}
-        <div>Source: {data.source}{data.asOf ? ` · latest ${fmtD(data.asOf)}` : ""}. A "—" change means there's no print within a week of that date to compare with. Gaps in the data are left as gaps. Drag the bar under the chart to zoom or pan.</div>
+        {flagged > 0 && <div style={{ color: "#b3403f" }}>Hollow red markers = {flagged} print{flagged === 1 ? "" : "s"} in view flagged as bad data (thin close far off the days around it and the other tenors) — shown, but left out of the changes and the high/low. Tap one for the reason.</div>}
+        <div>Source: {data.source}{data.asOf ? ` · latest ${fmtD(data.asOf)}` : ""}. Each change compares with the nearest good print within 3 business days of that date; "—" only when there is none. Gaps in the data are left as gaps. Drag the bar under the chart to zoom or pan.</div>
       </div>
     </div>
   );

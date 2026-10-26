@@ -94,6 +94,9 @@ async function ingestEod(e: IndexEntry): Promise<void> {
   const csv = await downloadCsv(e.fullFilePath);
   const ois = buildCurve(extractSofrSwaps(csv, "ois"), { curveDate: date });
   const term = buildCurve(extractSofrSwaps(csv, "term"), { ...termOpts(ois), curveDate: date });
+  // A file with no usable SOFR OIS close still counts as read — a marker row (its own kind, so no
+  // curve reader ever sees it) stops the backfill from downloading it again on every run.
+  if (!ois.points.length) { await upsert(`${date}|ois`, date, "ois-none", new Date().toISOString(), `DTCC end-of-day ${date}: no SOFR OIS close`, [{ m: CURVE_METHOD, none: true }]); return; }
   for (const [kind, c] of [["ois", ois], ["term", term]] as const) {
     if (!c.points.length) continue;
     await upsert(`${date}|${kind}`, date, kind, c.lastTradeAt ?? `${date}T21:00:00Z`, `DTCC end-of-day ${date} (${c.trades} trades)`, c.points.map(p => ({ ...p, m: CURVE_METHOD })));
@@ -146,16 +149,32 @@ export function filesToBackfill(cum: IndexEntry[], have: Set<string>, months = 1
 
 /** Every full trading day DTCC still publishes (about a year), newest first, not yet stored —
  *  the Today's Rates history backfill (10/26/26). Same files, same method as the daily close. */
-export function dailyFilesToBackfill(cum: IndexEntry[], have: Set<string>, days = 370, now = Date.now()): IndexEntry[] {
+const weekday = (d: string) => { const w = new Date(d + "T00:00:00Z").getUTCDay(); return w !== 0 && w !== 6; };
+/** `isBusinessDay` = a US bond-market business day (swapHistory.businessDayTest, from the NY Fed's
+ *  SOFR dates); weekend and holiday files are never downloaded or counted. */
+export function dailyFilesToBackfill(cum: IndexEntry[], have: Set<string>, days = 370, now = Date.now(), isBusinessDay: (d: string) => boolean = weekday): IndexEntry[] {
   const cutoff = new Date(now - days * 86_400_000).toISOString().slice(0, 10);
   return cum.map(e => ({ e, d: fileDate(e.fileName) }))
-    .filter((x): x is { e: IndexEntry; d: string } => !!x.d && x.d >= cutoff && (x.e.rowCount == null || x.e.rowCount >= FULL_DAY_ROWS) && !have.has(`${x.d}|ois`))
+    .filter((x): x is { e: IndexEntry; d: string } => !!x.d && x.d >= cutoff && isBusinessDay(x.d) && (x.e.rowCount == null || x.e.rowCount >= FULL_DAY_ROWS) && !have.has(`${x.d}|ois`))
     .sort((a, b) => (a.d < b.d ? 1 : -1)).map(x => x.e);
+}
+/** Coverage of the stored daily closes vs every full trading day DTCC still publishes. */
+export interface CurveCoverage { firstDate: string | null; lastDate: string | null; daysFilled: number; daysAvailable: number; daysMissing: number; missing: string[] }
+export function coverageOf(cum: IndexEntry[], have: Set<string>, days = 370, now = Date.now(), isBusinessDay: (d: string) => boolean = weekday): CurveCoverage {
+  const cutoff = new Date(now - days * 86_400_000).toISOString().slice(0, 10);
+  const avail = [...new Set(cum.map(e => ({ d: fileDate(e.fileName), rows: e.rowCount })).filter(x => !!x.d && x.d >= cutoff && isBusinessDay(x.d!) && (x.rows == null || x.rows >= FULL_DAY_ROWS)).map(x => x.d!))].sort();
+  const filled = avail.filter(d => have.has(`${d}|ois`)), missing = avail.filter(d => !have.has(`${d}|ois`));
+  return { firstDate: filled[0] ?? null, lastDate: filled[filled.length - 1] ?? null, daysFilled: filled.length, daysAvailable: avail.length, daysMissing: missing.length, missing: missing.slice(0, 60) };
+}
+export async function curveCoverage(isBusinessDay?: (d: string) => boolean): Promise<CurveCoverage> {
+  await ensureRateCurvesTable();
+  const { cum } = await loadIndex();
+  return coverageOf(cum, await storedIds(), 370, Date.now(), isBusinessDay);
 }
 let backfilling: Promise<number> | null = null;
 /** Fill in past trading days a few at a time, inside a time budget. NOT on the GET /rates path
  *  (that would make the panel wait) — the app's background tick, the timer and startup call it. */
-export function backfillDailyCurves(budgetMs = 8_000): Promise<number> {
+export function backfillDailyCurves(budgetMs = 8_000, isBusinessDay?: (d: string) => boolean): Promise<number> {
   if (backfilling) return backfilling;
   backfilling = (async () => {
     const deadline = Date.now() + budgetMs;
@@ -163,7 +182,7 @@ export function backfillDailyCurves(budgetMs = 8_000): Promise<number> {
     try {
       await ensureRateCurvesTable();
       const { cum } = await loadIndex();
-      for (const e of dailyFilesToBackfill(cum, await storedIds())) {
+      for (const e of dailyFilesToBackfill(cum, await storedIds(), 370, Date.now(), isBusinessDay)) {
         if (Date.now() > deadline - 4000) break;
         try { await ingestEod(e); n++; } catch (err) { logger.warn({ err, file: e.fileName }, "DTCC backfill ingest failed"); }
       }
