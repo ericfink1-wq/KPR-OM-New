@@ -36,6 +36,16 @@ describe("central model list", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("reply text is read by block type, never as the first block (Sonnet 5.5 can lead with a thinking block)", () => {
+    const offenders: string[] = [];
+    for (const root of ["artifacts/om-database/src", "artifacts/api-server/src"]) {
+      for (const f of walk(path.join(REPO, root))) {
+        fs.readFileSync(f, "utf8").split("\n").forEach((l, i) => { if (/content\??\.?\[0\]\??\.text/.test(l)) offenders.push(`${path.relative(REPO, f)}:${i + 1}`); });
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
   it("legacy names upgrade to a model that is still in use", () => {
     for (const to of Object.values(LEGACY_MODEL_UPGRADES)) expect(ALL_MODELS).toContain(to);
     expect(ALL_MODELS).toContain(MODEL_SONNET);

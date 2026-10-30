@@ -327,7 +327,7 @@ ${slice}`;
       max_tokens: 300,
       messages: [{ role: "user", content: prompt }],
     });
-    const raw = res.content?.[0]?.text ?? "";
+    const raw = res.content?.find((c: { type: string }) => c.type === "text")?.text ?? "";
     const parsed = robustParseJSON(raw) as Partial<Classification>;
     const llmType = (["om", "rent-roll", "lease-options", "sales", "flyer", "swap", "loan", "amort", "tax-bill", "utility-bill", "contract", "estoppel", "lease", "unknown"] as readonly string[]).includes(parsed.type as string)
       ? (parsed.type as DocType) : "unknown";

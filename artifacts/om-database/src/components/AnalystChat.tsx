@@ -277,7 +277,7 @@ export default function AnalystChat({ deals, onOpenDeal, onTenantClick, initialQ
       });
 
       if (genRef.current !== myGen) return; // stopped — discard the response
-      const content = (resp as any)?.content?.[0]?.text || (resp as any)?.text || "I couldn't generate a response.";
+      const content = (resp as any)?.content?.find((c: { type: string }) => c.type === "text")?.text || (resp as any)?.text || "I couldn't generate a response.";
       setMsgs(m => [...m, { role: "assistant", content, ts: Date.now() }]);
     } catch (err: unknown) {
       if (genRef.current !== myGen) return; // stopped — swallow the error too

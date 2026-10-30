@@ -78,7 +78,7 @@ ${text.slice(0, 30000)}`;
     max_tokens: 1500,
     messages: [{ role: "user", content: prompt }],
   });
-  const raw = res.content?.[0]?.text ?? "";
+  const raw = res.content?.find((c: { type: string }) => c.type === "text")?.text ?? "";
   let p: Record<string, unknown>;
   try { p = robustParseJSON(raw) as Record<string, unknown>; }
   catch { throw new Error("Couldn't read the swap confirmation. Try a clearer file."); }

@@ -2073,7 +2073,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
         messages: [{ role: "user", content: `Find sale records for: ${d.propertyName || d.fileName}, ${d.address || d.market}. Return JSON only.` }],
         max_tokens: 1024,
       }});
-      const text = (resp as any)?.content?.[0]?.text || "";
+      const text = (resp as any)?.content?.find((c: { type: string }) => c.type === "text")?.text || "";
       const jsonMatch = text.match(/\{[\s\S]+\}/);
       let found = false;
       if (jsonMatch) {

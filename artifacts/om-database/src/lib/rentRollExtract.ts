@@ -67,7 +67,7 @@ reviewQuestions: a SHORT list (max ~4) of values you could NOT capture with conf
       messages: [{ role: "user", content: baseContent + suffix }],
     });
     return {
-      raw: res.content?.[0]?.text ?? "",
+      raw: res.content?.find((c: { type: string }) => c.type === "text")?.text ?? "",
       stop: (res as unknown as { stop_reason?: string }).stop_reason,
     };
   };
@@ -162,7 +162,7 @@ ${text.slice(0, 60000)}`;
     max_tokens: 8000,
     messages: [{ role: "user", content: prompt + taught }],
   });
-  const raw = res.content?.[0]?.text ?? "";
+  const raw = res.content?.find((c: { type: string }) => c.type === "text")?.text ?? "";
   let parsed: { tenants?: unknown[] };
   try { parsed = robustParseJSON(raw) as typeof parsed; }
   catch { throw new Error("Couldn't parse the lease-options file."); }

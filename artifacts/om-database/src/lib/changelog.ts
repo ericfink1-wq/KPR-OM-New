@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-10-30-ai-model-upgrade",
+    date: "2026-10-30",
+    category: "improved",
+    title: "The AI now runs on Anthropic's newest Sonnet",
+    detail: "OM, rent-roll, lease and loan reads, deal grading and the Analyst chat now use Anthropic's newest Sonnet model, which is smarter and costs less per read. If the AI ever declines a request by mistake, it now retries automatically instead of coming back blank. Nothing changes in how you use the site.",
+    where: "Everywhere the site uses AI",
+  },
+  {
     id: "2026-10-26-rates-interactive",
     date: "2026-10-26",
     category: "new",

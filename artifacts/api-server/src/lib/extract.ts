@@ -187,8 +187,33 @@ CRITICAL RENT-ROLL LESSONS (from real operator corrections — past extractions 
 
 Return ONLY raw JSON. No markdown, no code fences, no explanation.`;
 
-export async function callAnthropicOnce(body: object, retryCount = 0, extraHeaders: Record<string, string> = {}): Promise<Response> {
+/** Request defaults for the main Sonnet (10/30/26 move to Sonnet 5.5). A plain read with no
+ *  thinking setting and no tools keeps thinking OFF (`between_tools`, the model's lowest setting)
+ *  so OM / rent-roll reads behave as they did on 4.6 — same speed, the whole max_tokens left for
+ *  the answer. Every Sonnet call also gets the server-side safety fallback, so a mistaken decline
+ *  is retried instead of returning nothing. A caller that sets its own thinking / fallbacks wins. */
+export function withModelDefaults(body: object, extraHeaders: Record<string, string>): { body: object; headers: Record<string, string> } {
+  const b = body as Record<string, unknown>;
+  if (b.model !== MODEL_SONNET) return { body, headers: extraHeaders };
+  const out: Record<string, unknown> = { ...b };
+  const headers = { ...extraHeaders };
+  if (out.thinking == null && out.tools == null) {
+    out.thinking = { type: "between_tools" };
+    const oc = (out.output_config ?? {}) as Record<string, unknown>;
+    if (oc.effort == null || ["low", "medium", "high"].includes(String(oc.effort))) out.output_config = { ...oc, effort: oc.effort ?? "high" };
+    else delete out.thinking;  // xhigh / max need adaptive thinking
+  }
+  if (out.fallbacks == null) {
+    out.fallbacks = "default";
+    const beta = headers["anthropic-beta"];
+    if (!beta?.includes("server-side-fallback-2026-07-01")) headers["anthropic-beta"] = beta ? `${beta},server-side-fallback-2026-07-01` : "server-side-fallback-2026-07-01";
+  }
+  return { body: out, headers };
+}
+
+export async function callAnthropicOnce(rawBody: object, retryCount = 0, rawHeaders: Record<string, string> = {}): Promise<Response> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
+  const { body, headers: extraHeaders } = withModelDefaults(rawBody, rawHeaders);
 
   let resp: Response;
   try {

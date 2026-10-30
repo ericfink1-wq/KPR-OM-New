@@ -224,7 +224,7 @@ Statuses: Owned/Under Contract/Sold are KPR's actual deals (kpr object = real ec
         messages: [{ role: "user", content: `Compare these ${deals.length} retail centers:\n${JSON.stringify(compact, null, 2)}` }],
         max_tokens: 1500,
       }});
-      const text = (resp as any)?.content?.[0]?.text || (resp as any)?.text || "Couldn't generate an analysis.";
+      const text = (resp as any)?.content?.find((c: { type: string }) => c.type === "text")?.text || (resp as any)?.text || "Couldn't generate an analysis.";
       setAiText(text);
     } catch (err) {
       setAiText(`Error: ${err instanceof Error ? err.message : "analysis failed"}`);

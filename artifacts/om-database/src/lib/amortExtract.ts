@@ -26,7 +26,7 @@ ${text.slice(0, 60000)}`;
     max_tokens: 16000,
     messages: [{ role: "user", content: prompt }],
   });
-  const raw = res.content?.[0]?.text ?? "";
+  const raw = res.content?.find((c: { type: string }) => c.type === "text")?.text ?? "";
   let parsed: { rows?: unknown[] };
   try { parsed = robustParseJSON(raw) as typeof parsed; }
   catch { throw new Error("Couldn't read the amortization schedule. Try a clearer file."); }

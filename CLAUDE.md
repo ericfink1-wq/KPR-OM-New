@@ -10,6 +10,13 @@ either src tree. The AI proxy allowlist (routes/ai.ts) = `ALL_MODELS` + `LEGACY_
 old tab still sends is upgraded via that map. A retired/upgraded model = edit BOTH copies, nothing else. A monthly
 scheduled task (1st Wednesday, midday ET) checks these against Anthropic's deprecations page: it swaps + pushes a model
 being RETIRED, and only REPORTS a newer same-price model (a new model can change how OMs read — Eric decides).
+SONNET 5.5 (Eric approved 10/30/26, after Anthropic's Sonnet 4.5 retirement notice): `MODEL_SONNET` = Sonnet 5.5 (4.5 + 4.6
+→ LEGACY_MODEL_UPGRADES). `withModelDefaults` (extract.ts, applied inside `callAnthropicOnce`, tested in modelDefaults.test.ts):
+a MODEL_SONNET call with no `thinking` and no `tools` gets `thinking: between_tools` + effort high (= thinking OFF, as on 4.6 —
+same speed, all of max_tokens for the answer; `disabled` is a 400 on this model), and every MODEL_SONNET call gets
+`fallbacks:"default"` + beta `server-side-fallback-2026-07-01` unless the caller set its own. Sonnet 5.5 rejects non-default
+temperature/top_p, budget_tokens, prefill and forced tool_choice — none are used; don't add them. A reply can START with a
+thinking block: read text by `type === "text"`, never `content[0]` (models.test.ts fails on it).
 Cost work same day: prompt caching on the batch re-grade (1h TTL + one priming call), Analyst chat + local-intel
 continuations (top-level automatic caching); local intel moved Opus → Sonnet. Nothing on Opus now.
 
