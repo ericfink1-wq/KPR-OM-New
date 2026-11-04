@@ -8,13 +8,15 @@
 /** High-stakes reads: OM extraction, rent rolls, lease abstracts, loan/pref/sales docs, Analyst chat. */
 export const MODEL_SONNET = "claude-sonnet-5-5";
 /** Quick, simple jobs: classifying uploads, flyers, swap/amort schedules, re-grading deals. */
-export const MODEL_HAIKU = "claude-haiku-4-5-20251001";
+export const MODEL_HAIKU = "claude-haiku-5-5";
 /** Local-news web research scans (needs the newest web-search tool). */
 export const MODEL_RESEARCH = "claude-sonnet-5-5";
 /** Retired names an old open browser tab may still send — the server quietly upgrades them. */
 export const LEGACY_MODEL_UPGRADES: Record<string, string> = {
   "claude-sonnet-4-5": MODEL_SONNET,
   "claude-sonnet-4-6": MODEL_SONNET,
+  "claude-haiku-4-5": MODEL_HAIKU,
+  "claude-haiku-4-5-20251001": MODEL_HAIKU,
 };
 
 /** Every model the site uses (the server's AI proxy allowlist is built from this). */

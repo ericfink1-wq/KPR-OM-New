@@ -192,8 +192,19 @@ Return ONLY raw JSON. No markdown, no code fences, no explanation.`;
  *  so OM / rent-roll reads behave as they did on 4.6 — same speed, the whole max_tokens left for
  *  the answer. Every Sonnet call also gets the server-side safety fallback, so a mistaken decline
  *  is retried instead of returning nothing. A caller that sets its own thinking / fallbacks wins. */
+/** Haiku 5.5 quick-job request shape (also used directly by the Batch API params, which skip withModelDefaults). */
+export const HAIKU_QUICK_JOB_SETTINGS = { thinking: { type: "disabled" }, output_config: { effort: "high" } } as const;
+
 export function withModelDefaults(body: object, extraHeaders: Record<string, string>): { body: object; headers: Record<string, string> } {
   const b = body as Record<string, unknown>;
+  if (b.model === MODEL_HAIKU) {
+    // Haiku 5.5 thinks by default and thinking tokens eat max_tokens (a 300-token reply could end
+    // empty). Quick jobs get thinking OFF at high effort; a caller's own thinking/effort wins.
+    if (b.thinking != null) return { body, headers: extraHeaders };
+    const oc = (b.output_config ?? {}) as Record<string, unknown>;
+    if (oc.effort != null && !["low", "medium", "high"].includes(String(oc.effort))) return { body, headers: extraHeaders };
+    return { body: { ...b, ...HAIKU_QUICK_JOB_SETTINGS, output_config: { ...oc, effort: oc.effort ?? "high" } }, headers: extraHeaders };
+  }
   if (b.model !== MODEL_SONNET) return { body, headers: extraHeaders };
   const out: Record<string, unknown> = { ...b };
   const headers = { ...extraHeaders };
@@ -1021,6 +1032,7 @@ export function rosterAnalysisParams(snapshot: Record<string, unknown>, cacheTtl
   const cache = cacheTtl === "1h" ? { type: "ephemeral", ttl: "1h" } : { type: "ephemeral" };
   return {
     model: MODEL_HAIKU,
+    ...HAIKU_QUICK_JOB_SETTINGS,
     // 8000, not 4000 (10/17/26): long write-ups on big centers were being cut off mid-JSON
     // and failed to parse. Unused headroom costs nothing.
     max_tokens: 8000,

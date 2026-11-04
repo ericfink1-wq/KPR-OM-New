@@ -48,6 +48,13 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-11-04-haiku-5-5",
+    date: "2026-11-04",
+    category: "improved",
+    title: "Faster, cheaper AI for the quick jobs",
+    detail: "Sorting uploads, reading flyers and swap sheets, re-grading deals and the second-reader check now run on Anthropic's newest small model. It should be sharper and costs roughly a tenth as much. Main OM reads and the Analyst are unchanged.",
+  },
+  {
     id: "2026-10-30-ai-model-upgrade",
     date: "2026-10-30",
     category: "improved",

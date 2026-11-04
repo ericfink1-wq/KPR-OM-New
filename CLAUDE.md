@@ -17,6 +17,10 @@ same speed, all of max_tokens for the answer; `disabled` is a 400 on this model)
 `fallbacks:"default"` + beta `server-side-fallback-2026-07-01` unless the caller set its own. Sonnet 5.5 rejects non-default
 temperature/top_p, budget_tokens, prefill and forced tool_choice — none are used; don't add them. A reply can START with a
 thinking block: read text by `type === "text"`, never `content[0]` (models.test.ts fails on it).
+HAIKU 5.5 (Eric approved 11/4/26, cheaper + newer): `MODEL_HAIKU` = `claude-haiku-5-5` (4.5 names → LEGACY_MODEL_UPGRADES). It thinks by
+default and thinking eats max_tokens, so `withModelDefaults` gives every Haiku call `thinking: disabled` + effort high (`HAIKU_QUICK_JOB_SETTINGS`,
+also spread into `rosterAnalysisParams` because the Batch path skips withModelDefaults). `disabled` is a 400 at xhigh/max; `between_tools` and
+prefill are 400s on Haiku; same text ≈30% more tokens than 4.5. No Haiku call uses prefill/tools/temperature (keep it so).
 Cost work same day: prompt caching on the batch re-grade (1h TTL + one priming call), Analyst chat + local-intel
 continuations (top-level automatic caching); local intel moved Opus → Sonnet. Nothing on Opus now.
 

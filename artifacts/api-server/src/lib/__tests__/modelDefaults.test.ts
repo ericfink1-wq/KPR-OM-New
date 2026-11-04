@@ -24,7 +24,17 @@ describe("withModelDefaults (Sonnet 5.5 request shape)", () => {
     const once = withModelDefaults({ model: MODEL_SONNET }, { "anthropic-beta": "x-1" });
     expect(once.headers["anthropic-beta"]).toBe("x-1,server-side-fallback-2026-07-01");
     expect(withModelDefaults(once.body, once.headers)).toEqual(once);
-    const h = { model: MODEL_HAIKU };
-    expect(withModelDefaults(h, {}).body).toBe(h);
+  });
+  it("Haiku 5.5 quick job: thinking off at high effort; caller's own settings win; no Sonnet fallback header", () => {
+    const { body, headers } = withModelDefaults({ model: MODEL_HAIKU, max_tokens: 300, messages: [] }, {});
+    expect(body).toMatchObject({ thinking: { type: "disabled" }, output_config: { effort: "high" } });
+    expect((body as Record<string, unknown>).fallbacks).toBeUndefined();
+    expect(headers).toEqual({});
+    const own = { model: MODEL_HAIKU, thinking: { type: "adaptive" } };
+    expect(withModelDefaults(own, {}).body).toBe(own);
+    const low = withModelDefaults({ model: MODEL_HAIKU, output_config: { effort: "low" } }, {}).body as Record<string, unknown>;
+    expect(low.output_config).toEqual({ effort: "low" });
+    const max = { model: MODEL_HAIKU, output_config: { effort: "max" } };
+    expect(withModelDefaults(max, {}).body).toBe(max);
   });
 });
