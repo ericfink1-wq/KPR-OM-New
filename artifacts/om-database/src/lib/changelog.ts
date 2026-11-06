@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-11-06-loan-payoff",
+    date: "2026-11-06",
+    category: "new",
+    title: "What it costs (or earns) to pay off each of our loans early",
+    detail: "Every owned loan now shows its cost or gain to prepay. That covers defeasance (priced bond by bond off today's Treasury curve), yield maintenance, step-down penalties, fees and any swap unwind, netted against paying the balance at par. Pick any payoff date. If the loan is still locked out, it says until when and prices the first allowed date. It also shows how a 25 bp rate move changes the number. Terms are read from each loan's prepayment wording, and admins can enter exact ones (lockout, securitization date, open date, fee quote). Estimates — the servicer's or consultant's quote governs.",
+    where: "Asset Mgmt → Debt (new \"Prepay today\" column; tap a loan for the full breakdown) and an owned deal's Financing tab",
+  },
+  {
     id: "2026-11-04-haiku-5-5",
     date: "2026-11-04",
     category: "improved",

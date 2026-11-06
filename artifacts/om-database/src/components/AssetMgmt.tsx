@@ -19,6 +19,8 @@ import {
 } from "../lib/assetMgmt";
 import { useWatchlist } from "../lib/useWatchlist";
 import { useIsMobile } from "../hooks/use-mobile";
+import { LoanPayoffPanel, payoffCell, toneColor } from "./LoanPayoff";
+import { computePayoff, loanInputFromRow } from "../lib/payoffEngine";
 
 const RateDetailPanel = lazy(() => import("./RateDetailPanel"));
 /** A rate cell that opens the rate detail panel (Eric, 10/26/26) — its own button, so the row's
@@ -117,7 +119,15 @@ const FIELDS: Record<"loan" | "swap" | "date" | "pref" | "covenant" | "acquisiti
     ["allInRatePct", "All-in rate (%) — if stated", "number"], ["maturityDate", "Maturity", "date"], ["extensionOptions", "Extension options", "text"], ["extensionNoticeDate", "Extension notice deadline", "date"],
     ["amortization", "Amortization (IO / amortizing)", "text"], ["amortYears", "Amortization (years)", "number"], ["dscrCovenant", "DSCR covenant (x)", "number"], ["debtYieldCovenantPct", "Debt-yield covenant (%)", "number"],
     ["recourse", "Recourse", "text"], ["guarantor", "Guarantor", "text"], ["loanLabel", "Loan label (e.g. Town Court)", "text"],
-    ["covenants", "Covenants", "text"], ["prepayment", "Prepayment", "text"], ["notes", "Notes", "text"], ["openQuestions", "Open questions", "text"], ["confidence", "Confidence", "text"]],
+    ["originationDate", "Originated (closing date)", "date"], ["ioUntil", "Interest-only until", "date"],
+    ["covenants", "Covenants", "text"], ["prepayment", "Prepayment (wording from the loan agreement)", "text"],
+    // Prepay terms (Eric, 11/6/26) — the payoff calculator reads the wording above; anything entered here wins.
+    ["prepayType", "Prepay type (defeasance / yield maintenance / step-down / open / spread maintenance / flat %)", "text"],
+    ["prepayLockoutEnd", "Prepay lockout ends", "date"], ["securitizationDate", "Securitization (REMIC startup) date", "date"], ["prepayOpenDate", "Open at par from", "date"],
+    ["prepayYmSpreadBps", "Yield maintenance: spread over Treasury (bps)", "number"], ["prepayFloorPct", "Minimum prepay premium (%)", "number"],
+    ["prepayStepdown", "Step-down % by loan year (e.g. 5,4,3,2,1)", "text"], ["prepayPremiumPct", "Flat prepay premium (%)", "number"],
+    ["spreadMaintenanceEnd", "Spread maintenance ends", "date"], ["exitFeePct", "Exit fee (%)", "number"], ["defeasanceFees", "Defeasance / payoff fees ($) — your quote", "number"],
+    ["notes", "Notes", "text"], ["openQuestions", "Open questions", "text"], ["confidence", "Confidence", "text"]],
   swap: [["counterparty", "Counterparty", "text"], ["notional", "Notional ($)", "number"], ["fixedSwapRatePct", "Fixed swap rate (%)", "number"], ["spreadBps", "Loan spread (bps)", "number"],
     ["allInFixedPct", "All-in fixed (%) — if stated", "number"], ["effectiveDate", "Effective", "date"], ["maturityDate", "Maturity", "date"], ["index", "Index", "text"], ["loanLabel", "Loan label", "text"],
     ["notes", "Notes", "text"], ["openQuestions", "Open questions", "text"], ["confidence", "Confidence", "text"]],
@@ -223,9 +233,11 @@ function Clamp2({ text }: { text: string | null | undefined }) {
   if (!text) return <>—</>;
   return <div className="am-clamp2" title={text}>{text}</div>;
 }
-function LoanDrawer({ r, isAdmin, onClose, onEdit, onDelete, onOpenDeal, onRate }: { r: DebtRow; isAdmin: boolean; onClose: () => void; onEdit: () => void; onDelete: () => void; onOpenDeal: (id: string) => void; onRate: () => void }) {
+function LoanDrawer({ r, deal, rates, isAdmin, onClose, onEdit, onDelete, onOpenDeal, onRate }: { r: DebtRow; deal: Deal | null; rates: RatesPayload | null; isAdmin: boolean; onClose: () => void; onEdit: () => void; onDelete: () => void; onOpenDeal: (id: string) => void; onRate: () => void }) {
   const d = r.record.data;
-  const known = new Set(["lender", "loanName", "loanLabel", "originalBalance", "currentBalance", "balanceAsOf", "rateType", "index", "spreadBps", "fixedRatePct", "allInRatePct", "originationDate", "maturityDate", "extensionOptions", "extensionNoticeDate", "amortization", "amortYears", "ioUntil", "ioEndDate", "amortizationText", "dscrCovenant", "debtYieldCovenantPct", "recourse", "guarantor", "covenants", "prepayment", "notes", "openQuestions", "confidence", "datexLoanId"]);
+  const payoffInput = useMemo(() => loanInputFromRow(r, deal), [r, deal]);
+  const known = new Set(["lender", "loanName", "loanLabel", "originalBalance", "currentBalance", "balanceAsOf", "rateType", "index", "spreadBps", "fixedRatePct", "allInRatePct", "originationDate", "maturityDate", "extensionOptions", "extensionNoticeDate", "amortization", "amortYears", "ioUntil", "ioEndDate", "amortizationText", "dscrCovenant", "debtYieldCovenantPct", "recourse", "guarantor", "covenants", "prepayment", "notes", "openQuestions", "confidence", "datexLoanId",
+    "prepayType", "prepayLockoutEnd", "securitizationDate", "prepayOpenDate", "prepayYmSpreadBps", "prepayFloorPct", "prepayStepdown", "prepayPremiumPct", "spreadMaintenanceEnd", "exitFeePct", "defeasanceFees", "paymentDay"]);
   const extras = Object.entries(d).filter(([k, v]) => !known.has(k) && v != null && typeof v !== "object" && String(v).trim() !== "");
   return (
     <SideDrawer title={`${r.property}${r.loanLabel ? ` · ${r.loanLabel}` : ""}`} onClose={onClose}>
@@ -234,6 +246,7 @@ function LoanDrawer({ r, isAdmin, onClose, onEdit, onDelete, onOpenDeal, onRate 
         <button style={btn()} onClick={() => onOpenDeal(r.dealId)}>Open deal</button>
         {isAdmin && <><button style={btn()} onClick={onEdit}>Edit</button><button style={btn()} onClick={onDelete}>Delete</button></>}
       </div>
+      {!r.superseded && <div style={{ margin: "6px 0 10px" }}><LoanPayoffPanel input={payoffInput} rates={rates} onEditTerms={isAdmin ? onEdit : undefined} editHint={isAdmin ? undefined : "An admin can set exact prepay terms (lockout, open date, fees) on this loan."} /></div>}
       <Field k="Lender" v={r.lender} />
       <Field k="Loan name" v={s(d.loanName)} />
       <Field k="Balance" v={`${fmtM(r.balance)}${r.balanceIsOriginal ? " (original)" : ""}${d.balanceAsOf ? ` as of ${fmtDate(String(d.balanceAsOf))}` : ""}`} />
@@ -255,6 +268,10 @@ function LoanDrawer({ r, isAdmin, onClose, onEdit, onDelete, onOpenDeal, onRate 
       <Field k="Amortization terms" v={s(d.amortizationText)} />
       <Field k="Covenants" v={[s(d.covenants), d.dscrCovenant ? `DSCR ${d.dscrCovenant}x` : null, d.debtYieldCovenantPct ? `Debt yield ${d.debtYieldCovenantPct}%` : null].filter(Boolean).join("\n") || null} />
       <Field k="Prepayment" v={s(d.prepayment)} />
+      <Field k="Prepay terms entered" v={([["Type", d.prepayType], ["Lockout ends", d.prepayLockoutEnd], ["Securitized", d.securitizationDate], ["Open at par from", d.prepayOpenDate],
+        ["YM spread (bps)", d.prepayYmSpreadBps], ["Minimum %", d.prepayFloorPct], ["Step-down", d.prepayStepdown], ["Flat premium %", d.prepayPremiumPct],
+        ["Spread maintenance ends", d.spreadMaintenanceEnd], ["Exit fee %", d.exitFeePct], ["Fees quote", d.defeasanceFees != null ? fmtM(Number(d.defeasanceFees)) : null]] as Array<[string, unknown]>)
+        .filter(([, v]) => v != null && String(v).trim() !== "").map(([k, v]) => `${k}: ${String(v)}`).join("\n") || null} />
       <Field k="Recourse" v={s(d.recourse)} />
       <Field k="Guarantor" v={s(d.guarantor)} />
       <Field k="Notes" v={s(d.notes)} />
@@ -414,6 +431,8 @@ const LOAN_COLS: SortCol<DebtRow>[] = [
   { key: "allIn", label: "All-in", value: r => r.allInPct },
   { key: "ioAmort", label: "IO / Amort", value: r => r.ioAmort },
   { key: "maturity", label: "Maturity", value: r => r.maturity },
+  // Net cost (+) / gain (−) to prepay today; a locked loan sorts by its first-allowed-date figure.
+  { key: "prepay", label: "Prepay today", value: r => r.payoffToday?.net ?? r.payoffToday?.atEarliest?.net ?? null },
   { key: "extension", label: "Extension", value: r => s(r.record.data.extensionOptions) },
   { key: "recourse", label: "Recourse", value: r => [r.record.data.recourse, r.record.data.guarantor].filter(Boolean).map(String).join(" · ") || null },
 ];
@@ -470,7 +489,14 @@ export function DetailRow({ cols, rec, items }: { cols: number; rec: AmRecord; i
 }
 function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals: Deal[]; records: AmRecord[]; rates: RatesPayload | null; isAdmin: boolean; reload: () => void; onOpenDeal: (id: string) => void }) {
   const today = useMemo(() => new Date(), []);
-  const rows = useMemo(() => buildDebtRows(records, deals, rates, today), [records, deals, rates, today]);
+  const dealById = useMemo(() => new Map(deals.map(d => [d.id, d])), [deals]);
+  const rows = useMemo(() => {
+    const iso = today.toISOString().slice(0, 10);
+    return buildDebtRows(records, deals, rates, today).map(r => {
+      if (r.superseded) return r;
+      try { return { ...r, payoffToday: computePayoff(loanInputFromRow(r, dealById.get(r.dealId)), rates, iso) }; } catch { return r; }
+    });
+  }, [records, deals, rates, today, dealById]);
   const swaps = useMemo(() => buildSwapRows(records, new Map(deals.map(d => [d.id, d.propertyName || "—"])), rates, today), [records, deals, rates, today]);
   const tot = useMemo(() => debtTotals(rows, swaps), [rows, swaps]);
   const prefs = useMemo(() => buildPrefRows(records, deals, today), [records, deals, today]);
@@ -527,7 +553,7 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
                 <button key={r.record.id} onClick={() => setDrawer(r.record.id)} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: "2px 10px", width: "100%", textAlign: "left", background: "#fff", border: "none", borderTop: k ? "1px solid #f3f2ee" : "none", padding: "11px 14px", cursor: "pointer", opacity: r.superseded ? 0.5 : 1, fontFamily: "inherit" }}>
                   <span style={{ fontSize: 13.5, fontWeight: 600, color: K.ink, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere", minWidth: 0 }}>{r.property}{r.loanLabel ? <span style={{ color: K.gray, fontWeight: 400 }}> · {r.loanLabel}</span> : null}</span>
                   <span style={{ fontSize: 13.5, color: K.ink, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{fmtM(r.balance)}{r.balanceIsOriginal ? "*" : ""}</span>
-                  <span style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ fontSize: 12, color: K.gray, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere", minWidth: 0 }}>{r.lender ?? "—"} · {rateLabel(r)}{r.partlySwapped ? " · partly" : ""} · {fmtDate(r.maturity)}</span><span style={{ flex: "none" }}><DocBadge rec={r.record} /></span></span>
+                  <span style={{ display: "flex", alignItems: "center", minWidth: 0 }}><span style={{ fontSize: 12, color: K.gray, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere", minWidth: 0 }}>{r.lender ?? "—"} · {rateLabel(r)}{r.partlySwapped ? " · partly" : ""} · {fmtDate(r.maturity)}{r.payoffToday ? <> · prepay <span style={{ color: toneColor(payoffCell(r.payoffToday).tone) }}>{payoffCell(r.payoffToday).text}</span></> : null}</span><span style={{ flex: "none" }}><DocBadge rec={r.record} /></span></span>
                   <span style={{ fontSize: 12, color: K.gray, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmtPct(r.allInPct, 2)}{r.estimated ? <span style={{ color: K.amber }}>~</span> : null}</span>
                 </button>
               ))}
@@ -548,6 +574,7 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
                     <td style={{ ...num, verticalAlign: "middle" }} title={allInTip(r)}><RateCellButton label={`Rate detail for ${r.property}`} onOpen={() => setRateTarget({ kind: "loan", row: r })}>{fmtPct(r.allInPct, 2)}{r.estimated ? <span style={{ color: K.amber }} aria-label={r.allInBasis === "blended" ? "blended estimate (partly swapped)" : "estimated from today's curve"}>~</span> : null}</RateCellButton></td>
                     <td style={{ ...wrapTd, minWidth: 140 }}><Clamp2 text={r.ioAmort} /></td>
                     <td className="am-nowrap" style={{ ...wrapTd, whiteSpace: "nowrap" }}>{fmtDate(r.maturity)} {daysPill(r.daysToMaturity, r.flag)}</td>
+                    {(() => { const c = payoffCell(r.payoffToday); return <td style={{ ...num, verticalAlign: "middle", color: toneColor(c.tone), fontWeight: c.tone === "gain" || c.tone === "cost" ? 600 : 400 }} title={c.title}>{c.text}</td>; })()}
                     <td style={{ ...wrapTd, minWidth: 230 }}><Clamp2 text={s(d.extensionOptions)} /></td>
                     <td style={{ ...wrapTd, minWidth: 230 }}><Clamp2 text={recourse === "—" ? null : recourse} /></td>
                   </tr>
@@ -557,7 +584,7 @@ function DebtTab({ deals, records, rates, isAdmin, reload, onOpenDeal }: { deals
           </div>
           )}
           <Src>Click a Rate or All-in figure for the rate detail (how it's built, its history, the forward view and Datex actual vs expected interest). One line per loan — tap a row for every field (covenants, prepayment, caps, notes, source). <span style={{ color: K.amber }}>~</span> = all-in estimated from today's 1M Term SOFR (max of the curve and the loan's index floor, plus spread; a live rate cap limits it) — for a partly swapped loan, the swapped part at the swap rate and the rest at that estimate. A linked live swap always beats the stored rate type. Hover the All-in for its source. * = original balance (no current balance on file).</Src>
-          {(() => { const r = rows.find(x => x.record.id === drawer); return r ? <LoanDrawer r={r} isAdmin={isAdmin} onClose={() => setDrawer(null)} onEdit={() => { setDrawer(null); setEdit({ kind: "loan", rec: r.record }); }} onDelete={() => { setDrawer(null); void del(r.record.id); }} onOpenDeal={onOpenDeal} onRate={() => { setDrawer(null); setRateTarget({ kind: "loan", row: r }); }} /> : null; })()}
+          {(() => { const r = rows.find(x => x.record.id === drawer); return r ? <LoanDrawer r={r} deal={dealById.get(r.dealId) ?? null} rates={rates} isAdmin={isAdmin} onClose={() => setDrawer(null)} onEdit={() => { setDrawer(null); setEdit({ kind: "loan", rec: r.record }); }} onDelete={() => { setDrawer(null); void del(r.record.id); }} onOpenDeal={onOpenDeal} onRate={() => { setDrawer(null); setRateTarget({ kind: "loan", row: r }); }} /> : null; })()}
         </>
       )}
       {swaps.length > 0 && (

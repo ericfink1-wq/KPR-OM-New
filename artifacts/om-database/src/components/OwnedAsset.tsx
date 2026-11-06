@@ -16,6 +16,8 @@ import {
 // covenants and the acquisition — and Datex for what the property is doing today.
 
 const RateDetailPanel = lazy(() => import("./RateDetailPanel"));
+import { LoanPayoffPanel } from "./LoanPayoff";
+import { loanInputFromRow } from "../lib/payoffEngine";
 const mine = (records: AmRecord[] | null, dealId: string) => (records ?? []).filter(r => r.dealId === dealId);
 const head = (t: string) => <div style={{ fontFamily: "'Montserrat',sans-serif", fontWeight: 800, fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase", color: K.charcoal }}>{t}</div>;
 const statusPill = (st: CovenantRow["status"]) => st === "breach" ? <Pill flag="red">below covenant</Pill> : st === "watch" ? <Pill flag="amber">under 10% headroom</Pill> : st === "ok" ? <Pill flag="green">passing</Pill> : <Pill flag="gray">monitor</Pill>;
@@ -249,6 +251,7 @@ export function OwnedFinancing({ deal }: { deal: Deal }) {
                 <Line l="Recourse / guarantor" v={[d.recourse, d.guarantor].filter(Boolean).map(String).join(" · ") || "—"} />
               </div>
             </div>
+            <div style={{ marginTop: 10 }}><LoanPayoffPanel input={loanInputFromRow(r, deal)} rates={rates} editHint="Exact prepay terms (lockout, open date, fee quote) are set on the loan in Asset Mgmt → Debt." /></div>
             {r.swaps.map(w => (
               <div key={w.record.id} style={{ marginTop: 10, background: K.page, borderRadius: 10, padding: "10px 12px" }}>
                 <b style={{ fontSize: 13 }}>Swap{w.counterparty ? ` · ${w.counterparty}` : ""}</b> <RateCellButton label="Rate detail" onOpen={() => setRateTarget({ kind: "swap", swap: w })}><span style={{ fontSize: 12 }}>Rate detail ›</span></RateCellButton>

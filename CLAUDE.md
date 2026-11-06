@@ -24,6 +24,26 @@ prefill are 400s on Haiku; same text ≈30% more tokens than 4.5. No Haiku call 
 Cost work same day: prompt caching on the batch re-grade (1h TTL + one priming call), Analyst chat + local-intel
 continuations (top-level automatic caching); local intel moved Opus → Sonnet. Nothing on Opus now.
 
+## LOAN PAYOFF / PREPAY ENGINE (Eric, 11/6/26 — "see cost/profit on each of our own loans if we prepay")
+`om-database lib/payoffEngine.ts` (pure, tested `payoffEngine.test.ts` on Lakeland Park's REAL loan wording + the 11/5
+Treasury curve): `computePayoff(LoanInput, rates, date)` → net = premium + fees − swap value (+ = cost, − = gain),
+cash to retire, ±25 bp sensitivity, lines, assumptions, `needs`. DEFEASANCE = every scheduled payment to the OPEN date
+(else maturity) + the balance then, each discounted on the Treasury CMT curve (semiannual) at its own date — can be
+BELOW par (a gain). YM = PV of the note−Treasury(+spread) gap, never < 0, with the minimum %. Also step-down (loan year
+from origination), flat %, spread maintenance, exit fee, open, LOCKOUT (locked → priced on the first allowed date,
+`atEarliest`). Swaps via `calcSwapBreakage` + `marketSwapRate` at the payoff date. Terms: `parsePrepayText` reads the
+loan's `prepayment` wording (CMBS "earlier of 3rd anniversary of the first payment date / 2 yrs after REMIC startup",
+"N-month lockout", "last N months open", "greater of 1% and YM", 5/4/3/2/1); fields an admin enters on the loan WIN
+(`prepayType`, `prepayLockoutEnd`, `securitizationDate`, `prepayOpenDate`, `prepayYmSpreadBps`, `prepayFloorPct`,
+`prepayStepdown`, `prepayPremiumPct`, `spreadMaintenanceEnd`, `exitFeePct`, `defeasanceFees`, `paymentDay`) —
+sanitized in api `sanitizeLoan` and in ALIAS_KEYS so a bad value is DROPPED, not kept raw. No wording on the loan
+record → the deal's Financing fields (`debtPrepay`/`prepayTerms`) when the balance matches. Floating/swapped with no
+terms → assumed open (labelled). No open date → defeased to maturity (said so). Fees default $150k (labelled) until a
+quote is entered. Interest 30/360, IO unless amortYears. UI `components/LoanPayoff.tsx` (`LoanPayoffPanel`,
+`payoffCell`): Asset Mgmt → Debt "Prepay today" column (DebtRow.payoffToday) + loan drawer; owned deal Financing tab;
+the deal-page prepayment calculator uses it for defeasance/YM. Verified live (local Postgres + real Treasury feed),
+desktop 1440 + phone 390, no sideways scroll.
+
 ## FINISHED-BUT-UNSAVED UPLOADS (10/21/26 — The Waterfront ×3)
 An OM upload is a temp row stamped `_ingestBy` until the uploading tab files it (merge or save drops the marker). Tab
 closed in between → the finished read sat in the library as a stray deal (two "Waterfront" Financial Narrative rows

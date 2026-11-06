@@ -16,6 +16,9 @@ import { apiLoadImages, apiSaveImages, apiReanalyzeDeal, apiRefreshAnalysis, api
   apiListLeaseAbstracts, apiDealUploadedBy, type DealUploader, cachedRead, apiLocalIntel, type LocalIntelResponse } from "../lib/api";
 import { reconcileDeal, assessExtraction, classifyLocation, getRecency, buildCorrectionsNote, robustParseJSON, lenderLabel, openReviewCount, openAuditCount, tenantKey, stripSuiteCode, estimateRecoveries, buildLatestSales, recomputeRosterMetrics, formatFullAddress, fmtUSD, withAbstractRecoveries } from "../lib/utils";
 import { calcPrepay, prepayInputsFromDeal, calcSwapBreakage } from "../lib/prepay";
+import { loanInputFromDeal } from "../lib/payoffEngine";
+import type { RatesPayload } from "../lib/api";
+import { LoanPayoffPanel } from "./LoanPayoff";
 import { marketSwapRate } from "../lib/assetMgmt";
 import { extractSwap, buildSwapPatch, recognizeRateIndex } from "../lib/swapExtract";
 import { extractRentRoll, buildRosterPatch } from "../lib/rentRollExtract";
@@ -4698,6 +4701,7 @@ function AmortizationCard({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
 function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: string, patch: Partial<Deal>) => void }) {
   const [payoff, setPayoff] = useState<string>(new Date().toISOString().slice(0, 10));
   const [reinvest, setReinvest] = useState<number | null>(null);
+  const [ratesData, setRatesData] = useState<RatesPayload | null>(null);
   const terms = deal.prepayTerms || null;
   const needsRate = terms?.type === "yield_maintenance" || terms?.type === "defeasance";
 
@@ -4707,6 +4711,7 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
     let alive = true;
     apiGetRates().then(r => {
       if (!alive) return;
+      setRatesData(r);
       // Pick the Treasury tenor closest to the loan's remaining term.
       const mat = deal.debtMaturityDate ? new Date(deal.debtMaturityDate) : null;
       const yrsLeft = mat ? Math.max(0, (mat.getTime() - new Date(payoff).getTime()) / (365.25 * 864e5)) : 7;
@@ -4963,7 +4968,10 @@ function PrepayCalculator({ deal, onUpdate }: { deal: Deal; onUpdate: (id: strin
         </div>
       )}
 
-      {!swap ? (
+      {!swap && needsRate ? (
+        // Defeasance / yield maintenance: the payoff engine (Treasury curve, payment by payment).
+        <LoanPayoffPanel input={loanInputFromDeal(deal, payoffBalance)} rates={ratesData} date={payoff} onDate={setPayoff} hideDate />
+      ) : !swap ? (
         <>
           <div style={{ background:"#faf9f5", border:`1px solid ${basisColor}33`, borderRadius:10, padding:"12px 14px" }}>
             <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>

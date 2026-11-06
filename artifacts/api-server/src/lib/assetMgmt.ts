@@ -153,6 +153,8 @@ export interface LoanRec {
   dscrCovenant?: number; debtYieldCovenantPct?: number; recourse?: string; guarantor?: string;
   datexLoanId?: number; notes?: string;
   loanLabel?: string; covenants?: string; prepayment?: string; openQuestions?: string; confidence?: string;
+  prepayType?: string; prepayLockoutEnd?: string; securitizationDate?: string; prepayOpenDate?: string; prepayYmSpreadBps?: number; prepayFloorPct?: number;
+  prepayStepdown?: string; prepayPremiumPct?: number; spreadMaintenanceEnd?: string; exitFeePct?: number; defeasanceFees?: number; paymentDay?: number;
 }
 export interface SwapRec {
   loanId?: string; counterparty?: string; notional?: number; fixedSwapRatePct?: number; spreadBps?: number; allInFixedPct?: number;
@@ -254,6 +256,11 @@ export function sanitizeLoan(r: Record<string, unknown>): LoanRec {
     loanLabel: str(r.loanLabel ?? r.label, 120), covenants: text(r.covenants), prepayment: text(r.prepayment ?? r.prepaymentTerms ?? r.prepay),
     openQuestions: text(r.openQuestions), confidence: str(r.confidence, 60),
     sources: sanitizeSources(r.sources), missingDocs: sanitizeMissingDocs(r.missingDocs),
+    // Prepay terms for the payoff calculator (11/6/26) — entered values win over the wording above.
+    prepayType: str(r.prepayType, 60), prepayLockoutEnd: isoDate(r.prepayLockoutEnd), securitizationDate: isoDate(r.securitizationDate),
+    prepayOpenDate: isoDate(r.prepayOpenDate), prepayYmSpreadBps: num(r.prepayYmSpreadBps, 0, 1000), prepayFloorPct: num(r.prepayFloorPct, 0, 20),
+    prepayStepdown: str(r.prepayStepdown, 80), prepayPremiumPct: num(r.prepayPremiumPct, 0, 20), spreadMaintenanceEnd: isoDate(r.spreadMaintenanceEnd),
+    exitFeePct: num(r.exitFeePct, 0, 10), defeasanceFees: num(r.defeasanceFees ?? r.payoffFees, 0, 5e7), paymentDay: num(r.paymentDay, 1, 31),
   } as LoanRec & Record<string, unknown>);
 }
 export function sanitizeSwap(r: Record<string, unknown>): SwapRec {
@@ -289,7 +296,9 @@ export function sanitizeDate(r: Record<string, unknown>): DateRec {
 const META_KEYS = new Set(["kind", "id", "dealId", "bldgId", "BLDGID", "property", "propertyName", "source", "sourceNote"]);
 const ALIAS_KEYS = new Set(["margin", "ioEndDate", "sources", "missingDocs", "spread", "spreadPct", "spread_bps", "originalAmount", "balance", "name", "fixedRate", "allInRate", "startDate", "maturity",
   "dscr", "debtYieldCovenant", "swapRate", "allIn", "terminationDate", "floatingIndex", "label", "prepaymentTerms", "prepay", "provider",
-  "prefRatePct", "rate", "allInPct", "currentPay", "cashPayPct", "accrualPct", "accrued", "accrual", "rateSteps", "steps", "price", "closingDate", "noiAtClose", "goingInCap", "capRate", "kpOwnershipPct", "kpPercent", "jv", "partner"]);
+  "prefRatePct", "rate", "payoffFees",
+  // Prepay terms are sanitized in sanitizeLoan — an invalid value is dropped, never kept raw.
+  "prepayType", "prepayLockoutEnd", "securitizationDate", "prepayOpenDate", "prepayYmSpreadBps", "prepayFloorPct", "prepayStepdown", "prepayPremiumPct", "spreadMaintenanceEnd", "exitFeePct", "defeasanceFees", "paymentDay", "allInPct", "currentPay", "cashPayPct", "accrualPct", "accrued", "accrual", "rateSteps", "steps", "price", "closingDate", "noiAtClose", "goingInCap", "capRate", "kpOwnershipPct", "kpPercent", "jv", "partner"]);
 function withExtras(raw: Record<string, unknown>, clean: Record<string, unknown>): Record<string, unknown> {
   let kept = 0;
   for (const [k, v] of Object.entries(raw)) {

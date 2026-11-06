@@ -143,6 +143,8 @@ export interface DebtRow {
   partlySwapped: { swapped: number; balance: number } | null;
   /** "IO full term" / "IO to Jan 2030, then 25-yr" / "30-yr amort"; null = unknown. */
   ioAmort: string | null;
+  /** Cost / gain to prepay today (lib/payoffEngine) — filled by the Debt tab, not here. */
+  payoffToday?: import("./payoffEngine").PayoffResult | null;
 }
 export interface SwapRow {
   record: AmRecord; dealId: string; property: string; counterparty: string | null; notional: number | null; fixedSwapRatePct: number | null;
