@@ -103,3 +103,32 @@ describe("fingerprint — identifies WHICH key is set, without disclosing it", (
     expect(st.fingerprint).toBeTruthy();
   });
 });
+
+// 11/9/26: an unattended scheduled session connects its connectors once, with a short probe.
+// The handshake must not wait on a cold database — but tools/call must ALWAYS verify fully.
+import { matchesStaticKeyNoDb, isHandshakeOnly } from "../mcpKeys";
+describe("fast handshake — no database read, never for a tool call", () => {
+  it("matches the environment key without touching the database", () => {
+    set(GOOD, "eric@example.com");
+    expect(matchesStaticKeyNoDb(GOOD)?.id).toBe("env-static");
+    expect(matchesStaticKeyNoDb(`  ${GOOD}  `)?.email).toBe("eric@example.com");
+  });
+  it("refuses a wrong key, a near-miss and an unconfigured environment", () => {
+    set(GOOD, "eric@example.com");
+    expect(matchesStaticKeyNoDb(`${KEY_PREFIX}${"b".repeat(32)}`)).toBeNull();
+    expect(matchesStaticKeyNoDb(GOOD.slice(0, -1))).toBeNull();
+    expect(matchesStaticKeyNoDb(null)).toBeNull();
+    set(GOOD, undefined);
+    expect(matchesStaticKeyNoDb(GOOD)).toBeNull();
+  });
+  it("treats only handshake methods as handshake — a tools/call (alone or batched) never is", () => {
+    expect(isHandshakeOnly({ jsonrpc: "2.0", id: 1, method: "initialize" })).toBe(true);
+    expect(isHandshakeOnly({ jsonrpc: "2.0", method: "notifications/initialized" })).toBe(true);
+    expect(isHandshakeOnly([{ method: "tools/list" }, { method: "ping" }])).toBe(true);
+    expect(isHandshakeOnly({ method: "tools/call", params: { name: "datex_refresh_credentials" } })).toBe(false);
+    expect(isHandshakeOnly([{ method: "tools/list" }, { method: "tools/call" }])).toBe(false);
+    expect(isHandshakeOnly([])).toBe(false);
+    expect(isHandshakeOnly(null)).toBe(false);
+    expect(isHandshakeOnly({})).toBe(false);
+  });
+});

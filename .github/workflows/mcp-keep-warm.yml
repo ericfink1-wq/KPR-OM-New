@@ -1,0 +1,27 @@
+# Wake the site before the scheduled Datex refresh (11/9/26).
+# The live app is on autoscale hosting: after a quiet weekend the container AND its database are
+# asleep, and the scheduled Claude session connects its connectors ONCE, at start-up, with a short
+# probe (~5 s). A connector that misses that probe is simply absent for the whole run. This job
+# pings the public MCP health check (which also reads the database) every 4 minutes from ~30
+# minutes before each scheduled run until ~5 minutes after it, so the site is warm when the
+# session connects. GitHub's cron can start late, hence the long window. Times are UTC and
+# cover both EST and EDT (5:50 am ET weekly on Mondays; 5:49 am ET monthly on the 12th).
+name: MCP keep-warm before Datex refresh
+on:
+  schedule:
+    - cron: "15 9 * * 1"     # Mon 09:15 UTC = 5:15 am EDT
+    - cron: "15 10 * * 1"    # Mon 10:15 UTC = 5:15 am EST
+    - cron: "15 9 12 * *"    # 12th, monthly run (EDT)
+    - cron: "15 10 12 * *"   # 12th, monthly run (EST)
+  workflow_dispatch: {}
+jobs:
+  keep-warm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Ping the MCP health check
+        run: |
+          for i in $(seq 1 12); do
+            echo "ping $i $(date -u +%H:%M:%S) $(curl -sS -m 60 -o /dev/null -w 'HTTP %{http_code} in %{time_total}s' https://kpr-oms.replit.app/api/mcp/health || echo failed)"
+            sleep 240
+          done

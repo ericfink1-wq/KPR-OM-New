@@ -24,6 +24,24 @@ prefill are 400s on Haiku; same text ≈30% more tokens than 4.5. No Haiku call 
 Cost work same day: prompt caching on the batch re-grade (1h TTL + one priming call), Analyst chat + local-intel
 continuations (top-level automatic caching); local intel moved Opus → Sonnet. Nothing on Opus now.
 
+## SCHEDULED DATEX REFRESH MISSING THE KPR_OM_Data CONNECTOR (11/2 + 11/9/26) — not a server fault
+Diagnosed 11/9: routine `trig_01CDQMweuP24SWqY46WyEDPc` ("KPR Datex weekly refresh", Mon 5:50 ET; monthly sibling
+`trig_01HFH5G8cuBisHbphxzPYNjX`) lists KPR_OM_Data, but it fires as a COWORK scheduled session (tags cowork-scheduled,
+env remote_cowork) whose connector set is assembled server-side from the account's Cowork connectors, NOT the routine's
+list: the 11/9 init listed 15 servers (incl. Gmail/Sheets/IBKR the routine doesn't name) and KPR_OM_Data + BrickRoster_MCP
+were ABSENT — no failed / pending / needs-auth status at all, so the server was never contacted. Live endpoint checked the
+same day: health 200 in 0.6–1.4 s, unauthenticated initialize → 401 + WWW-Authenticate in 0.24 s, GET → 405, connector from a
+Claude Code session: initialize/tools/list/datex_refresh_credentials OK, token → job-kit 200 (401 without), `state` = 37
+properties. No OAuth anywhere (static/minted keys), so no token expiry is involved. A Claude Code session can't create a
+routine WITH connectors in this org ("connectors parameter is not available") — the fix is Eric's: enable KPR_OM_Data for
+Cowork, or re-create the routine in claude.ai with KPR_OM_Data + Datex_MCP on a surface that honours the list.
+Hardening shipped anyway (a cold Monday-morning start must not miss the ~5 s connect probe): MCP HANDSHAKE (initialize /
+ping / */list / notifications — `isHandshakeOnly`, mcpKeys.ts) is answered with NO database read for the static key
+(`matchesStaticKeyNoDb`) or a key fully verified in the last 6 h; every tools/call still runs `verifyMcpKey` in full.
+A key check that can't reach the DB answers 503 JSON-RPC + Retry-After (was Express's HTML 500). Startup steps yield
+(setImmediate) between jobs. `.github/workflows/mcp-keep-warm.yml` pings /api/mcp/health every 4 min from ~35 min before
+each scheduled run. Verified locally with the DB unreachable: initialize 200 in 20 ms, tools/list 14 tools in 4 ms.
+
 ## LOAN PAYOFF / PREPAY ENGINE (Eric, 11/6/26 — "see cost/profit on each of our own loans if we prepay")
 `om-database lib/payoffEngine.ts` (pure, tested `payoffEngine.test.ts` on Lakeland Park's REAL loan wording + the 11/5
 Treasury curve): `computePayoff(LoanInput, rates, date)` → net = premium + fees − swap value (+ = cost, − = gain),

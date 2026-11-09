@@ -20,7 +20,7 @@ import { MCP_TOOLS, MCP_TOOLS_BY_NAME, MCP_SERVER_INSTRUCTIONS } from "../lib/mc
 import {
   createMcpKey, listMcpKeys, revokeMcpKey, deleteMcpKey,
   verifyMcpKey, extractKeyFromRequest, ensureMcpKeysTable, keyOwner, type VerifiedKey,
-  staticKeyStatus, findUserByEmail,
+  staticKeyStatus, findUserByEmail, matchesStaticKeyNoDb, keyCacheId, isHandshakeOnly,
 } from "../lib/mcpKeys";
 import { requireAdmin, requireAuth } from "../middleware/auth";
 import { logger } from "../lib/logger";
@@ -65,9 +65,45 @@ function overRateLimit(keyId: string): boolean {
 // ─── key gate ───────────────────────────────────────────────────────────────
 interface McpRequest extends Request { mcpKey?: VerifiedKey }
 
+// ─── fast handshake (11/9/26) ────────────────────────────────────────────────
+// The weekly Datex refresh is an UNATTENDED scheduled session. Its connectors are connected
+// once, at session start, with a short probe; a connector that misses it is simply absent for
+// the whole run. On autoscale hosting the first request of a quiet Monday morning lands on a
+// cold container AND a sleeping database, and the key check used to read the database before
+// answering `initialize`. So: the handshake methods (which expose only what /api/mcp/health
+// already publishes — server name, version, tool names and the instructions) are answered
+// with no database read when the key is the environment key, or one fully verified in the last
+// 6 hours. Every tools/call is still verified in full (owner approved, key not revoked).
+const VERIFIED_TTL_MS = 6 * 3600_000;
+const recentlyVerified = new Map<string, { key: VerifiedKey; at: number }>();
+function rememberVerified(raw: string, key: VerifiedKey): void {
+  if (recentlyVerified.size > 200) recentlyVerified.clear();
+  recentlyVerified.set(keyCacheId(raw), { key, at: Date.now() });
+}
+function handshakeKey(raw: string): VerifiedKey | null {
+  const viaEnv = matchesStaticKeyNoDb(raw);
+  if (viaEnv) return viaEnv;
+  const hit = recentlyVerified.get(keyCacheId(raw));
+  return hit && Date.now() - hit.at < VERIFIED_TTL_MS ? hit.key : null;
+}
+
 async function requireMcpKey(req: Request, res: Response, next: NextFunction): Promise<void> {
   const raw = extractKeyFromRequest(req as unknown as { headers: Record<string, unknown>; params?: Record<string, unknown>; query?: Record<string, unknown> });
-  const verified = raw ? await verifyMcpKey(raw) : null;
+  let verified: VerifiedKey | null = null;
+  if (raw && isHandshakeOnly(req.body)) verified = handshakeKey(raw);
+  if (!verified && raw) {
+    try { verified = await verifyMcpKey(raw); }
+    catch (err) {
+      // Database still waking (cold start) or unreachable: a clean, retryable JSON-RPC answer —
+      // never Express's HTML 500, which a connector reads as a broken server and gives up on.
+      logger.warn({ err: err instanceof Error ? err.message : String(err) }, "MCP key check could not reach the database");
+      res.setHeader("Retry-After", "5");
+      res.status(503).json({ jsonrpc: "2.0", error: { code: -32000, message: "The KPR deal library is starting up — try again in a few seconds." }, id: null });
+      return;
+    }
+    if (verified) rememberVerified(raw, verified);
+    else recentlyVerified.delete(keyCacheId(raw));
+  }
   if (!verified) {
     // WWW-Authenticate tells a well-behaved MCP client that this is an auth failure
     // rather than a broken endpoint, so it prompts for a token instead of retrying.

@@ -263,6 +263,36 @@ async function verifyStaticKey(key: string): Promise<VerifiedKey | null> {
   return { id: "env-static", name: "Environment key (MCP_STATIC_KEY)", scope: "read", userId: owner.id, email: owner.email };
 }
 
+/** The static key matched with NO database read — for the MCP HANDSHAKE only (initialize,
+ *  tools/list, ping, notifications), which reveals nothing the public /api/mcp/health page
+ *  doesn't already list. A cold deployment + a sleeping database can take longer than a
+ *  connector's ~5 s connect probe, and an unattended scheduled run then starts WITHOUT the
+ *  connector (11/2 + 11/9/26). Every tools/call still goes through `verifyMcpKey`, owner check
+ *  included, so offboarding the owner still stops all data access on the next call. */
+export function matchesStaticKeyNoDb(raw: string | null | undefined): VerifiedKey | null {
+  if (typeof raw !== "string") return null;
+  const key = raw.trim();
+  const st = staticKeyStatus();
+  if (!st.configured || !st.email || !key.startsWith(KEY_PREFIX)) return null;
+  if (!sameHash(hashKey(key), hashKey(STATIC_KEY()))) return null;
+  return { id: "env-static", name: "Environment key (MCP_STATIC_KEY)", scope: "read", userId: "", email: st.email };
+}
+
+/** True when every JSON-RPC message in the body is part of the MCP handshake (initialize,
+ *  ping, the list calls, notifications) — never a tools/call. */
+const HANDSHAKE_METHODS = new Set(["initialize", "ping", "tools/list", "prompts/list", "resources/list", "resources/templates/list"]);
+export function isHandshakeOnly(body: unknown): boolean {
+  const msgs = Array.isArray(body) ? body : [body];
+  if (!msgs.length) return false;
+  return msgs.every(m => {
+    const method = m && typeof m === "object" ? (m as { method?: unknown }).method : undefined;
+    return typeof method === "string" && (HANDSHAKE_METHODS.has(method) || method.startsWith("notifications/"));
+  });
+}
+
+/** sha256 of a raw key — the handshake cache keys on it so no raw secret is held in memory. */
+export const keyCacheId = (raw: string): string => hashKey(raw.trim());
+
 // Verify a raw key. Returns null for anything that isn't a live, unexpired,
 // unrevoked key — callers must treat null as a hard 401, never as a soft failure.
 export async function verifyMcpKey(raw: string | null | undefined): Promise<VerifiedKey | null> {

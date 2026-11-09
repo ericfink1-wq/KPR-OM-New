@@ -21,6 +21,8 @@ export async function runStartupSequence(steps: StartupStep[], log: Logger, retr
   const ok: string[] = [], failed: string[] = [];
   const t0 = Date.now();
   for (const s of steps) {
+    // Let any request that arrived meanwhile (a connector's handshake on a cold boot) run first.
+    await new Promise(r => setImmediate(r));
     current = s.name;
     for (let attempt = 1; ; attempt++) {
       try { await s.run(); ok.push(s.name); break; }
