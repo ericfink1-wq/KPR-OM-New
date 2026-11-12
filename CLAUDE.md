@@ -24,6 +24,18 @@ prefill are 400s on Haiku; same text ≈30% more tokens than 4.5. No Haiku call 
 Cost work same day: prompt caching on the batch re-grade (1h TTL + one priming call), Analyst chat + local-intel
 continuations (top-level automatic caching); local intel moved Opus → Sonnet. Nothing on Opus now.
 
+## SITE-PLAN PAGE PICKER — TRAINED ON 15 REAL OMs (Eric, 11/12/26)
+`pickSitePlanPages` / `scoreSitePlanPage` (om-database lib/pdfExtract.ts) went from 7/15 to 15/15 on real OMs from Eric's
+Drive (CBRE, JLL, NMRK, Eastdil, C&W, BCA). Rules learned: the title is the page's LARGEST TYPE (top 3 sizes — a big
+property-name banner must not hide a 20pt "SITE PLAN"), not the first text; titles vary (Site Plan / Site Layout / Retail
+Site Plan / Tenant Roster / Floor Plan level / Phase I-II) and can be LETTER-SPACED ("S I T E P L A N" → `unspaceLetters`);
+a Suite+Tenant+SF table and an Available/Leased/NAP legend corroborate; a title naming roof/HVAC/parcel/redevelopment/aerial/
+trade/contents/rent roll is never the plan; dense pages (>300 items) are tables; an untitled weak guess returns []. Adjacent
+titled page (Phase II) or an untitled SF-label continuation joins the pick. Upload passes type sizes via `sitePlanPageInfo`.
+Deal page: leave the page box blank → "Find it in a PDF" (`findSitePlanCandidates`) renders the best ~4 pages to tap
+(best guess badged). Tests: pickSitePlanReal.test.ts on FEATURE-ONLY fixtures (vocabulary words + type sizes; no OM prose —
+the repo is public); add OMs with tools/siteplan-fixtures/. The 10 MB Drive-tool cap kept the big JLL/NMRK/C&W books out.
+
 ## DATEX REFRESH NEVER RUNS DOWNLOADED CODE (11/12/26 — the monthly run was blocked)
 Claude's safety check stopped the 11/12 monthly run ("code from external"): the task downloaded job_kit.py from
 /api/datex/job-kit and ran it. The kit's plan + build now run ON THE SITE: `api lib/datexPlanBuild.ts` (pure port of

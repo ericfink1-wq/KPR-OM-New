@@ -113,7 +113,7 @@ export interface ImageBundle {
   cover?: string | null;
   coverThumb?: string | null;
   sitePlan?: string[] | null;
-  pagePicks?: { page: number; img: string }[];
+  pagePicks?: { page: number; img: string; best?: boolean }[];
   needsSitePlanPick?: boolean;
 }
 

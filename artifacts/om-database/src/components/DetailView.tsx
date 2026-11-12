@@ -37,7 +37,7 @@ import LeaseAbstractModal from "./LeaseAbstractModal";
 import AbstractUploadModal from "./AbstractUploadModal";
 import SiteAgreementsCard from "./SiteAgreementsCard";
 import { computeAbstractChecks } from "../lib/abstractChecks";
-import { loadPdfJs, _capturePagePhoto, extractPdfText, dataUrlToThumb } from "../lib/pdfExtract";
+import { loadPdfJs, _capturePagePhoto, extractPdfText, dataUrlToThumb, findSitePlanCandidates } from "../lib/pdfExtract";
 import { useCreateAiMessage } from "@workspace/api-client-react";
 import { exportDealToExcel, exportRosterToExcel } from "../lib/exportExcel";
 import { exportLeaseAbstractsWorkbook } from "../lib/abstractExcel";
@@ -2147,11 +2147,19 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
   const handleSitePlanPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (e.target) e.target.value = "";
-    if (!file || !fixPage.trim()) return;
+    if (!file) return;
     setFixingPlan(true);
     try {
-      const lib = await loadPdfJs();
       const buf = await file.arrayBuffer();
+      // No page typed → let the site find it: show its best candidate pages to tap
+      // (the PDF's page numbers rarely match the OM's printed ones).
+      if (!fixPage.trim()) {
+        const picks = await findSitePlanCandidates(buf);
+        if (!picks.length) { alert("I couldn't find a page that looks like a site plan in that PDF. Type the page number instead, or upload an image."); return; }
+        setImgs(prev => ({ ...(prev || {}), pagePicks: picks.map(p => ({ page: p.page, img: p.img, best: p.best })) }));
+        return;
+      }
+      const lib = await loadPdfJs();
       const pdf = await lib.getDocument({ data: buf }).promise;
       if (pdf.numPages > 5 && !window.confirm(
         `This PDF has ${pdf.numPages} pages. Pulling a site plan from a large PDF loads the whole file and uses unnecessary bandwidth (and can be slow on a phone). For best results, extract just the page(s) you need into a smaller PDF first.\n\nUpload this ${pdf.numPages}-page PDF anyway?`
@@ -3122,12 +3130,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
               <input ref={sitePlanImgRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={handleSitePlanImageFiles}/>
               <span style={{ fontSize:11, color:"#c4bba7" }}>·</span>
               <span style={{ fontSize:11, color:"#9b9992" }}>Wrong page? Set from</span>
-              <input value={fixPage} onChange={e => setFixPage(e.target.value.replace(/[^0-9,\-\s]/g,""))} placeholder="e.g. 5 or 3-6 or 3,5,7"
+              <input value={fixPage} onChange={e => setFixPage(e.target.value.replace(/[^0-9,\-\s]/g,""))} placeholder="page # (or leave blank)"
                 style={{ width:148, fontSize:11.5, padding:"5px 8px", border:"1px solid #dfddd6", borderRadius:6, color:"#383a37", fontFamily:"'Roboto',sans-serif" }}/>
               <HalfToggle val={sitePlanHalf} set={setSitePlanHalf}/>
-              <button onClick={() => { if (fixPage.trim()) sitePlanPdfRef.current?.click(); }} disabled={fixingPlan||!fixPage.trim()}
-                style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingPlan||!fixPage.trim())?"#94928b":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Roboto',sans-serif" }}>
-                {fixingPlan?"Rendering…":"Choose PDF & set"}
+              <button onClick={() => sitePlanPdfRef.current?.click()} disabled={fixingPlan}
+                title={fixPage.trim() ? "Pick the PDF; the page(s) you typed become the site plan" : "Pick the OM PDF; the site finds the likely site-plan pages for you to tap"}
+                style={{ background:"transparent", border:"1px solid #0d9488", color:fixingPlan?"#94928b":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Roboto',sans-serif" }}>
+                {fixingPlan?(fixPage.trim()?"Rendering…":"Looking…"):(fixPage.trim()?"Choose PDF & set":"Find it in a PDF")}
               </button>
               <input ref={sitePlanPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleSitePlanPdf}/>
             </div>
@@ -3156,12 +3165,13 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
             <input ref={sitePlanImgRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={handleSitePlanImageFiles}/>
             <span style={{ fontSize:11, color:"#c4bba7" }}>·</span>
             <span style={{ fontSize:11, color:"#9b9992" }}>Set from page</span>
-            <input value={fixPage} onChange={e => setFixPage(e.target.value.replace(/[^0-9,\-\s]/g,""))} placeholder="e.g. 5 or 3-6 or 3,5,7"
+            <input value={fixPage} onChange={e => setFixPage(e.target.value.replace(/[^0-9,\-\s]/g,""))} placeholder="page # (or leave blank)"
               style={{ width:148, fontSize:11.5, padding:"5px 8px", border:"1px solid #dfddd6", borderRadius:6, color:"#383a37", fontFamily:"'Roboto',sans-serif" }}/>
             <HalfToggle val={sitePlanHalf} set={setSitePlanHalf}/>
-            <button onClick={() => { if (fixPage.trim()) sitePlanPdfRef.current?.click(); }} disabled={fixingPlan||!fixPage.trim()}
-              style={{ background:"transparent", border:"1px solid #0d9488", color:(fixingPlan||!fixPage.trim())?"#94928b":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Roboto',sans-serif" }}>
-              {fixingPlan?"Rendering…":"Choose PDF & set"}
+            <button onClick={() => sitePlanPdfRef.current?.click()} disabled={fixingPlan}
+              title={fixPage.trim() ? "Pick the PDF; the page(s) you typed become the site plan" : "Pick the OM PDF; the site finds the likely site-plan pages for you to tap"}
+              style={{ background:"transparent", border:"1px solid #0d9488", color:fixingPlan?"#94928b":"#0d9488", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontSize:11, fontFamily:"'Roboto',sans-serif" }}>
+              {fixingPlan?(fixPage.trim()?"Rendering…":"Looking…"):(fixPage.trim()?"Choose PDF & set":"Find it in a PDF")}
             </button>
             <input ref={sitePlanPdfRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={handleSitePlanPdf}/>
           </div>
@@ -3170,10 +3180,10 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
       )}
 
       {/* Site plan picker (manual) */}
-      {imgs != null && (!imgs.sitePlan || imgs.sitePlan.length===0) && imgs.pagePicks && imgs.pagePicks.length > 0 && (
+      {imgs != null && imgs.pagePicks && imgs.pagePicks.length > 0 && (
         <div style={{ background:"#fff", border:"1px solid #e7c48f", borderRadius:12, padding:"16px 18px", marginBottom:12 }}>
           <div style={{ fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", fontWeight:700, color:"#b45309", marginBottom:8 }}>Site Plan — choose the page</div>
-          <p style={{ fontSize:11.5, color:"#676767", lineHeight:1.55, margin:"0 0 12px 0" }}>I couldn't confidently find the site plan. Tap the page that shows it.</p>
+          <p style={{ fontSize:11.5, color:"#676767", lineHeight:1.55, margin:"0 0 12px 0" }}>{imgs.pagePicks.some(pk => (pk as { best?: boolean }).best) ? "Best guess first — tap the page that shows the site plan." : "I couldn't confidently find the site plan. Tap the page that shows it."}{" "}<button onClick={() => setImgs(prev => ({ ...(prev || {}), pagePicks: [] }))} style={{ background:"none", border:"none", color:"#94928b", fontSize:11, textDecoration:"underline", cursor:"pointer", padding:0 }}>cancel</button></p>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(108px, 1fr))", gap:9 }}>
             {imgs.pagePicks.map(pk => (
               <button key={pk.page} onClick={() => chooseSitePlan(pk.page)}
@@ -3182,6 +3192,7 @@ export default function DetailView({ deal: d, allDeals, onBack, onDelete, onUpda
                 onMouseLeave={e => { e.currentTarget.style.borderColor="#ebeae5"; e.currentTarget.style.transform="none"; }}>
                 <img src={pk.img} alt={`Page ${pk.page}`} style={{ width:"100%", display:"block", aspectRatio:"3/4", objectFit:"cover", objectPosition:"top" }}/>
                 <span style={{ position:"absolute", bottom:5, right:5, background:"rgba(38,40,31,0.78)", color:"#fff", fontSize:9, fontWeight:600, padding:"1px 6px", borderRadius:10 }}>p.{pk.page}</span>
+                {(pk as { best?: boolean }).best && <span style={{ position:"absolute", top:5, left:5, background:"#5bba47", color:"#fff", fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:10 }}>best guess</span>}
               </button>
             ))}
           </div>

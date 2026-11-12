@@ -555,89 +555,150 @@ async function _pickCoverPage(pdf: any, lib: any): Promise<number | null> {
   return anyPhoto ? bestPage : null;
 }
 
-// Choose the SITE-PLAN page(s) from the front-section page texts. OM site plans sit on
-// ONE page ~95% of the time, yet the old logic captured the top THREE scoring pages —
-// so the real plan came back bundled with whatever else was nearby and SF-label-heavy:
-// the rent roll, the lease-expiration schedule, the tenant summary, an aerial. This
-// returns the SINGLE best page (and at most a genuine adjacent strong-titled spread),
-// and it rejects the look-alikes:
-//   • the table of contents (matches "site plan" but is a list, not the plan);
-//   • rent rolls / lease-expiration / financial TABLES (full of "<n> SF" tokens but
-//     hundreds of text items — a table, not a diagram);
-//   • narrative pages that merely mention the site plan.
-// Each candidate carries its text AND its text-ITEM count — a diagram has a handful of
-// labels, a rent-roll table has hundreds — so a graphic plan outranks an SF-heavy table.
-export function pickSitePlanPages(
-  pages: { page: number; text: string; itemCount: number }[],
-): number[] {
-  const strong = /site\s*plan|site\s*map|leasing\s*plan|leasing\s*map|site\s*layout|plot\s*plan|lease\s*plan|overall\s*plan|parcel\s*map|tax\s*parcel|key\s*plan/i;
-  const weak = /aerial|site\s*aerial|asset\s*overview/i;
-  const toc = /table\s+of\s+contents/i;
-  // Pages full of "SF" labels that are really TABLES/financials, not a plan.
-  const tableLike = /rent\s*roll|lease\s*expiration|expiration\s*report|rent\s*schedule|cash\s*flow|operating\s*statement|income\s*statement|tenant\s*sales|debt\s*service|argus|amortization/i;
-  const sfLabel = /\b\d{1,3}(?:,\d{3})?\s*SF\b/gi;
+// Choose the SITE-PLAN page(s) from the front-section page texts.
+// REBUILT 11/12/26 against 15 real OMs from Eric's Drive (CBRE, JLL, Newmark, Eastdil,
+// C&W, BCA …) — the old title-at-the-start-of-the-text rule got 7 of 15. What the books
+// actually do (tests: pickSitePlanReal.test.ts, features only — no OM text is stored):
+//   • the TITLE is the page's LARGEST type, but not always first in the text stream
+//     (Sunshine's sits under a running header; Paddock's is "Retail Site Plan"), and some
+//     are LETTER-SPACED in the text layer ("S I T E P L A N", "T E N A N T R O S T E R");
+//   • titles vary: Site Plan · Site Layout · Leasing Plan · Site Plan & Tenant Roster ·
+//     Tenant Roster · Floor Plan (level) — only ~2/3 say "site plan" at all;
+//   • the strongest corroboration is a TENANT TABLE / LEGEND on the same page
+//     (Suite|Ste|Unit|No. + Tenant + SF|GLA|Size; Available/Leased/NAP);
+//   • the SAME base plan is reused as ROOF / HVAC / PARCEL / REDEVELOPMENT maps and as
+//     AERIALS — a title naming one of those is never the site plan;
+//   • "site plan" in small print (CBRE disclaimers, lease-abstract prose) is not a title;
+//   • rent rolls are dense tables (300+ text items); a plan page is ~25–270.
+// Returns the single best page, plus a genuine adjacent page (Phase I/II, a two-page
+// spread). Nothing scores → [] (the user picks; never guess an aerial).
+export interface SitePlanPageInfo {
+  page: number; text: string; itemCount: number;
+  /** text runs with font height (and y), when available — enables title detection by size */
+  items?: { s: string; h: number; y?: number }[];
+}
 
-  // TITLE CHECK (first, and strongest — Eric's rule): the real site-plan page is
-  // LABELED "Site Plan" as a page title at the top (or a running header), not just
-  // mentioned in prose. A title = the strong keyword appears at/near the START of the
-  // page text and is NOT embedded in a sentence ("the site plan on the following
-  // page…"). We allow a property-name running header before it ("TRUSSVILLE
-  // PROMENADE  SITE PLAN …") but reject a lowercase article/verb lead-in.
-  const TITLE_ZONE = 80;
-  const proseLead = /\b(the|a|an|see|our|this|these|its|their|refer|following|below|above|on|to|as|per|for|of|in|at|and|shows?|depicts?|illustrat)\s+$/i;
-  const isTitled = (text: string): boolean => {
-    const zone = text.slice(0, TITLE_ZONE);
-    const m = zone.match(strong);
-    if (!m || m.index == null) return false;
-    return !proseLead.test(zone.slice(0, m.index));
+/** "S I T E  P L A N" → "SITE PLAN": collapse runs of single letters split by spaces. */
+export function unspaceLetters(t: string): string {
+  return t.replace(/\b(?:[A-Za-z&] ){2,}[A-Za-z&]\b/g, m => m.replace(/ /g, ""));
+}
+
+const PLAN_TITLE = /site\s*plan|siteplan|site\s*layout|sitelayout|leasing\s*plan|leasingplan|site\s*map|sitemap|tenant\s*(?:site\s*)?(?:plan|map)|lease\s*plan|plot\s*plan|key\s*plan|center\s*layout|property\s*layout|retail\s*plan|floor\s*plan|floorplan|merchandising\s*plan/i;
+const ROSTER_TITLE = /tenant\s*roster|tenantroster|tenant\s*mix|tenancy\s*plan|stacking\s*plan/i;
+const NOT_PLAN_TITLE = /roof|hvac|parcel|redevelopment|aerial|trade\s*area|demograph|regional|location\s*map|area\s*map|traffic|zoning|flood|utility|survey|contents|rent\s*roll|lease\s*expiration|cash\s*flow|competition|competitive|comparable/i;
+const TOC = /table\s+of\s+contents|\bcontents\b/i;
+const TABLE_LIKE = /rent\s*roll|lease\s*expiration|expiration\s*report|rent\s*schedule|cash\s*flow|operating\s*statement|income\s*statement|tenant\s*sales|debt\s*service|argus|amortization/i;
+const SF_LABEL = /\b\d{1,3}(?:,\d{3})+\s*(?:SF|RSF|GLA)\b|\b\d{3,6}\s*SF\b/gi;
+
+function headingText(p: SitePlanPageInfo): string | null {
+  const items = (p.items ?? []).filter(i => i.s && i.s.trim() && i.h > 0);
+  if (!items.length) return null;
+  // The three largest type sizes on the page: a big property-name banner (Bolton's 39pt
+  // "Bolton Plaza") must not push the real 20pt "SITE PLAN" title out of the heading set.
+  const sizes = [...new Set(items.map(i => Math.round(i.h)))].sort((a, b) => b - a).slice(0, 3);
+  const big = items.filter(i => i.h >= 11 && sizes.includes(Math.round(i.h)));
+  return unspaceLetters(big.map(i => i.s).join(" "));
+}
+
+function rosterSignals(text: string): { table: boolean; legend: boolean } {
+  const t = text.toLowerCase();
+  const id = /\b(suite|ste\.?|unit|space|no\.|#)\s/.test(t) || /\bsuite\b|\bste\b/.test(t);
+  const ten = /\btenants?\b|\boccupant\b/.test(t);
+  const size = /\b(sf|gla|size|sq\.?\s*ft|square\s*feet|rsf)\b/.test(t);
+  const legend = /\b(available|leased|occupied|vacant|n\.?a\.?p\.?|not\s*a\s*part|leasing\s*opportunit)/.test(t);
+  return { table: id && ten && size, legend };
+}
+
+export function scoreSitePlanPage(p: SitePlanPageInfo): { s: number; titled: boolean; reason: string } {
+  const text = unspaceLetters(p.text || "");
+  const head = headingText(p);
+  // Title: the large type when we have it; else (text only) the strong keyword heading the page.
+  let titleZone: string;
+  if (head != null) titleZone = head;
+  else {
+    const zone = text.slice(0, 80), m = zone.match(PLAN_TITLE);
+    const proseLead = /\b(the|a|an|see|our|this|these|its|their|refer|following|below|above|on|to|as|per|for|of|in|at|and|shows?|depicts?|illustrat)\s+$/i;
+    titleZone = m && m.index != null && !proseLead.test(zone.slice(0, m.index)) ? zone : "";
+  }
+  if (TOC.test(titleZone) || /table\s+of\s+contents/i.test(text.slice(0, 200))) return { s: 0, titled: false, reason: "contents" };
+  const planTitle = PLAN_TITLE.test(titleZone), rosterTitle = ROSTER_TITLE.test(titleZone);
+  const badTitle = NOT_PLAN_TITLE.test(titleZone) && !/site\s*plan|siteplan/i.test(titleZone);
+  if (badTitle) return { s: 0, titled: false, reason: "titled roof/parcel/aerial/table" };
+  const { table, legend } = rosterSignals(text);
+  const sfCount = (text.match(SF_LABEL) || []).length;
+  const dense = p.itemCount > 300;
+  if (TABLE_LIKE.test(text) && !planTitle && !rosterTitle) return { s: 0, titled: false, reason: "a table, not a plan" };
+  let s = 0, reason = "";
+  if (planTitle) { s = /floor\s*plan|floorplan/i.test(titleZone) ? 160 : 200; reason = "titled plan"; }
+  else if (rosterTitle && !dense) { s = 130; reason = "titled tenant roster"; }
+  else if (PLAN_TITLE.test(text) && !dense && (table || sfCount >= 3) && head == null) { s = 100; reason = "plan keyword + roster/SF labels"; }
+  else if (table && legend && !dense && sfCount >= 3) { s = 90; reason = "roster table + legend"; }
+  else if (sfCount >= 6 && p.itemCount <= 220 && head == null) { s = 50; reason = "SF-dense graphic"; }
+  if (s <= 0) return { s: 0, titled: false, reason: "no plan signal" };
+  if (table) s += 30;
+  if (legend) s += 10;
+  if (dense && !planTitle) s -= 60;
+  s -= Math.min(p.itemCount, 600) * 0.03;
+  return { s, titled: planTitle || rosterTitle, reason };
+}
+
+/** pdf.js getTextContent() → what the picker reads (text, item count, type sizes). */
+export function sitePlanPageInfo(page: number, content: { items: any[] }): SitePlanPageInfo {
+  const items = content.items.filter((it: any) => typeof it.str === "string");
+  return {
+    page, text: items.map((it: any) => it.str).join(" "), itemCount: content.items.length,
+    items: items.filter((it: any) => it.str.trim()).map((it: any) => ({ s: it.str, h: Math.abs(Number(it.transform?.[3]) || Number(it.height) || 0), y: Number(it.transform?.[5]) || 0 })),
   };
+}
 
-  const scoreOf = (text: string, itemCount: number): { s: number; strongHit: boolean } => {
-    if (toc.test(text)) return { s: 0, strongHit: false };
-    const strongHit = strong.test(text);
-    // A rent roll / lease-expiration / financial table is never a site plan, even when
-    // it's full of "SF" labels — unless the page is explicitly titled a site/leasing plan.
-    if (tableLike.test(text) && !strongHit) return { s: 0, strongHit: false };
-    const sfCount = (text.match(sfLabel) || []).length;
-    let s = 0;
-    if (isTitled(text)) {
-      // TITLED "Site Plan" — the highest-confidence signal. Dominates a page that
-      // merely mentions the plan in prose, and a graphic-but-untitled page.
-      s = 200;
-    } else if (strongHit && sfCount >= 3) {
-      // Not titled at the top, but carries the keyword AND suite-SF labels — a real
-      // plan whose title just wasn't first in the text stream. A bare keyword mention
-      // with NO SF labels ("see the site plan below") is a reference/divider, not a
-      // plan, and scores nothing.
-      s = 100;
-    } else if (sfCount >= 6 && itemCount <= 220) {
-      s = 50; // SF-dense GRAPHIC page (suite labels on a diagram), not a big table
-    } else if (weak.test(text)) {
-      s = 20; // bare "aerial" — weak signal
-    }
-    if (s <= 0) return { s: 0, strongHit };
-    // Among comparable pages prefer the most graphic one: fewer text items = more
-    // diagram-like, so the actual plan beats a narrative that merely mentions it.
-    s -= Math.min(itemCount, 600) * 0.05;
-    return { s, strongHit };
-  };
-
+export function pickSitePlanPages(pages: SitePlanPageInfo[]): number[] {
   const scored = pages
-    .map(p => ({ page: p.page, ...scoreOf(p.text, p.itemCount) }))
+    .map(p => ({ page: p.page, info: p, ...scoreSitePlanPage(p) }))
     .filter(p => p.s > 0)
     .sort((a, b) => b.s - a.s || a.page - b.page);
   if (!scored.length) return [];
   const best = scored[0];
+  // Untitled guesses (SF-dense graphics) need a real margin — an aerial is worse than nothing.
+  if (!best.titled && best.s < 60) return [];
   const chosen = [best.page];
-  // Allow a genuine TWO-PAGE spread: an ADJACENT page that is ALSO strong-titled and
-  // scores close to the winner (a deliberate "Site Plan" spread). Otherwise one page.
-  if (best.strongHit) {
-    const neighbor = scored.find(
-      p => p.strongHit && Math.abs(p.page - best.page) === 1 && p.s >= best.s - 15,
-    );
-    if (neighbor) chosen.push(neighbor.page);
+  if (best.titled) {
+    // Phase I / Phase II, a two-page spread: an ADJACENT page that is also titled a plan
+    // and scores close, OR an untitled continuation (few items, suite-SF labels) next to it.
+    const nb = scored.find(p => p.page !== best.page && Math.abs(p.page - best.page) === 1 && p.titled && p.s >= best.s - 40);
+    if (nb) chosen.push(nb.page);
+    else {
+      const next = pages.find(p => p.page === best.page + 1);
+      const nh = next ? headingText(next) : null;
+      // A continuation has no title of its own — its biggest type is suite numbers / SF.
+      if (next && nh !== null && next.itemCount <= 60 && (unspaceLetters(next.text).match(SF_LABEL) || []).length >= 2 && !/[A-Za-z]{4,}/.test(nh.replace(/\b(?:SF|GLA|RSF)\b/g, ""))) chosen.push(next.page);
+    }
   }
   return chosen.sort((a, b) => a - b);
+}
+
+/** For the deal page's "Find it in a PDF": scan the first `maxScan` pages and render the
+ *  picker's best page(s) first, then the next-best plan-like pages, up to `max` thumbnails
+ *  the user taps. Untitled weak guesses are included here (the user decides), but never
+ *  pages the scorer rejects outright (TOC, roof/parcel/aerial titles, rent-roll tables). */
+export async function findSitePlanCandidates(buffer: ArrayBuffer, max = 4, maxScan = 60): Promise<{ page: number; img: string; best: boolean }[]> {
+  const lib = await loadPdfJs();
+  const pdf = await lib.getDocument({ data: buffer }).promise;
+  const n = Math.min(pdf.numPages, maxScan);
+  const pages: SitePlanPageInfo[] = [];
+  for (let i = 1; i <= n; i += 6) {
+    await Promise.all(Array.from({ length: Math.min(6, n - i + 1) }, (_, k) => i + k).map(async p => {
+      try { const pg = await pdf.getPage(p); pages.push(sitePlanPageInfo(p, await pg.getTextContent())); } catch { /* skip */ }
+    }));
+  }
+  const best = pickSitePlanPages(pages);
+  const rest = pages.map(p => ({ page: p.page, s: scoreSitePlanPage(p).s })).filter(x => x.s > 0 && !best.includes(x.page))
+    .sort((a, b) => b.s - a.s).map(x => x.page);
+  const order = [...best, ...rest].slice(0, max);
+  const out: { page: number; img: string; best: boolean }[] = [];
+  for (const p of order) {
+    try { const img = await _captureSitePlan(pdf, p, lib); if (img) out.push({ page: p, img, best: best.includes(p) }); } catch { /* skip */ }
+  }
+  return out;
 }
 
 // Auto-detect cover + site plan pages from the PDF.
@@ -684,7 +745,7 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
   // the rent roll / lease-expiration schedule / aerial that sit near the real plan.
   try {
     const scanPages = Math.min(pdf.numPages, 40);
-    const pages: { page: number; text: string; itemCount: number }[] = [];
+    const pages: SitePlanPageInfo[] = [];
     const textPages = Array.from({ length: Math.max(0, scanPages - 1) }, (_, i) => i + 2);
     const TEXT_CONC = 6;
     for (let i = 0; i < textPages.length; i += TEXT_CONC) {
@@ -692,7 +753,7 @@ export async function extractPdfImages(buffer: ArrayBuffer): Promise<{
         try {
           const page = await pdf.getPage(p);
           const content = await page.getTextContent();
-          pages.push({ page: p, text: content.items.map((it: any) => it.str).join(" "), itemCount: content.items.length });
+          pages.push(sitePlanPageInfo(p, content));
         } catch {}
       }));
     }

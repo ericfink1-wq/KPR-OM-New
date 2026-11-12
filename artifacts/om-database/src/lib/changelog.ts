@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-11-12-site-plan-finder",
+    date: "2026-11-12",
+    category: "improved",
+    title: "Finds the right site-plan page far more often — and lets you tap it",
+    detail: "The upload now recognizes a site plan the way brokers actually lay it out: \"Site Plan\", \"Site Layout\", \"Tenant Roster\", \"Retail Site Plan\", Phase I / Phase II pages, spaced-out titles, and plans with the tenant list beside them. It also stops grabbing look-alikes — roof, HVAC and parcel maps, aerials, the table of contents and rent rolls. On 15 real OMs from our files it now picks the right page every time (it used to get about half). If a site plan is still wrong or missing, leave the page box blank and press \"Find it in a PDF\": the site shows its best candidate pages and you tap the right one, with no page number needed.",
+    where: "Uploading an OM (automatic) · deal page → Site plan → \"Find it in a PDF\"",
+  },
+  {
     id: "2026-11-12-occ-cost-pct-rent",
     date: "2026-11-12",
     category: "fixed",
