@@ -38,6 +38,25 @@ works when the connector key's KPR account is an approved ADMIN, and only while 
 Each mint is audit-logged (who, when, which key) and listed under "Short-lived credentials issued";
 these tokens never appear in the permanent token list, and an expired one gets 401.
 
+**SERVER-SIDE PLAN + BUILD (11/12/26) — what the scheduled task uses now.** Claude's safety check
+stopped the 11/12 monthly run ("code from external") because the task downloaded `job_kit.py` from
+the site and ran it. The kit's plan/build now run ON THE SITE (`lib/datexPlanBuild.ts`, a port the
+tests hold byte-identical to the Python on the fixtures), so the task only calls Datex, saves the raw
+result pages to `calls.jsonl` with its own python, and POSTs that file:
+
+```
+T=$(cat /root/dx/.token); B=https://kpr-oms.replit.app/api/datex
+curl -sS -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/x-ndjson" --data-binary @empty.jsonl "$B/plan?mode=weekly&sales=newest"   # phase 1
+curl -sS -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/x-ndjson" --data-binary @calls.jsonl "$B/plan?mode=weekly&sales=newest"   # phase 2
+curl -sS -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/x-ndjson" --data-binary @calls.jsonl "$B/build?mode=weekly&dryRun=1"     # preview
+curl -sS -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/x-ndjson" --data-binary @calls.jsonl "$B/build?mode=weekly"              # write
+```
+
+Options (query or JSON body): `mode`, `sales`, `asOf` (default today UTC), `finPeriod`, `force`,
+`dryRun`, `includePayload`. Body may also be JSON `{calls:[...]}` or gzip. `/build` merges through the
+same code as `/ingest` (snapshot before a write, ingest log). The full routine prompts are in
+`docs/datex-routine-prompts/weekly.txt` + `monthly.txt` (pasted into the two scheduled tasks).
+
 **The job kit (use this — it encodes the recipe below).** `GET /api/datex/job-kit` (same Bearer
 token) returns `job_kit.py` — Python 3, standard library only:
 

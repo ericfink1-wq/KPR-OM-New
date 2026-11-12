@@ -29,7 +29,7 @@ describe("datex_refresh_credentials", () => {
     expect(Date.parse(r.expiresAt) - Date.now()).toBeGreaterThan(2.9 * 3600_000);
     expect(r.baseUrl).toBe("https://kpr-oms.replit.app");
     expect(r.jobKitUrl).toBe("https://kpr-oms.replit.app/api/datex/job-kit");
-    expect(Object.keys(r).sort()).toEqual(["baseUrl", "expiresAt", "jobKitUrl", "token"]);
+    expect(Object.keys(r).sort()).toEqual(["baseUrl", "buildUrl", "expiresAt", "jobKitUrl", "planUrl", "token"]);
   });
   it("refuses a non-admin, an unapproved admin, and a call with no caller", async () => {
     user.row = { status: "approved", isAdmin: false };

@@ -24,6 +24,19 @@ prefill are 400s on Haiku; same text ≈30% more tokens than 4.5. No Haiku call 
 Cost work same day: prompt caching on the batch re-grade (1h TTL + one priming call), Analyst chat + local-intel
 continuations (top-level automatic caching); local intel moved Opus → Sonnet. Nothing on Opus now.
 
+## DATEX REFRESH NEVER RUNS DOWNLOADED CODE (11/12/26 — the monthly run was blocked)
+Claude's safety check stopped the 11/12 monthly run ("code from external"): the task downloaded job_kit.py from
+/api/datex/job-kit and ran it. The kit's plan + build now run ON THE SITE: `api lib/datexPlanBuild.ts` (pure port of
+job_kit.py plan()/build(); `datexPlanBuild.test.ts` runs BOTH on the fixtures across modes/sales/states and fails if
+they differ — change both or neither) behind `POST /api/datex/plan` and `POST /api/datex/build[?dryRun=1]`
+(routes/datexIngest.ts, same ingest-token auth; body = calls.jsonl as `application/x-ndjson`, or JSON {calls}, gzip ok;
+a form-encoded body gets a 400 naming the header; build merges via the shared `ingestPayload`, same as /ingest).
+The routine prompts (`docs/datex-routine-prompts/weekly.txt` / `monthly.txt`) only curl + save Datex rows with their
+own python; token saved to /root/dx/.token, never echoed. /job-kit still served. datex_refresh_credentials returns
+planUrl/buildUrl too. Verified on a local Postgres: plan phase 1/2, dry run, gzip write, state round-trip (hash match).
+The 11/9 connector-missing problem is separate (below) and was cleared by Eric re-enabling the connector; a test
+fire on 11/9 found KPR_OM_Data on the first ToolSearch.
+
 ## SCHEDULED DATEX REFRESH MISSING THE KPR_OM_Data CONNECTOR (11/2 + 11/9/26) — not a server fault
 Diagnosed 11/9: routine `trig_01CDQMweuP24SWqY46WyEDPc` ("KPR Datex weekly refresh", Mon 5:50 ET; monthly sibling
 `trig_01HFH5G8cuBisHbphxzPYNjX`) lists KPR_OM_Data, but it fires as a COWORK scheduled session (tags cowork-scheduled,

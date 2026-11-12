@@ -7,7 +7,8 @@ import type { McpCallContext, McpToolDef } from "./mcpTools";
 // approved it, 10/18/26). It lets the scheduled Datex refresh, running in a cloud Claude
 // session that already holds this connector, get a short-lived ingest token instead of
 // carrying a pasted kpr_dx_ token. The token it mints can do exactly what kpr_dx_ can —
-// GET /datex/state, POST /datex/ingest, GET /datex/job-kit — and expires in 3 hours.
+// GET /datex/state, POST /datex/plan + /datex/build (11/12/26 — the kit's logic, run on the
+// site), POST /datex/ingest, GET /datex/job-kit — and expires in 3 hours.
 //
 // Who may call it: the KPR account that owns the connector key must be an APPROVED ADMIN,
 // re-checked on every call. (The connector authenticates with a key bound to a KPR account;
@@ -23,7 +24,7 @@ export async function isApprovedAdmin(userId: string | null | undefined): Promis
 export const datexRefreshCredentials: McpToolDef = {
   name: "datex_refresh_credentials",
   title: "Datex refresh credentials",
-  description: "Admins only. Mints a 3-hour ingest token for the scheduled Datex refresh (state, ingest and job-kit only). Returns {token, expiresAt, baseUrl, jobKitUrl}.",
+  description: "Admins only. 3-hour token for the scheduled Datex refresh. Returns {token, expiresAt, baseUrl, planUrl, buildUrl, jobKitUrl}.",
   readOnly: false,
   inputSchema: { type: "object", properties: {} },
   handler: async (_args, ctx?: McpCallContext) => {
@@ -38,6 +39,6 @@ export const datexRefreshCredentials: McpToolDef = {
     const minted = await mintTempIngestToken({ userId: caller.userId, email: caller.email, via: `MCP key "${caller.name}"` });
     if ("problem" in minted) throw new Error(minted.problem);
     const baseUrl = (ctx?.baseUrl || DEFAULT_PUBLIC_BASE).replace(/\/+$/, "");
-    return { token: minted.token, expiresAt: minted.expiresAt, baseUrl, jobKitUrl: `${baseUrl}/api/datex/job-kit` };
+    return { token: minted.token, expiresAt: minted.expiresAt, baseUrl, planUrl: `${baseUrl}/api/datex/plan`, buildUrl: `${baseUrl}/api/datex/build`, jobKitUrl: `${baseUrl}/api/datex/job-kit` };
   },
 };
