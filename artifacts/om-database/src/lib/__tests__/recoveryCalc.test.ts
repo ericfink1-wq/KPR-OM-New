@@ -101,6 +101,21 @@ describe("percentage rent", () => {
     expect(resolvePercentRent({ percentageRentClause: "6% over natural breakpoint" }, 1000000)).toBeUndefined();
     expect(resolvePercentRent({}, 1000000)).toEqual({ amount: 0, how: "none" });
   });
+  it("NATURAL breakpoint = base ÷ rate (the extraction leaves the $ field null for those)", () => {
+    // Dave & Buster's, South Point: $958,000 base; at 6% the natural breakpoint is $15.97M, and
+    // $10.73M of 2025 sales sits below it → $0 owed, so occupancy cost can be computed.
+    const dnb = { annualRent: 958000, percentageRentRate: 6, percentageRentBreakpointType: "natural" };
+    expect(resolvePercentRent(dnb, 10732079)).toEqual({ amount: 0, how: "formula" });
+    expect(resolvePercentRent({ annualRent: 958000, percentageRentClause: "6% over natural breakpoint" }, 17000000)).toEqual({ amount: 62000, how: "formula" });
+    expect(computeOccupancyCost({ name: "Dave & Buster's", sf: 40000, ...dnb, expenseReimbursements: 161541 } as never, undefined, 10732079)?.occ).toBe(10.4);
+  });
+  it("reads a single, unambiguous breakpoint from the clause; never guesses a tiered one", () => {
+    expect(resolvePercentRent({ percentageRentClause: "4% of gross sales over $3,000,000" }, 3916994)).toEqual({ amount: 36680, how: "formula" });
+    expect(resolvePercentRent({ sf: 10000, percentageRentClause: "5% of sales above $400/SF" }, 4500000)).toEqual({ amount: 25000, how: "formula" });
+    expect(resolvePercentRent({ percentageRentClause: "6% over $2,000,000; 5% over $4,000,000" }, 5000000)).toBeUndefined();
+    expect(resolvePercentRent({ percentageRentClause: "Yes — see lease" }, 5000000)).toBeUndefined();
+    expect(resolvePercentRent({ percentageRentClause: "6% over natural breakpoint" }, 1000000)).toBeUndefined();   // no base rent → can't compute
+  });
 });
 
 describe("estimateRecoveries + occupancy cost — the Northtowne case", () => {

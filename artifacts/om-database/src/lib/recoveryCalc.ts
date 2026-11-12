@@ -381,21 +381,59 @@ export function reconcileRecoveries(
   return { accounted: r0(accounted), omTotal, coverage, ratio, verdict };
 }
 
+type PctRentTenant = { percentageRent?: unknown; percentageRentRate?: unknown; percentageRentBreakpoint?: unknown; percentageRentBreakpointType?: unknown;
+  percentageRentClause?: unknown; leaseType?: unknown; reimbursementMethod?: unknown; annualRent?: unknown; sf?: unknown };
+
+/** The rate and breakpoint the lease states — from the captured fields, else read from the
+ *  clause text ONLY when it is unambiguous (exactly one % and at most one $ figure; a tiered
+ *  clause "6% over $X, 5% over $Y" is never guessed). A NATURAL breakpoint = base rent ÷ rate
+ *  (the extraction leaves the $ field null for those — 11/12/26, Dave & Buster's at South
+ *  Point showed "—" for exactly this reason). */
+export function percentRentTerms(t: PctRentTenant): { rate: number | null; breakpoint: number | null; basis: "stated" | "natural" | "clause" | null } {
+  const n = (v: unknown) => (v == null || v === "" || isNaN(Number(v)) ? null : Number(v));
+  const clause = String(t.percentageRentClause ?? "");
+  const pcts = [...clause.matchAll(/(\d+(?:\.\d+)?)\s*%/g)].map(m => Number(m[1]));
+  let rate = n(t.percentageRentRate);
+  if ((rate == null || rate <= 0) && pcts.length === 1 && pcts[0] > 0 && pcts[0] <= 25) rate = pcts[0];
+  if (rate != null && rate <= 0) rate = null;
+  const bpField = n(t.percentageRentBreakpoint);
+  if (bpField != null && bpField > 0) return { rate, breakpoint: bpField, basis: "stated" };
+  const natural = String(t.percentageRentBreakpointType ?? "").toLowerCase() === "natural" || /\bnatural\b/i.test(clause);
+  // A breakpoint the clause states in dollars ("over $2,016,000", "above $500/SF") wins over
+  // recomputing a natural one — it IS the lease's number.
+  if (pcts.length <= 1) {
+    const dollars = [...clause.matchAll(/\$\s*([\d,]+(?:\.\d+)?)\s*(k|m|million)?\s*(\/\s*sf|psf|per\s+(?:square\s+)?(?:foot|sf))?/gi)];
+    if (dollars.length === 1) {
+      const m = dollars[0];
+      let v = Number(m[1].replace(/,/g, ""));
+      const unit = (m[2] ?? "").toLowerCase();
+      if (unit === "k") v *= 1e3; else if (unit === "m" || unit === "million") v *= 1e6;
+      if (m[3]) { const sf = n(t.sf); v = v > 0 && v <= 5000 && sf != null && sf > 0 ? v * sf : NaN; }
+      else if (v < 10_000) v = NaN;                       // "$5" is not an annual sales breakpoint
+      if (Number.isFinite(v) && v > 0) return { rate, breakpoint: Math.round(v), basis: "clause" };
+    }
+  }
+  const base = n(t.annualRent);
+  if (natural && rate != null && base != null && base > 0) return { rate, breakpoint: Math.round(base * 100 / rate), basis: "natural" };
+  return { rate, breakpoint: null, basis: null };
+}
+
 /**
  * Percentage rent for the occupancy-cost numerator. Disclosed $ first; else the
- * lease's own formula (sales over the breakpoint × rate, or sales × rate when it's
- * paid in lieu of base rent); else — when the tenant HAS a percentage-rent clause we
- * can't price — undefined, so the caller withholds occupancy cost instead of
- * understating it. 0 when there's no sign of percentage rent at all.
+ * lease's own formula (sales over the breakpoint × rate — stated, natural = base ÷ rate,
+ * or read from an unambiguous clause — or sales × rate when it's paid in lieu of base
+ * rent); else — when the tenant HAS a percentage-rent clause we can't price — undefined,
+ * so the caller withholds occupancy cost instead of understating it. 0 when there's no
+ * sign of percentage rent at all.
  */
 export function resolvePercentRent(
-  t: { percentageRent?: unknown; percentageRentRate?: unknown; percentageRentBreakpoint?: unknown; percentageRentClause?: unknown; leaseType?: unknown; reimbursementMethod?: unknown },
+  t: PctRentTenant,
   grossSales: number | null,
 ): { amount: number; how: "disclosed" | "formula" | "none" } | undefined {
   const n = (v: unknown) => (v == null || v === "" || isNaN(Number(v)) ? null : Number(v));
   const disclosed = n(t.percentageRent);
   if (disclosed != null) return { amount: disclosed, how: "disclosed" };
-  const rate = n(t.percentageRentRate), bp = n(t.percentageRentBreakpoint);
+  const { rate, breakpoint: bp } = percentRentTerms(t);
   const clause = String(t.percentageRentClause ?? "");
   const inLieu = /in lieu/i.test(`${clause} ${t.leaseType ?? ""} ${t.reimbursementMethod ?? ""}`);
   if (grossSales != null && rate != null && rate > 0) {

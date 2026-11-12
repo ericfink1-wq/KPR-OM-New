@@ -48,6 +48,14 @@ export const CATEGORY_STYLE: Record<ChangeCategory, { fg: string; bg: string; bo
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    id: "2026-11-12-occ-cost-pct-rent",
+    date: "2026-11-12",
+    category: "fixed",
+    title: "Occupancy cost now fills in for more tenants with percentage-rent clauses",
+    detail: "Occupancy cost used to stay blank for any tenant whose lease has percentage rent but no dollar breakpoint written out — for example a \"natural\" breakpoint, like Dave & Buster's at South Point. It now works the breakpoint out (base rent ÷ the percentage), or reads it from the lease wording when that wording is unambiguous, so occupancy cost counts the right percentage rent. A tiered or unclear clause is still left blank rather than guessed. Hover any blank occupancy cost to see why it's missing.",
+    where: "Deal page → Tenants & Sales (Tenant Sales table and the rent roll)",
+  },
+  {
     id: "2026-11-06-loan-payoff",
     date: "2026-11-06",
     category: "new",

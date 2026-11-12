@@ -764,6 +764,7 @@ export interface TenantSalesRecord {
   occIsEst?: boolean;            // legacy — kept for type compat; no longer set to true
   occSource?: "stated" | "computed"; // how occupancyCost was resolved
   occBreakdown?: OccBreakdown | null; // breakdown for computed values
+  occWhy?: string | null;          // display-only: why occupancy cost was withheld (never saved meaningfully)
   // Set when the figure is a 12-month RUN-RATE annualized from a newly-opened
   // tenant's partial first year (e.g. 4 months × 3), not a real full year. salesNote
   // explains the basis. Surfaced with an "annualized" badge so a run-rate is never

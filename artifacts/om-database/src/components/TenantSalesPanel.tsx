@@ -3,7 +3,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import RecoveryWorking, { recoveryLabel } from "./RecoveryWorking";
 import { createPortal } from "react-dom";
 import type { TenantSalesYear, TenantSalesRecord, OccBreakdown, Tenant } from "../lib/idb";
-import { tenantKey, stripSuiteCode, isVacant, assessClosureRisk, computeOccupancyCost, type RecoveryEntry } from "../lib/utils";
+import { tenantKey, stripSuiteCode, isVacant, assessClosureRisk, computeOccupancyCost, occupancyCostGap, type RecoveryEntry } from "../lib/utils";
 import { occCostBand, gradeOccupancyCost } from "../lib/retailCategory";
 import { useIsMobile } from "../hooks/use-mobile";
 
@@ -256,10 +256,11 @@ function deriveSalesRecord(
     occSource = "computed";
     occBreakdown = oc.breakdown;
   }
+  const occWhy = occupancyCost == null ? occupancyCostGap(rt, recByKey.get(key), gross) : null;
   // Show the clean brand (matched roster name, else suite-stripped) so the panel
   // mirrors the roster instead of "A06 Elite Nutrition".
   const cleanName = rt ? (rt.canonicalName || rt.name || stripSuiteCode(t.name)) : stripSuiteCode(t.name);
-  return { ...t, name: cleanName, sf, salesPSF: psf, annualSales: gross, occupancyCost, occSource, occBreakdown };
+  return { ...t, name: cleanName, sf, salesPSF: psf, annualSales: gross, occupancyCost, occSource, occBreakdown, occWhy };
 }
 
 function mergeRows(
@@ -739,7 +740,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                                 <td key={`${y}-occ`} style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>
                                   {rec?.occupancyCost != null && rec.occSource
                                     ? <OccTip val={rec.occupancyCost} source={rec.occSource} breakdown={rec.occBreakdown} grade={gradeOccupancyCost(row.name, rec.occupancyCost)} />
-                                    : rec?.occupancyCost != null ? fmtOcc(rec.occupancyCost) : "—"}
+                                    : rec?.occupancyCost != null ? fmtOcc(rec.occupancyCost) : <span title={(rec as { occWhy?: string | null } | undefined)?.occWhy ?? undefined} style={{ cursor: (rec as { occWhy?: string | null } | undefined)?.occWhy ? "help" : undefined }}>—</span>}
                                 </td>
                               </>
                             );
@@ -754,7 +755,7 @@ export default function TenantSalesPanel({ salesHistory, omTenants, omDate, reco
                                 <td style={{ padding: "7px 10px", textAlign: "right", color: "#5c5f57" }}>
                                   {rec?.occupancyCost != null && rec.occSource
                                     ? <OccTip val={rec.occupancyCost} source={rec.occSource} breakdown={rec.occBreakdown} grade={gradeOccupancyCost(row.name, rec.occupancyCost)} />
-                                    : rec?.occupancyCost != null ? fmtOcc(rec.occupancyCost) : "—"}
+                                    : rec?.occupancyCost != null ? fmtOcc(rec.occupancyCost) : <span title={(rec as { occWhy?: string | null } | undefined)?.occWhy ?? undefined} style={{ cursor: (rec as { occWhy?: string | null } | undefined)?.occWhy ? "help" : undefined }}>—</span>}
                                 </td>
                               </>
                             );

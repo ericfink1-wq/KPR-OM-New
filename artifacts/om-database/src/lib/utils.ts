@@ -1444,6 +1444,24 @@ export function computeOccupancyCost(
   };
 }
 
+/** Why computeOccupancyCost returned nothing — one plain sentence for the "—" tooltip, so a
+ *  blank never reads as "no data" when it is really "withheld so we don't misstate it". */
+export function occupancyCostGap(
+  rt: (RecoveryTenant & { percentageRentRate?: unknown; percentageRentBreakpoint?: unknown; percentageRentClause?: unknown }) | null | undefined,
+  rec: RecoveryEntry | { value: number; estimated: boolean } | undefined,
+  grossSales: number | null,
+): string | null {
+  if (grossSales == null || grossSales <= 0) return "No sales figure for this year.";
+  if (!rt) return "Not matched to a tenant on the rent roll, so there's no rent to compare with sales.";
+  if (_num(rt.annualRent) == null) return "Base rent isn't on the rent roll.";
+  if (_num(rt.expenseReimbursements) == null && !rec) return "Recoveries (CAM / tax / insurance) aren't disclosed and can't be calculated reliably from the lease terms — withheld rather than guessed.";
+  if (resolvePercentRent(rt, grossSales) === undefined) {
+    const clause = String((rt as { percentageRentClause?: unknown }).percentageRentClause ?? "").trim();
+    return `This lease has a percentage-rent clause${clause ? ` (“${clause.slice(0, 120)}”)` : ""} but its rate or breakpoint isn't stated, so the rent owed on these sales can't be priced — withheld rather than understated.`;
+  }
+  return null;
+}
+
 export interface LatestSale {
   salesPSF: number | null;
   grossSales: number | null;
